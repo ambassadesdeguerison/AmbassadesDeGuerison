@@ -33,7 +33,15 @@ async function activateConfirmedSubset(
     .in('id', toActivate.map((a: any) => a.id));
 }
 
-export async function applyState(supabase: SupabaseClient, state: DevState) {
+/**
+ * Résout les deux events de référence utilisés par tous les états démo :
+ * `demoLiveEvent` (celui qu'on positionne comme "en cours"/"passé"/"clôturé"
+ * selon l'état choisi) et `demoFutureEvent` (le prochain live à venir, s'il
+ * existe). Extrait de `applyState` pour être réutilisé par les actions dev
+ * qui doivent cibler le même event sans changer son état (ex: déclenchement
+ * manuel des emails de feedback en démo).
+ */
+export async function resolveDemoEvents(supabase: SupabaseClient) {
   const { data: events, error } = await supabase
     .from('events')
     .select('id, title, event_date')
@@ -68,6 +76,13 @@ export async function applyState(supabase: SupabaseClient, state: DevState) {
   if (!demoLiveEvent) {
     throw new Error('Aucun événement passé trouvé. Relancez node scripts/seed.js d\'abord.');
   }
+
+  return { demoLiveEvent, demoFutureEvent };
+}
+
+export async function applyState(supabase: SupabaseClient, state: DevState) {
+  const { demoLiveEvent, demoFutureEvent } = await resolveDemoEvents(supabase);
+  const WINDOW_H = Number(process.env.NEXT_PUBLIC_LIVE_SIGNAL_WINDOW_HOURS ?? 4);
 
   const hoursFromNow = (h: number) => new Date(Date.now() + h * 3_600_000).toISOString();
   const daysFromNow = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
