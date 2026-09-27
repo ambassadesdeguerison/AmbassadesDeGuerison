@@ -301,10 +301,7 @@ node scripts/magic-link.js david.thery@demo.fr
 - [ ] Bouton "Continuer" désactivé si `lat == null` (ville tapée sans sélection dropdown)
 - [ ] Sélectionner une ville étrangère (ex: "Yaoundé") → pays bascule automatiquement sur "Cameroun"
 - [ ] `CountrySelect` : pays épinglés (FR, BE, CH, CA, LU, MA, SN, CI, CM) visibles en premier
-- [ ] **Champ quartier** (optionnel) : visible après le sélecteur de pays, placeholder "ex : Paris 15e, Abidjan Cocody, Lyon Presqu'île", note explicite "Aide les visiteurs à te retrouver s'ils sont dans le même quartier."
-- [ ] Laisser le champ quartier vide → soumission réussie (`quartier = null` en DB)
-- [ ] Remplir le champ quartier → `host_profiles.quartier` sauvegardé en DB
-- [ ] Bouton "Continuer" **non bloqué** si quartier vide (champ optionnel)
+- [ ] **Pas de champ quartier saisissable à l'étape 1** (retiré 2026-09-27) — `quartier` est désormais exclusivement auto-déduit du geocodage de l'adresse à l'étape 2, jamais saisi manuellement à l'inscription
 - [ ] Soumettre → `host_profiles.phone`, `host_profiles.last_name` sauvegardés en DB
 
 ### Étape 2 — Type d'ambassade
