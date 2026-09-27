@@ -304,6 +304,45 @@ de proximité. `lat_precise`/`lng_precise` viennent de l'adresse complète saisi
 `AddressInput` (Nominatim `mode=address`), **jamais publics**, utilisés uniquement par
 `/api/distance` pour le calcul de proximité.
 
+### Jitter décoratif carte publique — `lib/geo/jitter.ts`
+
+Ajouté 2026-09-27 (retour David, discussion `/office-hours`). Problème observé : le
+geocodage se fait au niveau **ville**, pas adresse — plusieurs ambassadeurs d'une même
+ville obtiennent des `lat`/`lng` strictement identiques (le seed en donne un exemple
+volontaire : 6 ambassadeurs Paris à `48.8698, 2.3315` pile). Résultat, ils s'empilaient
+au même pixel sur la carte publique, à n'importe quel niveau de zoom — un artefact de
+base de données visible en démo, pas juste un cas limite théorique.
+
+`GET /api/host-activations` applique désormais `jitterCoordinates(lat, lng, host_id)` à
+chaque pin avant de le renvoyer : décalage pseudo-aléatoire mais **déterministe** (haché
+sur `host_id`, jamais recalculé à la volée), rayon 250m par défaut, échantillonné en
+`r = R·√u` pour une répartition visuellement uniforme dans le disque plutôt que
+concentrée près du centre. Stable entre deux refresh de la carte (`MapPublique.tsx`
+poll toutes les 5s) — un jitter qui bougerait à chaque appel ferait "sauter" les pins,
+pire que le problème d'origine.
+
+**Décision explicitement écartée : dériver le jitter de `lat_precise`/`lng_precise`
+(façon Airbnb — flouter l'adresse réelle plutôt que la ville).** Ça résoudrait le même
+problème visuel de façon "plus vraie", mais un second avis obtenu pendant la session
+`/office-hours` a identifié une faille concrète pour cette app spécifiquement : publier
+un point public ancré (même flouté à 500m-1km) sur la vraie adresse transformerait
+`/api/distance` — déjà un oracle de triangulation contre les vraies coordonnées,
+mitigé par le rate-limit (8 req/min/IP) et l'arrondi au km — en oracle de **raffinement
+local** : au lieu de chercher à l'aveugle sur toute une ville, un attaquant reçoit
+gratuitement (sans consommer le rate-limit) une zone de recherche réduite à 500m-1km,
+ce qui réduit le nombre de requêtes nécessaires d'un ou deux ordres de grandeur et rend
+l'attaque moins détectable. Aggravé par le fait que le public de l'app inclut des hôtes
+en zone rurale/périurbaine (Réunion, Afrique francophone, petites villes) où un rayon de
+flou de 500m peut ne laisser que 5-20 bâtiments candidats — bien en-deçà de la densité
+qui protège ce type de technique dans une grande ville dense.
+
+Le jitter décoratif (`lib/geo/jitter.ts`) évite ce risque par construction : il ne
+dérive **jamais** de `lat_precise`/`lng_precise`, donc ne peut ancrer aucune attaque
+contre `/api/distance`. Contrepartie assumée : le pin jitteré ne correspond à rien de
+réel, c'est un habillage visuel pur — `quartier` (label texte) et "Trier par distance"
+(popup de cluster, calcul serveur) restent les seuls signaux de proximité réels sur la
+carte publique.
+
 ---
 
 ## Routes API — carte des domaines
@@ -634,7 +673,7 @@ Mis à jour manuellement à chaque PR significative.
 
 | Feature | Statut | Routes principales | Gap / Note |
 |---------|--------|-------------------|------------|
-| Carte publique (pins) | ✅ | `GET /api/host-activations` | Cluster auto par proximité en pixels à l'écran (`leaflet.markercluster`, recalculé à chaque zoom — remplace juillet 2026 l'ancien groupement par coordonnées exactes qui masquait silencieusement les pins proches mais non identiques). Champ `quartier` + message de présentation (`presentation_message`, 240 car. max) + photo de profil (avatar 28px, signed URL 24h) affichés dans les popups (cluster + pin individuel) si renseignés. Bouton "Trier par distance" dans les clusters (géolocalisation éphémère, voir section dédiée). |
+| Carte publique (pins) | ✅ | `GET /api/host-activations` | Cluster auto par proximité en pixels à l'écran (`leaflet.markercluster`, recalculé à chaque zoom — remplace juillet 2026 l'ancien groupement par coordonnées exactes qui masquait silencieusement les pins proches mais non identiques). Champ `quartier` + message de présentation (`presentation_message`, 240 car. max) + photo de profil (avatar 28px, signed URL 24h) affichés dans les popups (cluster + pin individuel) si renseignés. Bouton "Trier par distance" dans les clusters (géolocalisation éphémère, voir section dédiée). **Jitter décoratif** (`lib/geo/jitter.ts`, 2026-09-27) appliqué à chaque pin avant renvoi — sépare visuellement les ambassadeurs d'une même ville géocodés au même point exact ; ne dérive jamais de `lat_precise`/`lng_precise`, voir § Jitter décoratif carte publique. |
 | Politique de confidentialité (`/confidentialite`) | ⚠️ | `app/confidentialite/page.tsx` | Page statique 8 sections (responsable, données collectées, ce qu'on ne fait pas, bases légales, durées, droits, sous-traitants, mineurs). **3 placeholders `[À COMPLÉTER]` bloquent la publication publique** : entité juridique, adresse du siège, e-mail de contact RGPD — mentions obligatoires (art. 13 RGPD), volontairement laissées visibles plutôt que remplies d'une valeur plausible qui passerait la relecture. Voir § Transparence des données. |
 | Page de préparation visiteur (`/decouvrir`) | ✅ | `app/decouvrir/page.tsx` | Réassurance + 3 étapes + FAQ accessible (`FaqAccordion`) + témoignage vedette (fallback global si aucun pour le prochain live) + CTA retour carte. CTA discret "C'est votre première fois ?" sur `MapPublique` (coin bas-droit, masquable, mémorisé `localStorage`). |
 | Géolocalisation auto au premier chargement | ✅ | `MapPublique` → `map.locate()` | Zoom métropole si permission acceptée, vue monde sinon (silencieux). Sautée si une position de carte est déjà mémorisée (`localStorage['map-view-state']`) — voir ligne dédiée ci-dessous. |

@@ -137,9 +137,11 @@ node scripts/magic-link.js david.thery@demo.fr
 
 ### Cluster de pins co-localisés (état `live` recommandé)
 
-> Vérifie le regroupement des pins quand plusieurs ambassadeurs sont à la même coordonnée. Avec les seeds : 6 ambassadeurs à Paris (Marie + 5 cluster) au point `48.8698, 2.3315`.
+> Vérifie le regroupement des pins quand plusieurs ambassadeurs partagent la même coordonnée ville. Avec les seeds : 6 ambassadeurs à Paris (Marie + 5 cluster) géocodés au point `48.8698, 2.3315` — depuis le jitter décoratif (`lib/geo/jitter.ts`, 2026-09-27), `GET /api/host-activations` renvoie 6 points distincts décalés de ~250m max autour de ce point, pas 6 fois la même coordonnée.
 
-- [ ] En état `live`, zoomer sur Paris → un seul pin visible (cercle indigo) avec un badge `6` (ou le nombre actif selon l'état du live)
+- [ ] En état `live`, zoom niveau ville/pays sur Paris → toujours regroupés en un seul pin (cercle indigo) avec un badge `6` (ou le nombre actif selon l'état du live) — le jitter (~250m) reste sous le seuil de clustering en pixels à ce niveau de zoom, comportement inchangé
+- [ ] Zoomer fortement (niveau rue/quartier) → les 6 pins se séparent en marqueurs individuels (plus de badge `6`) — vérifie que le jitter a bien produit des coordonnées distinctes, pas juste un artefact visuel
+- [ ] Aucun des 6 pins jittérés ne retombe exactement sur les coordonnées d'origine (`48.8698, 2.3315`) — sinon le jitter n'a pas été appliqué
 - [ ] Le pin cluster est rond (pas teardrop) et plus large (36×36 px) que les pins individuels
 - [ ] Cliquer sur le cluster → popup s'ouvre avec un titre "N ambassades · Paris"
 - [ ] Le popup liste chaque ambassadeur : prénom, type (Domicile / Église), places (`accepted_count/capacity`), lien "Contacter →"

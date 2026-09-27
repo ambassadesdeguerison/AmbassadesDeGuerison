@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getPublicMapPhotoUrls } from '@/lib/storage/photo-url';
+import { jitterCoordinates } from '@/lib/geo/jitter';
 
 // Polling 30s depuis la carte publique
 export const revalidate = 0;
@@ -74,13 +75,20 @@ export async function GET() {
 
   const pins = rows.map((a) => {
     const hp = a.host_profiles as any;
+    // Jitter décoratif (retour David 2026-09-27, voir lib/geo/jitter.ts) :
+    // plusieurs ambassadeurs d'une même ville partagent aujourd'hui des lat/lng
+    // identiques (géocodage ville) et s'empilaient au même pixel sur la carte,
+    // quel que soit le zoom. Décalage déterministe dérivé de host_id — ne dérive
+    // JAMAIS de lat_precise/lng_precise (voir commentaire du fichier pour la
+    // raison : ça aurait amplifié /api/distance en oracle de triangulation).
+    const { lat, lng } = jitterCoordinates(hp.lat, hp.lng, hp.id);
     return {
       id: hp.id,
       first_name: hp.first_name,
       city: hp.city,
       country: hp.country,
-      lat: hp.lat,
-      lng: hp.lng,
+      lat,
+      lng,
       is_active: a.is_active,
       is_full: a.is_full,
       accepted_count: a.accepted_count,
