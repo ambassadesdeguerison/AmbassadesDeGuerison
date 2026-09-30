@@ -298,7 +298,10 @@ async function run() {
       church_attendance: 'hebdomadaire',
       denomination: 'évangélique',
       parcours_spirituel: "Convertie il y a 8 ans après une guérison physique pendant un séminaire. Je sers dans l'équipe d'accueil de mon église locale et accompagne des nouvelles converties depuis 3 ans.",
-      livres_lus: 'Guérir les malades, Défi Guérison',
+      livres_lus: null,
+      books_read: ['guerir-les-malades', 'defi-guerison'],
+      trainings_done: ['defi_guerison'],
+      has_seen_healings: true, has_leadership_role: true, leadership_role: "Responsable de l'équipe d'accueil",
       conferences_assistees: true,
       lat: 43.6047, lng: 1.4442, quartier: 'Toulouse Capitole', status: 'enrichment_pending',
     },
@@ -318,9 +321,63 @@ async function run() {
       healing_challenge_done: true,
       church_attendance: 'hebdomadaire',
       parcours_spirituel: "Pasteur associé de l'Église Évangélique Strasbourg-Centre depuis 5 ans. J'accompagne le ministère de prière pour les malades et anime les rencontres de jeunes adultes.",
-      livres_lus: 'Guérir les malades, Vraiment Libre, La puissance de la prière',
+      livres_lus: 'La puissance de la prière',
+      books_read: ['guerir-les-malades', 'vraiment-libre'],
+      trainings_done: ['defi_guerison', 'vraiment_libre'],
+      has_seen_healings: true, has_leadership_role: true, leadership_role: 'Pasteur associé',
       conferences_assistees: true,
       lat: 48.5734, lng: 7.7521, quartier: 'Strasbourg Centre', status: 'enrichment_pending',
+    },
+
+    // ── Questionnaire enrichi v2 : trois états pour tester le parcours ─────────────
+    // Ruth : pre_approved, brouillon à moitié rempli (teste « reprendre plus tard » :
+    // /dashboard/questionnaire doit retrouver ces réponses). Pas encore de photos.
+    {
+      first_name: 'Ruth', last_name: 'Kabongo', email: 'ruth.kabongo@demo.fr',
+      phone: '+33 6 34 56 78 90',
+      city: 'Lille', country: 'France',
+      host_type: 'individual', capacity: 8,
+      address_private: '18 rue Solférino, 59000 Lille',
+      consignes: 'Sonnette « Kabongo », 2e étage. Parking gratuit rue Nationale.',
+      viewing_setup: 'TV 43 pouces',
+      healing_challenge_done: true,
+      books_read: ['guerir-les-malades', 'defi-guerison', 'joie-surnaturelle'],
+      trainings_done: ['defi_guerison'],
+      has_seen_healings: true,
+      church_attendance: 'regular',
+      lat: 50.6292, lng: 3.0573, quartier: 'Lille Centre', status: 'pre_approved',
+    },
+    // Daniel : pre_approved, questionnaire encore vierge (état de départ d'un nouveau candidat).
+    {
+      first_name: 'Daniel', last_name: 'Mbemba', email: 'daniel.mbemba@demo.fr',
+      phone: '+33 6 45 67 89 01',
+      city: 'Rennes', country: 'France',
+      host_type: 'individual', capacity: 6,
+      address_private: '7 rue de la Monnaie, 35000 Rennes',
+      consignes: 'Interphone « Mbemba ». Pas d\'ascenseur, 1er étage.',
+      viewing_setup: 'Ordinateur portable branché sur TV',
+      lat: 48.1147, lng: -1.6794, quartier: 'Rennes Centre', status: 'pre_approved',
+    },
+    // Esther : enrichment_pending, réponses « non » partout (fonction de responsabilité,
+    // guérisons vues) — distingue « a répondu non » de « pas répondu » côté admin.
+    {
+      first_name: 'Esther', last_name: 'Rakoto', email: 'esther.rakoto@demo.fr',
+      phone: '+33 6 56 78 90 12',
+      city: 'Montpellier', country: 'France',
+      host_type: 'individual', capacity: 10,
+      address_private: '31 rue Foch, 34000 Montpellier',
+      consignes: 'Code 2580. Rez-de-chaussée, entrée par le jardin.',
+      viewing_setup: 'TV 50 pouces',
+      profile_photo_url: 'seed-placeholder/esther-rakoto/profile.jpg',
+      room_photo_urls: ['seed-placeholder/esther-rakoto/room-1.jpg'],
+      church_attendance: 'occasional', denomination: 'catholique',
+      parcours_spirituel: "Je découvre la prière pour les malades depuis un an, après avoir suivi le Défi Guérison avec mon mari. Nous aimerions ouvrir notre salon aux voisins.",
+      livres_lus: null,
+      books_read: ['apprendre-a-jeuner'],
+      trainings_done: [],
+      has_seen_healings: false, has_leadership_role: false,
+      conferences_assistees: false,
+      lat: 43.6108, lng: 3.8767, quartier: 'Montpellier Écusson', status: 'enrichment_pending',
     },
   ];
 
@@ -331,6 +388,7 @@ async function run() {
   // le badge de distance ne s'affiche jamais. Décalage déterministe (~150m)
   // pour rester réaliste sans dépendre d'un géocodage réel en seed.
   for (const h of hostsData) {
+    if (h.trainings_done === undefined && h.healing_challenge_done) h.trainings_done = ['defi_guerison'];
     if (h.lat != null && h.lng != null && h.lat_precise == null) {
       h.lat_precise = h.lat + 0.0013;
       h.lng_precise = h.lng - 0.0009;

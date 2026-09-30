@@ -97,8 +97,17 @@ CREATE TABLE host_profiles (
   church_attendance      TEXT,
   denomination           TEXT,
   parcours_spirituel     TEXT,
-  livres_lus             TEXT,
+  livres_lus             TEXT,        -- texte libre : « autres livres ou formations » (hors catalogue)
   conferences_assistees  BOOLEAN     DEFAULT FALSE,
+  -- Questionnaire v2 (2026-09-30) : listes à cocher (slugs de lib/questionnaire/catalog.ts),
+  -- signaux pastoraux (NULL = pas encore répondu) et vidéo de présentation facultative.
+  books_read             TEXT[]      NOT NULL DEFAULT '{}',
+  trainings_done         TEXT[]      NOT NULL DEFAULT '{}',
+  has_seen_healings      BOOLEAN,
+  has_leadership_role    BOOLEAN,
+  leadership_role        TEXT,
+  intro_video_path       TEXT,        -- chemin Storage (bucket privé ambassador-videos), jamais une URL
+  intro_video_mime       TEXT,
   admin_notes            TEXT,
   -- Nouveau cycle de statut (remplace pending_onboarding/active)
   status                 TEXT        NOT NULL DEFAULT 'pending_review'
@@ -615,6 +624,19 @@ VALUES (
   false,
   5242880,
   ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Vidéos de présentation (questionnaire v2) — bucket privé, admin seulement, via signed URL.
+-- Limite 50 Mo = plafond de fichier du plan gratuit Supabase. Stockage provisoire :
+-- prévu pour être remplacé par pCloud (structure année/mois lisible sans API).
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'ambassador-videos',
+  'ambassador-videos',
+  false,
+  52428800,
+  ARRAY['video/mp4', 'video/webm', 'video/quicktime']
 )
 ON CONFLICT (id) DO NOTHING;
 

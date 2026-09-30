@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createServiceClient } from '@/lib/supabase/server';
 import { FEATURES } from '@/config/features';
 import { sendEnrichissementRecu } from '@/lib/email/templates';
+import { sanitizeQuestionnaire } from '@/lib/questionnaire/sanitize';
 
 export async function PATCH(req: NextRequest) {
   const anonClient = createServerClient(
@@ -30,39 +31,34 @@ export async function PATCH(req: NextRequest) {
     );
   }
 
-  // Vérifier qu'une photo de profil a bien été uploadée avant soumission
-  if (!profile.profile_photo_url) {
-    return NextResponse.json(
-      { error: 'Une photo de profil est requise pour soumettre votre profil.' },
-      { status: 400 }
-    );
+  const body = await req.json().catch(() => ({}));
+  // `draft: true` = enregistrement automatique pendant la saisie : on sauvegarde les
+  // champs texte/cases sans exiger les photos et sans changer le statut, pour que
+  // le candidat puisse reprendre plus tard (même depuis un autre appareil).
+  const isDraft = body?.draft === true;
+  const updates: Record<string, unknown> = sanitizeQuestionnaire(body);
+
+  if (!isDraft) {
+    // Vérifier qu'une photo de profil a bien été uploadée avant soumission
+    if (!profile.profile_photo_url) {
+      return NextResponse.json(
+        { error: 'Une photo de profil est requise pour soumettre votre profil.' },
+        { status: 400 }
+      );
+    }
+
+    // Vérifier qu'au moins une photo du lieu a bien été uploadée avant soumission
+    if (!profile.room_photo_urls || profile.room_photo_urls.length === 0) {
+      return NextResponse.json(
+        { error: 'Au moins une photo du lieu d\'accueil est requise pour soumettre votre profil.' },
+        { status: 400 }
+      );
+    }
+
+    updates.status = 'enrichment_pending';
   }
 
-  // Vérifier qu'au moins une photo du lieu a bien été uploadée avant soumission
-  if (!profile.room_photo_urls || profile.room_photo_urls.length === 0) {
-    return NextResponse.json(
-      { error: 'Au moins une photo du lieu d\'accueil est requise pour soumettre votre profil.' },
-      { status: 400 }
-    );
-  }
-
-  const body = await req.json();
-  const {
-    healing_challenge_done,
-    church_attendance,
-    denomination,
-    parcours_spirituel,
-    livres_lus,
-    conferences_assistees,
-  } = body;
-
-  const updates: Record<string, unknown> = { status: 'enrichment_pending' };
-  if (typeof healing_challenge_done === 'boolean') updates.healing_challenge_done = healing_challenge_done;
-  if (church_attendance !== undefined) updates.church_attendance = church_attendance;
-  if (denomination !== undefined) updates.denomination = denomination;
-  if (parcours_spirituel !== undefined) updates.parcours_spirituel = parcours_spirituel;
-  if (livres_lus !== undefined) updates.livres_lus = livres_lus;
-  if (typeof conferences_assistees === 'boolean') updates.conferences_assistees = conferences_assistees;
+  if (Object.keys(updates).length === 0) return NextResponse.json({ success: true, draft: isDraft });
 
   const { error } = await supabase
     .from('host_profiles')
@@ -70,6 +66,8 @@ export async function PATCH(req: NextRequest) {
     .eq('id', profile.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (isDraft) return NextResponse.json({ success: true, draft: true });
 
   if (FEATURES.EMAIL_NOTIFICATIONS) {
     const adminEmail = process.env.RESEND_ADMIN_EMAIL;

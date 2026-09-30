@@ -1,18 +1,49 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/browser';
 import { ArrowLeft, Camera, CheckCircle2, Loader2 } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import Dropzone from '@/components/ui/Dropzone';
+import ChipGroup from '@/components/ui/ChipGroup';
+import YesNoField from '@/components/ui/YesNoField';
+import VideoAsk from '@/components/ui/VideoAsk';
+import { BOOKS, TRAININGS } from '@/lib/questionnaire/catalog';
+import { uploadIntroVideo } from '@/lib/video/upload-client';
 
 const CHURCH_ATTENDANCE_OPTIONS = [
   { value: 'regular', label: 'Régulièrement (chaque semaine ou presque)' },
   { value: 'occasional', label: 'Occasionnellement (quelques fois par an)' },
   { value: 'none', label: 'Je ne fréquente pas une église actuellement' },
 ];
+
+type FormState = {
+  trainings_done: string[];
+  books_read: string[];
+  livres_lus: string; // « autres » livres ou formations, hors catalogue
+  conferences_assistees: boolean;
+  church_attendance: string;
+  denomination: string;
+  parcours_spirituel: string;
+  has_seen_healings: boolean | null;
+  has_leadership_role: boolean | null;
+  leadership_role: string;
+};
+
+const EMPTY_FORM: FormState = {
+  trainings_done: [],
+  books_read: [],
+  livres_lus: '',
+  conferences_assistees: false,
+  church_attendance: '',
+  denomination: '',
+  parcours_spirituel: '',
+  has_seen_healings: null,
+  has_leadership_role: null,
+  leadership_role: '',
+};
 
 export default function QuestionnairePage() {
   const router = useRouter();
@@ -24,14 +55,15 @@ export default function QuestionnairePage() {
   const [error, setError] = useState('');
   const [accessDenied, setAccessDenied] = useState(false);
 
-  const [form, setForm] = useState({
-    healing_challenge_done: false,
-    conferences_assistees: false,
-    church_attendance: '',
-    denomination: '',
-    parcours_spirituel: '',
-    livres_lus: '',
-  });
+  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [hasVideo, setHasVideo] = useState(false);
+
+  // Enregistrement automatique : le candidat peut quitter et reprendre plus tard,
+  // même depuis un autre appareil (les réponses sont écrites en base, pas en local).
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
+  const dirtyRef = useRef(false);
+  const formRef = useRef(form);
 
   // Suivi des photos (chemin stocké en DB → signed URL pour aperçu)
   const [profilePhotoPath, setProfilePhotoPath] = useState<string | null>(null);
@@ -52,12 +84,33 @@ export default function QuestionnairePage() {
 
       const { data: profile } = await supabase
         .from('host_profiles')
-        .select('status, profile_photo_url, room_photo_urls')
+        .select(
+          'status, profile_photo_url, room_photo_urls, healing_challenge_done, conferences_assistees, church_attendance, denomination, parcours_spirituel, livres_lus, books_read, trainings_done, has_seen_healings, has_leadership_role, leadership_role, intro_video_path'
+        )
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (!profile) { router.replace('/inscription'); return; }
       if (profile.status !== 'pre_approved') { setAccessDenied(true); setLoading(false); return; }
+
+      // Reprend les réponses déjà enregistrées (brouillon ou soumission précédente)
+      const trainings: string[] = profile.trainings_done ?? [];
+      setForm({
+        trainings_done:
+          profile.healing_challenge_done && !trainings.includes('defi_guerison')
+            ? [...trainings, 'defi_guerison']
+            : trainings,
+        books_read: profile.books_read ?? [],
+        livres_lus: profile.livres_lus ?? '',
+        conferences_assistees: profile.conferences_assistees ?? false,
+        church_attendance: profile.church_attendance ?? '',
+        denomination: profile.denomination ?? '',
+        parcours_spirituel: profile.parcours_spirituel ?? '',
+        has_seen_healings: profile.has_seen_healings ?? null,
+        has_leadership_role: profile.has_leadership_role ?? null,
+        leadership_role: profile.leadership_role ?? '',
+      });
+      setHasVideo(Boolean(profile.intro_video_path));
 
       // Charge la photo de profil existante
       if (profile.profile_photo_url) {
@@ -89,8 +142,27 @@ export default function QuestionnairePage() {
     })();
   }, [router, supabase]);
 
-  function set(field: string, value: string | boolean) {
+  function set<K extends keyof FormState>(field: K, value: FormState[K]) {
+    dirtyRef.current = true;
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function saveDraft(values: FormState, keepalive: boolean) {
+    if (!dirtyRef.current) return;
+    setSaveState('saving');
+    try {
+      const res = await fetch('/api/ambassadeur/enrichissement', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...values, draft: true }),
+        keepalive,
+      });
+      if (!res.ok) throw new Error();
+      setSaveState('saved');
+      setSavedAt(new Date());
+    } catch {
+      setSaveState('error');
+    }
   }
 
   async function uploadProfilePhoto(file: File) {
@@ -180,6 +252,7 @@ export default function QuestionnairePage() {
     }
     setSubmitting(true);
     setError('');
+    dirtyRef.current = false; // la soumission finale remplace tout brouillon en attente
 
     const res = await fetch('/api/ambassadeur/enrichissement', {
       method: 'PATCH',
@@ -198,6 +271,28 @@ export default function QuestionnairePage() {
     setSubmitting(false);
   }
 
+  // Garde la dernière valeur du formulaire accessible aux écouteurs d'événements.
+  useEffect(() => {
+    formRef.current = form;
+  }, [form]);
+
+  // Sauvegarde différée 1,2 s après la dernière frappe. Tant que rien n'a été modifié
+  // (chargement initial), on n'écrit rien.
+  useEffect(() => {
+    if (!dirtyRef.current) return;
+    const timer = setTimeout(() => saveDraft(form, false), 1200);
+    return () => clearTimeout(timer);
+  }, [form]);
+
+  // Onglet masqué ou fermé pendant qu'une saisie attend d'être sauvegardée : on l'envoie tout de suite.
+  useEffect(() => {
+    function flush() {
+      if (document.visibilityState === 'hidden' && dirtyRef.current) saveDraft(formRef.current, true);
+    }
+    document.addEventListener('visibilitychange', flush);
+    return () => document.removeEventListener('visibilitychange', flush);
+  }, []);
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -213,7 +308,7 @@ export default function QuestionnairePage() {
         <main className="flex-1 bg-slate-50 px-4 py-16">
           <div className="max-w-sm mx-auto text-center">
             <p className="text-slate-500 text-sm mb-4">
-              Cette page s'ouvre après la vidéo et votre engagement.
+              Cette page s&apos;ouvre après la vidéo et votre engagement.
             </p>
             <Link href="/dashboard" className="text-indigo-600 text-sm hover:underline">
               Retour à mon espace
@@ -235,7 +330,7 @@ export default function QuestionnairePage() {
             </div>
             <h1 className="text-lg font-semibold text-slate-800 mb-2">Présentation envoyée !</h1>
             <p className="text-sm text-slate-500 mb-6">
-              Votre présentation a été transmise à l'équipe.
+              Votre présentation a été transmise à l&apos;équipe.
               Vous serez informé par e-mail dès que David aura répondu.
             </p>
             <Link href="/dashboard" className="text-indigo-600 text-sm hover:underline">
@@ -261,25 +356,25 @@ export default function QuestionnairePage() {
             Aidez David à mieux vous connaître avant sa réponse.
             Ces informations restent confidentielles.
           </p>
+          <p className="text-sm text-indigo-700 bg-indigo-50 rounded-xl px-4 py-3 mb-6">
+            Vos réponses sont enregistrées automatiquement. Vous pouvez quitter cette page et reprendre plus tard :
+            vous retrouverez tout en revenant sur votre espace.
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
 
-            {/* Défi guérison */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-5">
-              <p className="text-sm font-medium text-slate-700 mb-3">Formation</p>
+            {/* Formations et livres */}
+            <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-5">
+              <p className="text-sm font-medium text-slate-700">Formations et livres</p>
+
+              <ChipGroup
+                legend="Formations gratuites que vous avez suivies"
+                items={TRAININGS}
+                selected={form.trainings_done}
+                onChange={(v) => set('trainings_done', v)}
+              />
+
               <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.healing_challenge_done}
-                  onChange={(e) => set('healing_challenge_done', e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm text-slate-700">
-                  J'ai suivi le <strong>Défi Guérison</strong>
-                  <span className="block text-xs text-slate-400 mt-0.5">(formation gratuite en ligne sur la prière pour la guérison)</span>
-                </span>
-              </label>
-              <label className="flex items-start gap-3 cursor-pointer mt-4">
                 <input
                   type="checkbox"
                   checked={form.conferences_assistees}
@@ -287,9 +382,28 @@ export default function QuestionnairePage() {
                   className="mt-0.5 w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-sm text-slate-700">
-                  J'ai déjà assisté à une <strong>conférence de David Théry</strong>
+                  J&apos;ai déjà assisté à une <strong>conférence de David Théry</strong>
                 </span>
               </label>
+
+              <ChipGroup
+                legend="Livres de David que vous avez lus"
+                items={BOOKS}
+                selected={form.books_read}
+                onChange={(v) => set('books_read', v)}
+              />
+
+              <Field label="Autres livres ou formations qui vous ont marqué (facultatif)">
+                <textarea
+                  value={form.livres_lus}
+                  onChange={(e) => set('livres_lus', e.target.value)}
+                  rows={2}
+                  className={inputCls}
+                />
+              </Field>
+              <p className="text-xs text-slate-400 -mt-3">
+                Ces réponses aident David à situer votre parcours. Elles ne sont vues que par l&apos;équipe.
+              </p>
             </div>
 
             {/* Pratique ecclésiale */}
@@ -316,10 +430,26 @@ export default function QuestionnairePage() {
                   className={inputCls}
                 />
               </Field>
+              <YesNoField
+                label="Avez-vous une fonction de responsabilité dans un groupe ou une église ?"
+                value={form.has_leadership_role}
+                onChange={(v) => set('has_leadership_role', v)}
+              />
+              {form.has_leadership_role && (
+                <Field label="Laquelle ?">
+                  <input
+                    type="text"
+                    value={form.leadership_role}
+                    onChange={(e) => set('leadership_role', e.target.value)}
+                    placeholder="Ex : responsable d'un groupe de maison, diacre, pasteur…"
+                    className={inputCls}
+                  />
+                </Field>
+              )}
             </div>
 
-            {/* Parcours spirituel */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
+            {/* Parcours personnel + vidéo */}
+            <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-5">
               <p className="text-sm font-medium text-slate-700">Parcours personnel</p>
               <Field label="Votre parcours spirituel (en quelques lignes)">
                 <textarea
@@ -330,15 +460,17 @@ export default function QuestionnairePage() {
                   className={inputCls}
                 />
               </Field>
-              <Field label="Livres ou formations qui vous ont marqué">
-                <textarea
-                  value={form.livres_lus}
-                  onChange={(e) => set('livres_lus', e.target.value)}
-                  rows={2}
-                  placeholder="Ex : Guérir les malades, Défi Guérison, Vraiment Libre…"
-                  className={inputCls}
-                />
-              </Field>
+              <YesNoField
+                label="Avez-vous déjà vu des personnes guéries lors d'une prière ?"
+                value={form.has_seen_healings}
+                onChange={(v) => set('has_seen_healings', v)}
+              />
+              <p className="text-xs text-slate-400 -mt-3">
+                Ces réponses aident David à mieux vous connaître avant de valider votre ambassade. Elles ne sont
+                vues que par l&apos;équipe.
+              </p>
+
+              <VideoAsk embedded onSubmit={uploadIntroVideo} alreadyUploaded={hasVideo} />
             </div>
 
             {/* Photos de l'ambassade */}
@@ -351,6 +483,24 @@ export default function QuestionnairePage() {
               {photoError && (
                 <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{photoError}</p>
               )}
+
+              <div className="rounded-xl bg-slate-50 px-4 py-3">
+                <p className="text-xs font-medium text-slate-600 mb-1.5">Quelques conseils pour de bonnes photos</p>
+                <ul className="list-disc pl-4 space-y-1 text-xs text-slate-500">
+                  <li>Prenez-les avec votre téléphone : c&apos;est largement suffisant.</li>
+                  <li>
+                    Privilégiez la lumière du jour : placez-vous face à une fenêtre plutôt qu&apos;à contre-jour, ou
+                    allumez les lampes de la pièce.
+                  </li>
+                  <li>Profil : votre visage bien visible et de face, sur un fond simple.</li>
+                  <li>
+                    Lieu : tenez le téléphone à l&apos;horizontale et reculez pour montrer toute la pièce où vous
+                    regarderez le live (sièges, écran).
+                  </li>
+                  <li>Rangez un peu avant, sans rien changer à votre intérieur.</li>
+                  <li>Évitez de photographier d&apos;autres personnes, surtout des enfants, ou des documents personnels.</li>
+                </ul>
+              </div>
 
               {/* Photo de profil (obligatoire) */}
               <div className="space-y-1.5">
@@ -366,7 +516,7 @@ export default function QuestionnairePage() {
                     onFile={uploadProfilePhoto}
                     preview={profilePhotoUrl}
                     onRemove={profilePhotoUrl ? removeProfilePhoto : undefined}
-                    label="Photo de profil — privée, vue uniquement par David pour valider votre ambassade"
+                    label="Photo de profil — vue par David pour valider votre ambassade, puis affichée en petit sur la carte publique quand votre ambassade est active"
                   />
                 )}
               </div>
@@ -426,6 +576,15 @@ export default function QuestionnairePage() {
                 Une photo de profil et au moins une photo du lieu d&apos;accueil sont requises pour envoyer votre présentation.
               </p>
             )}
+
+            <p className="text-xs text-slate-400 text-center" role="status" aria-live="polite">
+              {saveState === 'saving' && 'Enregistrement…'}
+              {saveState === 'saved' &&
+                savedAt &&
+                `Brouillon enregistré à ${savedAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
+              {saveState === 'error' &&
+                'Enregistrement automatique impossible pour le moment. Vos réponses restent à l\u2019écran.'}
+            </p>
 
             <button
               type="submit"

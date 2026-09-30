@@ -1,5 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import { getAdminPhotoUrl } from '@/lib/storage/photo-url';
+import { getAdminVideoUrls } from '@/lib/storage/video-url';
+import { videoDownloadName } from '@/lib/video/filename';
 import AdminLayout from '@/components/AdminLayout';
 import AdminPage from '@/components/admin/AdminPage';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
@@ -16,27 +18,36 @@ async function getAmbassadeurs(page: number, q: string, status: string) {
   let query = supabase
     .from('host_profiles')
     .select(
-      'id, first_name, last_name, email, city, country, host_type, status, capacity, created_at, phone, healing_challenge_done, conferences_assistees, church_attendance, denomination, parcours_spirituel, livres_lus, profile_photo_url, room_photo_urls, is_women_only',
+      'id, first_name, last_name, email, city, country, host_type, status, capacity, created_at, phone, healing_challenge_done, conferences_assistees, church_attendance, denomination, parcours_spirituel, livres_lus, books_read, trainings_done, has_seen_healings, has_leadership_role, leadership_role, intro_video_path, intro_video_mime, profile_photo_url, room_photo_urls, is_women_only',
       { count: 'exact' }
     );
 
-  if (q) query = (query as any).or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,city.ilike.%${q}%`);
-  if (status !== 'all') query = (query as any).eq('status', status);
+  if (q) query = query.or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,city.ilike.%${q}%`);
+  if (status !== 'all') query = query.eq('status', status);
 
-  const { data, count } = await (query as any)
+  const { data, count } = await query
     .order('created_at', { ascending: false })
     .range(offset, offset + PAGE_SIZE - 1);
 
   // Convertir les chemins Storage privés en signed URLs (1h) pour affichage admin
   const ambassadeurs = await Promise.all(
-    (data ?? []).map(async (a: any) => {
+    (data ?? []).map(async (a) => {
       const profile_photo_signed_url = a.profile_photo_url
         ? await getAdminPhotoUrl(a.profile_photo_url)
         : null;
       const room_photo_signed_urls = a.room_photo_urls?.length
         ? (await Promise.all(a.room_photo_urls.map((p: string) => getAdminPhotoUrl(p)))).filter(Boolean)
         : [];
-      return { ...a, profile_photo_signed_url, room_photo_signed_urls };
+      const video = a.intro_video_path
+        ? await getAdminVideoUrls(a.intro_video_path, videoDownloadName(a.first_name, a.last_name, a.intro_video_mime))
+        : null;
+      return {
+        ...a,
+        profile_photo_signed_url,
+        room_photo_signed_urls,
+        intro_video_play_url: video?.playUrl ?? null,
+        intro_video_download_url: video?.downloadUrl ?? null,
+      };
     })
   );
 

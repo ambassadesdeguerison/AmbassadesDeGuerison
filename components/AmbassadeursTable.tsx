@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronDown, ChevronUp, User, Flower2, X, ChevronLeft, ChevronRight, AlertCircle, Info } from 'lucide-react';
 import { apiCall } from '@/lib/admin/api-call';
 import { questionnaireGaps, type QuestionnaireGaps } from '@/lib/admin/questionnaire-gaps';
+import { BOOKS, TRAININGS, labelsFor } from '@/lib/questionnaire/catalog';
 import ErrorMessage from '@/components/admin/ErrorMessage';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/admin/ConfirmDialog';
 
@@ -26,6 +27,15 @@ interface Ambassadeur {
   denomination: string | null;
   parcours_spirituel: string | null;
   livres_lus: string | null;
+  books_read: string[] | null;
+  trainings_done: string[] | null;
+  has_seen_healings: boolean | null;
+  has_leadership_role: boolean | null;
+  leadership_role: string | null;
+  intro_video_path: string | null;
+  intro_video_mime: string | null;
+  intro_video_play_url: string | null;
+  intro_video_download_url: string | null;
   profile_photo_signed_url: string | null;
   room_photo_signed_urls: string[];
   is_women_only: boolean | null;
@@ -89,6 +99,8 @@ const FILTERS = [
 
 // Signal pastoral : ce que Camille regarde en premier pour juger l'engagement spirituel du candidat.
 function PastoralSignals({ a }: { a: Ambassadeur }) {
+  const trainingLabels = labelsFor(TRAININGS, a.trainings_done);
+  const bookLabels = labelsFor(BOOKS, a.books_read);
   return (
     <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4">
       <p className="text-xs font-medium text-indigo-700 uppercase tracking-wide mb-3">Engagement spirituel</p>
@@ -120,10 +132,62 @@ function PastoralSignals({ a }: { a: Ambassadeur }) {
           <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.parcours_spirituel}</p>
         </div>
       )}
-      {a.livres_lus && (
+      <div className="flex gap-6 mb-3">
         <div>
-          <p className="text-slate-400 text-xs mb-0.5">Livres / formations</p>
-          <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.livres_lus}</p>
+          <p className="text-slate-400 text-xs mb-0.5">A déjà vu des guérisons</p>
+          <p className={`text-sm font-medium ${a.has_seen_healings ? 'text-emerald-700' : 'text-slate-500'}`}>
+            {a.has_seen_healings == null ? 'Non renseigné' : a.has_seen_healings ? 'Oui' : 'Non'}
+          </p>
+        </div>
+        <div>
+          <p className="text-slate-400 text-xs mb-0.5">Fonction de responsabilité</p>
+          <p className={`text-sm font-medium ${a.has_leadership_role ? 'text-emerald-700' : 'text-slate-500'}`}>
+            {a.has_leadership_role == null
+              ? 'Non renseigné'
+              : a.has_leadership_role
+                ? `Oui${a.leadership_role ? ` — ${a.leadership_role}` : ''}`
+                : 'Non'}
+          </p>
+        </div>
+      </div>
+      {(trainingLabels.length > 0 || bookLabels.length > 0 || a.livres_lus) && (
+        <div className="mb-3 space-y-2">
+          <p className="text-slate-400 text-xs">Formations et livres</p>
+          {trainingLabels.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {trainingLabels.map((l) => (
+                <span key={l} className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full">{l}</span>
+              ))}
+            </div>
+          )}
+          {bookLabels.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {bookLabels.map((l) => (
+                <span key={l} className="bg-white border border-indigo-100 text-slate-700 text-xs px-2 py-0.5 rounded-full">{l}</span>
+              ))}
+            </div>
+          )}
+          {a.livres_lus && <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.livres_lus}</p>}
+        </div>
+      )}
+      {a.intro_video_path && (
+        <div>
+          <p className="text-slate-400 text-xs mb-1">Vidéo de présentation</p>
+          {a.intro_video_play_url ? (
+            <>
+              <video controls preload="metadata" playsInline className="w-full max-w-md rounded-lg bg-slate-900">
+                <source src={a.intro_video_play_url} type={a.intro_video_mime ?? undefined} />
+              </video>
+              <p className="text-xs text-slate-500 mt-1.5">
+                La vidéo ne s&apos;affiche pas ?{' '}
+                <a href={a.intro_video_download_url ?? a.intro_video_play_url} download className="text-indigo-600 hover:underline">
+                  Télécharger le fichier
+                </a>
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-red-600">Vidéo introuvable dans le stockage.</p>
+          )}
         </div>
       )}
     </div>
@@ -131,7 +195,7 @@ function PastoralSignals({ a }: { a: Ambassadeur }) {
 }
 
 function QuestionnairPanel({ a }: { a: Ambassadeur }) {
-  const hasQuestionnaire = a.parcours_spirituel || a.church_attendance || a.denomination || a.livres_lus || a.healing_challenge_done || a.conferences_assistees || a.phone;
+  const hasQuestionnaire = a.parcours_spirituel || a.church_attendance || a.denomination || a.livres_lus || a.books_read?.length || a.trainings_done?.length || a.has_seen_healings != null || a.has_leadership_role != null || a.intro_video_path || a.healing_challenge_done || a.conferences_assistees || a.phone;
 
   if (!hasQuestionnaire) {
     return (
@@ -392,7 +456,7 @@ function AmbassadeurCard({
           )}
 
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Présentation de l'ambassadeur</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Présentation de l&apos;ambassadeur</p>
             <QuestionnairPanel a={a} />
           </div>
 
@@ -628,8 +692,8 @@ export default function AmbassadeursTable({
       <p className="flex items-start gap-2 text-xs text-slate-500 bg-slate-100/70 px-3 py-2 rounded-lg">
         <Info className="w-3.5 h-3.5 mt-px shrink-0 text-slate-400" />
         <span>
-          Le candidat avance seul jusqu'au statut <strong className="font-medium">« À valider »</strong> : il valide
-          son engagement, puis remplit sa présentation. C'est à ce moment seulement que vous examinez son dossier et
+          Le candidat avance seul jusqu&apos;au statut <strong className="font-medium">« À valider »</strong> : il valide
+          son engagement, puis remplit sa présentation. C&apos;est à ce moment seulement que vous examinez son dossier et
           décidez.
         </span>
       </p>
@@ -823,7 +887,7 @@ export default function AmbassadeursTable({
                                 );
                               })()}
                               <div>
-                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Présentation de l'ambassadeur</p>
+                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Présentation de l&apos;ambassadeur</p>
                                 <QuestionnairPanel a={a} />
                               </div>
                               {displayStatus === 'enrichment_pending' && (
