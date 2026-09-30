@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { sendSignalApproved } from '@/lib/email/templates';
 import { FEATURES } from '@/config/features';
+import { firstRow } from '@/lib/supabase/relation';
 
 export async function PATCH(
   request: NextRequest,
@@ -48,8 +49,8 @@ export async function PATCH(
   // Envoie l'email si approuvé et notifications activées
   let emailSent = false;
   if (action === 'approve' && FEATURES.EMAIL_NOTIFICATIONS) {
-    const hp = signal.host_profiles as any;
-    const ev = signal.events as any;
+    const hp = firstRow(signal.host_profiles);
+    const ev = firstRow(signal.events);
     if (hp?.email && ev?.live_link) {
       try {
         await sendSignalApproved(hp.email, hp.first_name, ev.live_link);

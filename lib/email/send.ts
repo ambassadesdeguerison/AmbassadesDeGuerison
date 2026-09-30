@@ -10,7 +10,7 @@ interface MailPayload {
   react: React.ReactElement;
 }
 
-function useMailhog() {
+function isMailhogEnabled() {
   return process.env.USE_MAILHOG === 'true';
 }
 
@@ -46,7 +46,7 @@ export function getMailer() {
   return {
     emails: {
       async send({ from, to, subject, react }: MailPayload) {
-        if (useMailhog()) {
+        if (isMailhogEnabled()) {
           const html = await render(react);
           try {
             return await getMailhogTransport().sendMail({ from, to, subject, html });

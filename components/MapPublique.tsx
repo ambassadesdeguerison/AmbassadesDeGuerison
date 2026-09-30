@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useSyncExternalStore } from 'react';
 import { Search } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import type * as Leaflet from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
 import { useBrowserTimezone } from '@/lib/hooks/use-browser-timezone';
+
+// Marqueur Leaflet portant l'hôte qu'il représente (relu par le handler 'clusterclick').
+type HostMarker = Leaflet.Marker & { hostData: HostPin };
 
 interface EventInfo {
   id: string;
@@ -148,7 +152,7 @@ function readSavedMapView(): { lat: number; lng: number; zoom: number } | null {
   }
 }
 
-function saveMapView(map: any) {
+function saveMapView(map: LeafletMap) {
   try {
     const center = map.getCenter();
     localStorage.setItem(
@@ -160,7 +164,7 @@ function saveMapView(map: any) {
   }
 }
 
-function makeClusterIcon(L: any, count: number) {
+function makeClusterIcon(L: typeof Leaflet, count: number) {
   return L.divIcon({
     html: `<div style="width:36px;height:36px;border-radius:50%;background:#4f46e5;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;line-height:1;">${count}</div>`,
     className: '',
@@ -170,7 +174,7 @@ function makeClusterIcon(L: any, count: number) {
   });
 }
 
-function makeIcon(L: any, hostType: string, isFull: boolean, isActive: boolean, isWomenOnly: boolean) {
+function makeIcon(L: typeof Leaflet, hostType: string, isFull: boolean, isActive: boolean, isWomenOnly: boolean) {
   const isChurch = hostType === 'eglise' || hostType === 'church';
   // Précédence de couleur :
   // 1. Inactif (grisé) — prime sur tout (full ignoré, women-only en pastel rose pâle)
@@ -374,8 +378,10 @@ function StatsLine({ totalAmbassadors, totalCountries }: { totalAmbassadors: num
 
 function EmptyMapContent({ nextEvent, lastEvent, liveInProgress, totalAmbassadors, totalCountries, soonThresholdDays, dbError }: Props) {
   const tzLabel = useBrowserTimezone();
+  // Instant du montage : la carte se repollera bien avant que « dans N jours » change.
+  const [mountedAt] = useState(() => Date.now());
   const daysUntilNext = nextEvent
-    ? Math.ceil((new Date(nextEvent.event_date).getTime() - Date.now()) / 86_400_000)
+    ? Math.ceil((new Date(nextEvent.event_date).getTime() - mountedAt) / 86_400_000)
     : null;
 
   // Panne de chargement (pas un vrai calme plat) — priorité sur tous les
@@ -481,7 +487,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
   const containerRef = useRef<HTMLDivElement>(null);
   // Groupe leaflet.markercluster — créé une fois dans initMap, alimenté à
   // chaque changement de `hosts` (voir l'effet updatePins plus bas).
-  const clusterGroupRef = useRef<any>(null);
+  const clusterGroupRef = useRef<Leaflet.MarkerClusterGroup | null>(null);
   const [hosts, setHosts] = useState<HostPin[]>([]);
   const hostsRef = useRef<HostPin[]>([]);
   // Lu (pas fermé sur une valeur figée) par le handler 'clusterclick', bindé
@@ -509,22 +515,26 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
   const [locating, setLocating] = useState(false);
   // CTA "première fois" (Phase 4) — masquable, mémorisé en localStorage
   // (même pattern que tz-city) pour ne pas fatiguer les visiteurs récurrents.
-  const [discoverDismissed, setDiscoverDismissed] = useState(false);
+  const discoverStored = useSyncExternalStore(
+    () => () => {},
+    () => {
+      try {
+        return localStorage.getItem('discover-cta-dismissed') === '1';
+      } catch {
+        return false; // Safari mode privé — pas de crash, bandeau visible par défaut
+      }
+    },
+    () => false
+  );
+  const [discoverClosedNow, setDiscoverClosedNow] = useState(false);
+  const discoverDismissed = discoverStored || discoverClosedNow;
   // Hint "Pas d'ambassade dans votre ville ?" — fermable, non mémorisé (dépend du
   // viewport courant, contrairement au CTA "première fois" qui est global).
   const [noAmbassadorHintDismissed, setNoAmbassadorHintDismissed] = useState(false);
   const wasHintVisibleRef = useRef(false);
 
-  useEffect(() => {
-    try {
-      if (localStorage.getItem('discover-cta-dismissed') === '1') setDiscoverDismissed(true);
-    } catch {
-      // Safari mode privé — pas de crash, bandeau visible par défaut
-    }
-  }, []);
-
   function dismissDiscoverCta() {
-    setDiscoverDismissed(true);
+    setDiscoverClosedNow(true);
     try { localStorage.setItem('discover-cta-dismissed', '1'); } catch { /* ignore */ }
   }
 
@@ -569,7 +579,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
       await import('leaflet.markercluster');
 
       if (cancelled || !containerRef.current) return;
-      if ((containerRef.current as any)._leaflet_id) return;
+      if ((containerRef.current as HTMLDivElement & { _leaflet_id?: number })._leaflet_id) return;
 
       const savedView = readSavedMapView();
       const map = L.map(containerRef.current, { zoomControl: false }).setView(
@@ -591,17 +601,18 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
       // propre popup de cluster (liste + tri par distance) au lieu du
       // comportement par défaut du plugin (zoom automatique / éclatement en
       // étoile), pour ne pas changer l'UX existante en plus de corriger le bug.
-      const clusterGroup = (L as any).markerClusterGroup({
+      const clusterGroup = L.markerClusterGroup({
         maxClusterRadius: 60,
         zoomToBoundsOnClick: false,
         spiderfyOnMaxZoom: false,
         showCoverageOnHover: false,
-        iconCreateFunction: (cluster: any) => makeClusterIcon(L, cluster.getChildCount()),
+        iconCreateFunction: (cluster: Leaflet.MarkerCluster) => makeClusterIcon(L, cluster.getChildCount()),
       });
-      clusterGroup.on('clusterclick', (e: any) => {
-        const clusterLayer = e.layer;
-        const group: HostPin[] = clusterLayer.getAllChildMarkers().map((m: any) => m.hostData);
-        const idSafe = clusterLayer._leaflet_id != null ? String(clusterLayer._leaflet_id) : Math.random().toString(36).slice(2);
+      clusterGroup.on('clusterclick', (e: Leaflet.LeafletEvent) => {
+        const clusterLayer = (e as Leaflet.LeafletEvent & { layer: Leaflet.MarkerCluster }).layer;
+        const group: HostPin[] = clusterLayer.getAllChildMarkers().map((m: Leaflet.Marker) => (m as HostMarker).hostData);
+        const leafletId = (clusterLayer as unknown as { _leaflet_id?: number })._leaflet_id;
+        const idSafe = leafletId != null ? String(leafletId) : Math.random().toString(36).slice(2);
         const { html, rowsContainerId, sortButtonId, sortHintId, activeGroup } = renderClusterPopup(
           group,
           liveInProgressRef.current,
@@ -637,7 +648,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
         map.locate({ enableHighAccuracy: false });
       };
       map.on('locationerror', () => setLocating(false));
-      map.on('locationfound', (e: any) => {
+      map.on('locationfound', (e: Leaflet.LocationEvent) => {
         // flyTo anime le pan + zoom au lieu du saut sec de setView.
         map.flyTo(e.latlng, nextLocateZoom, { duration: 1.4 });
         nextLocateZoom = 9; // reset pour le prochain auto-trigger éventuel
@@ -712,7 +723,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
           });
           // Porté par le marqueur pour que le handler 'clusterclick' (bindé une
           // fois dans initMap) puisse reconstruire la liste des hôtes du cluster.
-          (marker as any).hostData = host;
+          (marker as HostMarker).hostData = host;
           marker.bindPopup(renderSinglePopup(host, effectiveIsFull, liveInProgress), { maxWidth: 280 });
           return marker;
         });

@@ -16,12 +16,14 @@ type State = 'loading' | 'invalid' | 'already_active' | 'ready' | 'confirmed';
 
 export default function ActivationPage() {
   const { token } = useParams<{ token: string }>();
-  const [state, setState] = useState<State>('loading');
+  const [rawState, setState] = useState<State>('loading');
   const [ctx, setCtx] = useState<CampaignContext | null>(null);
   const [activating, setActivating] = useState(false);
+  // Sans token, le lien est invalide d'emblée : dérivé au rendu plutôt que posé par un effet.
+  const state: State = token ? rawState : 'invalid';
 
   useEffect(() => {
-    if (!token) { setState('invalid'); return; }
+    if (!token) return;
 
     fetch(`/api/campaign-activations/context?token=${token}`)
       .then((r) => {
@@ -71,7 +73,7 @@ export default function ActivationPage() {
             <div className="text-center">
               <h1 className="text-lg font-semibold text-slate-800 mb-2">Ce lien ne fonctionne plus</h1>
               <p className="text-sm text-slate-500 mb-6">
-                Ce lien n'est plus valable. Rendez-vous dans votre espace ambassadeur pour confirmer votre présence.
+                Ce lien n&apos;est plus valable. Rendez-vous dans votre espace ambassadeur pour confirmer votre présence.
               </p>
               <Link href="/dashboard" className="text-indigo-600 text-sm hover:underline">
                 Accéder à mon espace

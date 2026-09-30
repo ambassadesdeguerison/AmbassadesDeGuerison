@@ -44,7 +44,11 @@ export default function MonEspacePage() {
     setLoading(false);
   }, [router]);
 
-  useEffect(() => { load(); }, [load]);
+  // Différé d'un tick : `load` met à jour l'état, ce qu'un effet ne doit pas faire de façon synchrone.
+  useEffect(() => {
+    const timer = setTimeout(load, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];

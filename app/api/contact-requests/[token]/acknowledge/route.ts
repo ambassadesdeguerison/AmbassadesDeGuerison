@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
+import { firstRow } from '@/lib/supabase/relation';
 
 const DELAY_MS = 24 * 60 * 60 * 1000; // 24h
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours
@@ -41,8 +42,8 @@ export async function GET(
     return NextResponse.json({ error: 'Cette demande a été refusée.' }, { status: 403 });
   }
 
-  const ha = data.host_activations as any;
-  const hp = ha?.host_profiles;
+  const ha = firstRow(data.host_activations);
+  const hp = firstRow(ha?.host_profiles);
   const secondsRemaining = Math.max(
     0,
     Math.ceil((new Date(data.created_at).getTime() + DELAY_MS - Date.now()) / 1000)
@@ -86,8 +87,8 @@ export async function POST(
     .update({ onboarding_completed: true })
     .eq('action_token', token);
 
-  const ha = data.host_activations as any;
-  const hp = ha?.host_profiles;
+  const ha = firstRow(data.host_activations);
+  const hp = firstRow(ha?.host_profiles);
 
   return NextResponse.json({
     address: hp?.address_private ?? null,

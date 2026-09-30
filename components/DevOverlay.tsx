@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 
 type DevState = 'live' | 'live-zero' | 'soon' | 'soon-confirmed' | 'upcoming' | 'upcoming-confirmed' | 'past' | 'closed' | 'blank';
@@ -8,6 +8,15 @@ type DevState = 'live' | 'live-zero' | 'soon' | 'soon-confirmed' | 'upcoming' | 
 // En prod, le DevOverlay est protégé par un secret (vérifié côté server).
 // Le secret est saisi une fois par l'utilisateur et conservé en localStorage.
 const SECRET_STORAGE_KEY = 'dev-overlay-secret';
+
+const subscribeNever = () => () => {};
+function readStoredSecret(): string {
+  try {
+    return window.localStorage.getItem(SECRET_STORAGE_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
 const SECRET_REQUIRED = process.env.NEXT_PUBLIC_DEV_OVERLAY === 'true';
 
 const QUICK_EMAILS = [
@@ -44,14 +53,12 @@ export default function DevOverlay() {
   const [feedbackError, setFeedbackError] = useState('');
 
   // Secret saisi par l'utilisateur en prod (en dev local, non requis)
-  const [secret, setSecret] = useState<string>('');
+  // Lu depuis localStorage sans passer par un effet ; `secretOverride` porte les changements
+  // faits pendant la session (saisie, effacement après un 403).
+  const storedSecret = useSyncExternalStore(subscribeNever, readStoredSecret, () => '');
+  const [secretOverride, setSecret] = useState<string | null>(null);
+  const secret = secretOverride ?? storedSecret;
   const [secretInput, setSecretInput] = useState('');
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem(SECRET_STORAGE_KEY);
-    if (stored) setSecret(stored);
-  }, []);
 
   const saveSecret = useCallback(() => {
     const trimmed = secretInput.trim();

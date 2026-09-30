@@ -10,6 +10,15 @@ function extractQuartier(addr: Record<string, string | undefined>): string | und
   return addr.city_district ?? addr.suburb ?? addr.neighbourhood ?? addr.quarter;
 }
 
+// Champs de la réponse Nominatim (format=json&addressdetails=1) que cette route lit.
+interface NominatimResult {
+  lat?: string;
+  lon?: string;
+  display_name: string;
+  addresstype?: string;
+  address?: Record<string, string | undefined>;
+}
+
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim();
   const mode = req.nextUrl.searchParams.get('mode'); // 'address' — Phase 2 (adresse précise ambassadeur)
@@ -37,7 +46,7 @@ export async function GET(req: NextRequest) {
 
   if (!res?.ok) return NextResponse.json([]);
 
-  const raw: any[] = await res.json();
+  const raw: NominatimResult[] = await res.json();
 
   if (mode === 'address') {
     const results = raw
@@ -52,8 +61,8 @@ export async function GET(req: NextRequest) {
           city,
           country,
           quartier: extractQuartier(addr) ?? null,
-          lat_precise: parseFloat(r.lat),
-          lng_precise: parseFloat(r.lon),
+          lat_precise: parseFloat(r.lat!),
+          lng_precise: parseFloat(r.lon!),
         };
       });
     return NextResponse.json(results);
@@ -73,8 +82,8 @@ export async function GET(req: NextRequest) {
   // afin qu'une même recherche renvoie toujours le même point.
   const ADDRESSTYPE_PRIORITY = ['city', 'town', 'village', 'hamlet'];
   const sorted = [...raw].sort((a, b) => {
-    const rankOf = (r: any) => {
-      const idx = ADDRESSTYPE_PRIORITY.indexOf(r.addresstype);
+    const rankOf = (r: NominatimResult) => {
+      const idx = ADDRESSTYPE_PRIORITY.indexOf(r.addresstype ?? '');
       return idx === -1 ? ADDRESSTYPE_PRIORITY.length : idx;
     };
     return rankOf(a) - rankOf(b);
@@ -91,8 +100,8 @@ export async function GET(req: NextRequest) {
         label: [city, country].filter(Boolean).join(', '),
         city,
         country,
-        lat: parseFloat(r.lat),
-        lng: parseFloat(r.lon),
+        lat: parseFloat(r.lat!),
+        lng: parseFloat(r.lon!),
       };
     })
     .filter((r) => {

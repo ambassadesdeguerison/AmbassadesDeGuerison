@@ -66,9 +66,13 @@ export default function AdminFeed({ eventId }: { eventId: string | null }) {
 
   // Polling 5s
   useEffect(() => {
-    fetchSignals();
+    // Premier appel différé d'un tick : `fetchSignals` met à jour l'état, ce qu'un effet ne doit pas faire de façon synchrone.
+    const first = setTimeout(fetchSignals, 0);
     const interval = setInterval(fetchSignals, 5_000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(first);
+      clearInterval(interval);
+    };
   }, [fetchSignals]);
 
   async function handleAction(id: string, action: 'approve' | 'decline') {
@@ -99,7 +103,7 @@ export default function AdminFeed({ eventId }: { eventId: string | null }) {
     <div className="max-w-2xl mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold text-slate-700">
-          En attente d'invitation ({signals.length})
+          En attente d&apos;invitation ({signals.length})
         </h2>
         {refreshing && (
           <svg className="animate-spin w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none">
@@ -118,7 +122,7 @@ export default function AdminFeed({ eventId }: { eventId: string | null }) {
           {emailToast.sent ? (
             <><Check className="w-4 h-4 flex-shrink-0" /> Lien YouTube envoyé par e-mail</>
           ) : (
-            <><X className="w-4 h-4 flex-shrink-0" /> Approuvé, mais l'e-mail n'est pas parti</>
+            <><X className="w-4 h-4 flex-shrink-0" /> Approuvé, mais l&apos;e-mail n&apos;est pas parti</>
           )}
         </div>
       )}

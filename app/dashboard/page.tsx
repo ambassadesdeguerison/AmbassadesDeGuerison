@@ -205,7 +205,11 @@ export default function DashboardPage() {
     setLoading(false);
   }, [router, supabase]);
 
-  useEffect(() => { load(); }, [load]);
+  // Différé d'un tick : `load` met à jour l'état, ce qu'un effet ne doit pas faire de façon synchrone.
+  useEffect(() => {
+    const timer = setTimeout(load, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   // Poll toutes les 5s pour détecter l'approbation de David quand un signal est en attente
   useEffect(() => {
@@ -964,7 +968,7 @@ export default function DashboardPage() {
                           onFile={(f) => uploadPhoto(f, 'profile')}
                           preview={profile.profile_photo_url ? (photoSignedUrls[profile.profile_photo_url] ?? null) : null}
                           onRemove={profile.profile_photo_url ? () => setProfile((p) => p ? { ...p, profile_photo_url: null } : p) : undefined}
-                          label="Photo de profil — privée, vue uniquement par David pour valider votre ambassade"
+                          label="Photo de profil — vue par David pour valider votre ambassade, puis affichée en petit sur la carte publique quand votre ambassade est active"
                         />
                       )}
                     </div>

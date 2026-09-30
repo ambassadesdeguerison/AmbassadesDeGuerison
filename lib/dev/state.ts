@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { firstRow } from '@/lib/supabase/relation';
 
 export type DevState = 'live' | 'live-zero' | 'soon' | 'soon-confirmed' | 'upcoming' | 'upcoming-confirmed' | 'past' | 'closed' | 'blank';
 
@@ -17,9 +18,10 @@ async function activateConfirmedSubset(
 
   if (!activations?.length) return;
 
-  const sorted = [...activations].sort((a: any, b: any) => {
-    const ahp = Array.isArray(a.host_profiles) ? a.host_profiles[0] : a.host_profiles;
-    const bhp = Array.isArray(b.host_profiles) ? b.host_profiles[0] : b.host_profiles;
+  const sorted = [...activations].sort((a, b) => {
+    const ahp = firstRow(a.host_profiles);
+    const bhp = firstRow(b.host_profiles);
+    if (!ahp || !bhp) return 0;
     if (ahp.is_women_only !== bhp.is_women_only) return ahp.is_women_only ? -1 : 1;
     return new Date(ahp.created_at).getTime() - new Date(bhp.created_at).getTime();
   });
@@ -30,7 +32,7 @@ async function activateConfirmedSubset(
   await supabase
     .from('host_activations')
     .update({ is_active: true })
-    .in('id', toActivate.map((a: any) => a.id));
+    .in('id', toActivate.map((a) => a.id));
 }
 
 /**

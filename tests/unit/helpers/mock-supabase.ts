@@ -11,15 +11,15 @@ import { vi } from 'vitest';
 //   vi.mocked(createServiceClient).mockReturnValue(sb.client);
 
 type MockResult = {
-  data: any;
+  data: unknown;
   count?: number | null;
-  error: any;
+  error: unknown;
 };
 
 class TableBuilder {
   private result: MockResult = { data: [], count: null, error: null };
 
-  selectReturns(data: any) {
+  selectReturns(data: unknown) {
     this.result.data = data;
     return this;
   }
@@ -29,7 +29,7 @@ class TableBuilder {
     return this;
   }
 
-  errorReturns(err: any) {
+  errorReturns(err: unknown) {
     this.result.error = err;
     return this;
   }
@@ -49,11 +49,13 @@ export function createMockSupabase() {
 
   // PostgREST chainable query builder mock — toutes les méthodes retournent `this`
   // sauf le terminus (await ou .single() / .maybeSingle()).
-  const makeQueryBuilder = (tableName: string): any => {
+  // Objet chaînable : chaque méthode renvoie l'objet lui-même (`then` fait office de terminus).
+  type Chainable = { [method: string]: unknown };
+  const makeQueryBuilder = (tableName: string): Chainable => {
     const builder = tables.get(tableName);
     const result = builder ? builder.build() : { data: [], count: null, error: null };
 
-    const chainable: any = {
+    const chainable: Chainable = {
       select: vi.fn(() => chainable),
       eq: vi.fn(() => chainable),
       neq: vi.fn(() => chainable),
@@ -67,7 +69,7 @@ export function createMockSupabase() {
       limit: vi.fn(() => chainable),
       single: vi.fn(() => Promise.resolve({ ...result, data: Array.isArray(result.data) ? result.data[0] ?? null : result.data })),
       maybeSingle: vi.fn(() => Promise.resolve({ ...result, data: Array.isArray(result.data) ? result.data[0] ?? null : result.data })),
-      then: (resolve: any) => Promise.resolve(result).then(resolve),
+      then: (resolve: (value: MockResult) => unknown) => Promise.resolve(result).then(resolve),
     };
     return chainable;
   };

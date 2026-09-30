@@ -10,18 +10,20 @@ import { createClient } from '@/lib/supabase/browser';
 function ConfirmContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [verifyStatus, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [verifyError, setErrorMsg] = useState('');
+  // Lien sans token ou sans type : erreur d'emblée, dérivée au rendu plutôt que posée par un effet.
+  const incomplete = !searchParams.get('token_hash') || !searchParams.get('type');
+  const status = incomplete ? 'error' : verifyStatus;
+  const errorMsg = incomplete
+    ? 'Ce lien est incomplet. Copiez-le en entier depuis votre e-mail.'
+    : verifyError;
 
   useEffect(() => {
     const token_hash = searchParams.get('token_hash');
     const type = searchParams.get('type') as 'magiclink' | 'email' | null;
 
-    if (!token_hash || !type) {
-      setStatus('error');
-      setErrorMsg('Ce lien est incomplet. Copiez-le en entier depuis votre e-mail.');
-      return;
-    }
+    if (!token_hash || !type) return;
 
     const supabase = createClient();
     supabase.auth.verifyOtp({ token_hash, type }).then(({ data, error }) => {
