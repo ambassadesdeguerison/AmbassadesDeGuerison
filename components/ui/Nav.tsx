@@ -31,7 +31,7 @@ export default function Nav({ variant = 'default' }: NavProps) {
             }`}
           >
             <UserPlus className="w-4 h-4" />
-            <span className="hidden sm:inline">Devenir ambassadeur</span>
+            <span className="sr-only sm:not-sr-only">Devenir ambassadeur</span>
           </Link>
           <Link
             href="/dashboard"
@@ -42,7 +42,7 @@ export default function Nav({ variant = 'default' }: NavProps) {
             }`}
           >
             <LayoutDashboard className="w-4 h-4" />
-            <span className="hidden sm:inline">Mon espace</span>
+            <span className="sr-only sm:not-sr-only">Mon espace</span>
           </Link>
         </nav>
       )}
