@@ -11,7 +11,7 @@ type Step = {
 const STEPS: Step[] = [
   {
     label: 'Inscription',
-    description: 'Regardez la vidéo et acceptez les conditions',
+    description: 'Regardez la vidéo et validez votre engagement',
   },
   {
     label: 'Engagement pris',

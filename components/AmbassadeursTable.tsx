@@ -628,8 +628,8 @@ export default function AmbassadeursTable({
       <p className="flex items-start gap-2 text-xs text-slate-500 bg-slate-100/70 px-3 py-2 rounded-lg">
         <Info className="w-3.5 h-3.5 mt-px shrink-0 text-slate-400" />
         <span>
-          Le candidat avance seul jusqu'au statut <strong className="font-medium">« À valider »</strong> : il accepte
-          les conditions, puis remplit son questionnaire. C'est à ce moment seulement que vous examinez son dossier et
+          Le candidat avance seul jusqu'au statut <strong className="font-medium">« À valider »</strong> : il valide
+          son engagement, puis remplit sa présentation. C'est à ce moment seulement que vous examinez son dossier et
           décidez.
         </span>
       </p>

@@ -138,7 +138,7 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
           jamais dire qu'aucun envoi n'était déclenché. */}
       <AdminNotice tone="paused" title="Les envois automatiques sont désactivés">
         Un envoi planifié ici est enregistré avec sa liste de destinataires, mais <strong>aucun e-mail ne partira
-        tant que les envois automatiques ne sont pas activés</strong>. Elle restera au statut « En attente ».
+        tant que les envois automatiques ne sont pas activés</strong>. Il restera au statut « En attente ».
       </AdminNotice>
 
       {campaigns.length > 0 && (

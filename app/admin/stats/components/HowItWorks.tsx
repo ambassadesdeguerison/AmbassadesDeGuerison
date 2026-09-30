@@ -15,7 +15,7 @@ const STORAGE_KEY = 'admin-how-it-works-dismissed';
 const STEPS: { title: string; body: string }[] = [
   {
     title: 'Le candidat avance seul',
-    body: "Il s'inscrit, regarde la vidéo, accepte les conditions, puis se présente avec ses photos. Vous n'avez rien à faire pendant cette phase.",
+    body: "Il s'inscrit, regarde la vidéo, valide son engagement, puis se présente avec ses photos. Vous n'avez rien à faire pendant cette phase.",
   },
   {
     title: 'Vous validez le dossier',

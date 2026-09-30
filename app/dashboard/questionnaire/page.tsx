@@ -423,7 +423,7 @@ export default function QuestionnairePage() {
 
             {(!profilePhotoPath || roomPhotoPaths.length === 0) && (
               <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
-                Une photo de profil et au moins une photo du lieu d&apos;accueil sont requises pour soumettre votre profil.
+                Une photo de profil et au moins une photo du lieu d&apos;accueil sont requises pour envoyer votre présentation.
               </p>
             )}
 
@@ -433,7 +433,7 @@ export default function QuestionnairePage() {
               className="w-full bg-indigo-600 text-white py-3 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Envoyer mon profil pour validation
+              Envoyer ma présentation à David
             </button>
           </form>
         </div>

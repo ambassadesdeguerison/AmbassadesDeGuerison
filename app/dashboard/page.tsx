@@ -417,7 +417,7 @@ export default function DashboardPage() {
 
   const statusLabels: Record<string, string> = {
     pending_review:     'Candidature en cours',
-    pre_approved:       'Conditions acceptées',
+    pre_approved:       'Engagement pris',
     enrichment_pending: 'En attente de validation',
     validated:          'Actif',
     suspended:          'Suspendu',
@@ -564,7 +564,7 @@ export default function DashboardPage() {
                   href="/dashboard/questionnaire"
                   className="inline-flex items-center gap-2 bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors"
                 >
-                  Compléter mon profil →
+                  Me présenter →
                 </Link>
               </div>
             )}
