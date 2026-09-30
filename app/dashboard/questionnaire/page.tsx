@@ -357,8 +357,8 @@ export default function QuestionnairePage() {
             Ces informations restent confidentielles.
           </p>
           <p className="text-sm text-indigo-700 bg-indigo-50 rounded-xl px-4 py-3 mb-6">
-            Vos réponses sont enregistrées automatiquement. Vous pouvez quitter cette page et reprendre plus tard :
-            vous retrouverez tout en revenant sur votre espace.
+            Seules les deux photos sont obligatoires, tout le reste est facultatif. Vos réponses s&apos;enregistrent
+            automatiquement : vous pouvez reprendre plus tard.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -393,7 +393,7 @@ export default function QuestionnairePage() {
                 onChange={(v) => set('books_read', v)}
               />
 
-              <Field label="Autres livres ou formations qui vous ont marqué (facultatif)">
+              <Field label="Autres livres ou formations qui vous ont marqué">
                 <textarea
                   value={form.livres_lus}
                   onChange={(e) => set('livres_lus', e.target.value)}
@@ -505,7 +505,7 @@ export default function QuestionnairePage() {
               {/* Photo de profil (obligatoire) */}
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">
-                  Photo de profil <span className="text-red-500 normal-case font-normal">— requise</span>
+                  Photo de profil <RequiredBadge />
                 </p>
                 {profileUploading ? (
                   <div className="flex items-center justify-center h-32 rounded-xl border border-slate-200 bg-slate-50">
@@ -524,7 +524,7 @@ export default function QuestionnairePage() {
               {/* Photos du lieu (requises, max 5) */}
               <div className="space-y-2">
                 <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">
-                  Photos du lieu d&apos;accueil <span className="text-red-500 normal-case font-normal">— requises</span>
+                  Photos du lieu d&apos;accueil <RequiredBadge />
                   <span className="font-normal text-slate-400 normal-case ml-1">
                     (max 5, {roomPhotoPaths.length}/5)
                   </span>
@@ -572,8 +572,15 @@ export default function QuestionnairePage() {
             )}
 
             {(!profilePhotoPath || roomPhotoPaths.length === 0) && (
-              <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
-                Une photo de profil et au moins une photo du lieu d&apos;accueil sont requises pour envoyer votre présentation.
+              <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg" role="status">
+                Pour envoyer, il manque :{' '}
+                {[
+                  !profilePhotoPath && 'la photo de profil',
+                  roomPhotoPaths.length === 0 && 'une photo du lieu d\u2019accueil',
+                ]
+                  .filter(Boolean)
+                  .join(' et ')}
+                .
               </p>
             )}
 
@@ -598,6 +605,15 @@ export default function QuestionnairePage() {
         </div>
       </main>
     </>
+  );
+}
+
+// Pastille « Obligatoire » : le rouge est réservé aux actions destructives (DESIGN.md).
+function RequiredBadge() {
+  return (
+    <span className="ml-1.5 normal-case tracking-normal bg-amber-50 text-amber-700 text-[11px] font-medium px-1.5 py-0.5 rounded-full">
+      Obligatoire
+    </span>
   );
 }
 
