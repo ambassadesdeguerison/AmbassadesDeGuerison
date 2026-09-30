@@ -54,7 +54,7 @@ export default function OnboardingConfigForm({ initialConfig }: Props) {
   return (
     <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
       <div className="mb-5">
-        <h2 className="font-medium text-slate-800 text-sm">Onboarding ambassadeurs</h2>
+        <h2 className="font-medium text-slate-800 text-sm">Accueil des nouveaux ambassadeurs</h2>
         {/* Audit 9.6 : rien n'indiquait où ces réglages apparaissent, ni que la
             vidéo conditionne la progression du candidat. */}
         <p className="text-xs text-slate-400 mt-1 leading-relaxed">
@@ -91,7 +91,7 @@ export default function OnboardingConfigForm({ initialConfig }: Props) {
               <div className="rounded-lg overflow-hidden border border-slate-200 aspect-video max-w-sm">
                 <iframe
                   src={`https://www.youtube.com/embed/${previewId}`}
-                  title="Aperçu de la vidéo d'onboarding"
+                  title="Aperçu de la vidéo de bienvenue"
                   allowFullScreen
                   className="w-full h-full"
                 />

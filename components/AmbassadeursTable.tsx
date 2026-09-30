@@ -47,7 +47,7 @@ interface Props {
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   validated:          { label: 'Validé',                 className: 'bg-emerald-50 text-emerald-700' },
   pending_review:     { label: 'En attente du candidat', className: 'bg-amber-50 text-amber-700'    },
-  pre_approved:       { label: 'Questionnaire en cours', className: 'bg-blue-50 text-blue-700'      },
+  pre_approved:       { label: 'Présentation en cours', className: 'bg-blue-50 text-blue-700'      },
   enrichment_pending: { label: 'À valider',              className: 'bg-purple-50 text-purple-700'  },
   suspended:          { label: 'Suspendu',               className: 'bg-red-50 text-red-700'        },
   rejected:           { label: 'Refusé',                 className: 'bg-slate-100 text-slate-500'   },
@@ -81,7 +81,7 @@ const FILTERS = [
   { value: 'all',                label: 'Tous'                  },
   { value: 'enrichment_pending', label: 'À valider'             },
   { value: 'pending_review',     label: 'En attente du candidat' },
-  { value: 'pre_approved',       label: 'Questionnaire en cours' },
+  { value: 'pre_approved',       label: 'Présentation en cours' },
   { value: 'validated',          label: 'Validés'               },
   { value: 'suspended',          label: 'Suspendus'             },
   { value: 'rejected',           label: 'Refusés'               },
@@ -135,7 +135,7 @@ function QuestionnairPanel({ a }: { a: Ambassadeur }) {
 
   if (!hasQuestionnaire) {
     return (
-      <p className="text-xs text-slate-400 italic">Questionnaire non encore rempli.</p>
+      <p className="text-xs text-slate-400 italic">Présentation pas encore remplie.</p>
     );
   }
 
@@ -392,7 +392,7 @@ function AmbassadeurCard({
           )}
 
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Questionnaire ambassadeur</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Présentation de l'ambassadeur</p>
             <QuestionnairPanel a={a} />
           </div>
 
@@ -409,7 +409,7 @@ function AmbassadeurCard({
                   disabled={isLoading || gaps.blocking.length > 0}
                   className="px-4 py-2.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-colors font-medium"
                 >
-                  {isLoading ? '…' : 'Valider le questionnaire'}
+                  {isLoading ? '…' : 'Valider le dossier'}
                 </button>
                 <button
                   onClick={() => onAction('rejected')}
@@ -569,7 +569,7 @@ export default function AmbassadeursTable({
         title: `Réintégrer ${name} ?`,
         body: complete
           ? 'Le dossier est complet : l\'ambassade redeviendra visible sur la carte au prochain live.'
-          : 'Le dossier est incomplet (photos manquantes). Le candidat sera renvoyé vers son questionnaire, pas vers la carte.',
+          : 'Le dossier est incomplet (photos manquantes). Le candidat sera renvoyé vers sa présentation, pas vers la carte.',
         emailNotice: complete ? `Un e-mail de bienvenue sera envoyé à ${a.email}.` : undefined,
         tone: 'primary',
         confirmLabel: 'Réintégrer',
@@ -823,7 +823,7 @@ export default function AmbassadeursTable({
                                 );
                               })()}
                               <div>
-                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Questionnaire ambassadeur</p>
+                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Présentation de l'ambassadeur</p>
                                 <QuestionnairPanel a={a} />
                               </div>
                               {displayStatus === 'enrichment_pending' && (
@@ -839,7 +839,7 @@ export default function AmbassadeursTable({
                                       disabled={isLoading || gaps.blocking.length > 0}
                                       className="px-4 py-2 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-colors font-medium"
                                     >
-                                      {isLoading ? '…' : 'Valider le questionnaire'}
+                                      {isLoading ? '…' : 'Valider le dossier'}
                                     </button>
                                     <button
                                       onClick={() => handleAction(a, 'rejected')}

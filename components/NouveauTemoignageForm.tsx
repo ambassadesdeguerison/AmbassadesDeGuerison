@@ -183,7 +183,7 @@ export default function NouveauTemoignageForm({ events, defaultEventId }: Props)
         <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
           <CheckCircle className="w-7 h-7 text-emerald-600" />
         </div>
-        <h2 className="text-xl font-semibold text-slate-800 mb-2">Merci pour ton témoignage</h2>
+        <h2 className="text-xl font-semibold text-slate-800 mb-2">Merci pour votre témoignage</h2>
         <p className="text-slate-500 text-sm max-w-xs mx-auto">
           Il sera relu avant d'être publié. Ce que Dieu fait mérite d'être partagé.
         </p>
@@ -238,16 +238,16 @@ export default function NouveauTemoignageForm({ events, defaultEventId }: Props)
       </Link>
 
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
-        <h1 className="text-xl font-semibold text-slate-800 mb-1">Partage ton témoignage</h1>
+        <h1 className="text-xl font-semibold text-slate-800 mb-1">Partagez votre témoignage</h1>
         <p className="text-slate-500 text-sm mb-6">
-          Qu'as-tu vécu pendant ce live ?
+          Qu'avez-vous vécu pendant ce live ?
         </p>
 
         {ambassadorCity && (
           <div className="flex items-start gap-2.5 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 mb-6">
             <UserCheck className="w-4 h-4 text-indigo-500 mt-0.5 shrink-0" />
             <p className="text-sm text-indigo-700">
-              Tu es ambassadeur à <span className="font-medium">{ambassadorCity}</span> — ton témoignage sera lié à ton profil.
+              Vous êtes ambassadeur à <span className="font-medium">{ambassadorCity}</span> — votre témoignage sera lié à votre profil.
             </p>
           </div>
         )}
@@ -266,7 +266,7 @@ export default function NouveauTemoignageForm({ events, defaultEventId }: Props)
 
           <div>
             <label htmlFor="content" className="block text-sm font-medium text-slate-700 mb-1.5">
-              Ton témoignage <span className="text-red-500">*</span>
+              Votre témoignage <span className="text-red-500">*</span>
             </label>
             <textarea
               id="content"
@@ -294,7 +294,7 @@ export default function NouveauTemoignageForm({ events, defaultEventId }: Props)
                   onChange={(e) => setName(e.target.value)}
                   required
                   maxLength={60}
-                  placeholder="Ton prénom"
+                  placeholder="Votre prénom"
                   className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                 />
               </div>
@@ -309,7 +309,7 @@ export default function NouveauTemoignageForm({ events, defaultEventId }: Props)
                   onChange={(e) => setCity(e.target.value)}
                   required
                   maxLength={80}
-                  placeholder="Ta ville"
+                  placeholder="Votre ville"
                   className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                 />
               </div>

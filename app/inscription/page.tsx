@@ -83,7 +83,7 @@ export default function InscriptionPage() {
               Un e-mail vient d'être envoyé à <span className="font-medium text-slate-700">{form.email}</span>.
             </p>
             <p className="text-slate-500 text-sm max-w-sm mx-auto">
-              Connecte-toi à ton espace ambassadeur pour démarrer : vidéo de formation, conditions à accepter, puis ton questionnaire de profil.
+              Connectez-vous à votre espace ambassadeur pour démarrer : vidéo de formation, engagement à valider, puis votre présentation.
             </p>
             <Link
               href="/auth"

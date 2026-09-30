@@ -15,11 +15,11 @@ const STORAGE_KEY = 'admin-how-it-works-dismissed';
 const STEPS: { title: string; body: string }[] = [
   {
     title: 'Le candidat avance seul',
-    body: "Il s'inscrit, regarde la vidéo, accepte les conditions, puis remplit son questionnaire avec ses photos. Vous n'avez rien à faire pendant cette phase.",
+    body: "Il s'inscrit, regarde la vidéo, accepte les conditions, puis se présente avec ses photos. Vous n'avez rien à faire pendant cette phase.",
   },
   {
     title: 'Vous validez le dossier',
-    body: 'Quand son questionnaire est complet, il passe « À valider » dans Ambassadeurs. Vous examinez ses photos et son parcours, puis vous validez ou refusez.',
+    body: 'Quand sa présentation est complète, il passe « À valider » dans Ambassadeurs. Vous examinez ses photos et son parcours, puis vous validez ou refusez.',
   },
   {
     title: 'Le live rend l\'ambassade visible',
@@ -27,7 +27,7 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: 'Après le live',
-    body: 'Clôturez le live pour retirer les points de la carte. Modérez les témoignages déposés, et traitez les signalements éventuels dans Retours post-live.',
+    body: 'Clôturez le live pour retirer les points de la carte. Modérez les témoignages déposés, et traitez les signalements éventuels dans Retours après le live.',
   },
 ];
 

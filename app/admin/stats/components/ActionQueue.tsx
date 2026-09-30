@@ -65,7 +65,7 @@ export default function ActionQueue({ queue }: Props) {
       <ul className="space-y-1">
         {queue.questionnairesToReview > 0 && (
           <QueueRow href="/admin/ambassadeurs?status=enrichment_pending" count={queue.questionnairesToReview}>
-            questionnaire{queue.questionnairesToReview > 1 ? 's' : ''} à valider
+            dossier{queue.questionnairesToReview > 1 ? 's' : ''} à valider
           </QueueRow>
         )}
         {queue.testimonialsPending > 0 && (

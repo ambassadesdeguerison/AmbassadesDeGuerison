@@ -59,7 +59,7 @@ export default function RefuserPage() {
             <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-6 h-6 text-amber-500" />
             </div>
-            <h1 className="text-slate-800 font-semibold text-lg mb-1">Lien invalide ou expiré</h1>
+            <h1 className="text-slate-800 font-semibold text-lg mb-1">Ce lien ne fonctionne plus</h1>
             <p className="text-slate-400 text-sm">Ce lien est valable 7 jours.</p>
             <Link href="/" className="mt-4 inline-block text-indigo-600 text-sm hover:underline">Retour à la carte</Link>
           </div>

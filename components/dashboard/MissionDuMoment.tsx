@@ -70,7 +70,7 @@ export default function MissionDuMoment({
       <div className="bg-indigo-600 text-white rounded-2xl p-5 space-y-2">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 bg-indigo-300 rounded-full animate-pulse" />
-          <p className="font-semibold text-sm">Signal envoyé — en attente de David…</p>
+          <p className="font-semibold text-sm">Votre témoignage est envoyé — David vous répond bientôt</p>
         </div>
         <p className="text-indigo-200 text-sm">
           Si David vous accepte, le lien pour rejoindre le live apparaîtra ici automatiquement.

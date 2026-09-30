@@ -213,7 +213,7 @@ export default function QuestionnairePage() {
         <main className="flex-1 bg-slate-50 px-4 py-16">
           <div className="max-w-sm mx-auto text-center">
             <p className="text-slate-500 text-sm mb-4">
-              Ce questionnaire n'est accessible que pour les candidats pré-approuvés.
+              Cette page s'ouvre après la vidéo et votre engagement.
             </p>
             <Link href="/dashboard" className="text-indigo-600 text-sm hover:underline">
               Retour à mon espace
@@ -233,10 +233,10 @@ export default function QuestionnairePage() {
             <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-6 h-6 text-emerald-600" />
             </div>
-            <h1 className="text-lg font-semibold text-slate-800 mb-2">Profil envoyé !</h1>
+            <h1 className="text-lg font-semibold text-slate-800 mb-2">Présentation envoyée !</h1>
             <p className="text-sm text-slate-500 mb-6">
-              Ton profil a été transmis à l'équipe pour la validation finale.
-              Tu seras informé par e-mail dès la décision prise.
+              Votre présentation a été transmise à l'équipe.
+              Vous serez informé par e-mail dès que David aura répondu.
             </p>
             <Link href="/dashboard" className="text-indigo-600 text-sm hover:underline">
               Retour à mon espace
@@ -256,9 +256,9 @@ export default function QuestionnairePage() {
             <ArrowLeft className="w-4 h-4" /> Mon espace
           </Link>
 
-          <h1 className="text-xl font-semibold text-slate-800 mb-1">Compléter mon profil</h1>
+          <h1 className="text-xl font-semibold text-slate-800 mb-1">Parlez-nous de vous</h1>
           <p className="text-sm text-slate-500 mb-6">
-            Aide David à mieux te connaître avant la validation finale de ton ambassade.
+            Aidez David à mieux vous connaître avant sa réponse.
             Ces informations restent confidentielles.
           </p>
 
@@ -321,16 +321,16 @@ export default function QuestionnairePage() {
             {/* Parcours spirituel */}
             <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
               <p className="text-sm font-medium text-slate-700">Parcours personnel</p>
-              <Field label="Ton parcours spirituel (en quelques lignes)">
+              <Field label="Votre parcours spirituel (en quelques lignes)">
                 <textarea
                   value={form.parcours_spirituel}
                   onChange={(e) => set('parcours_spirituel', e.target.value)}
                   rows={4}
-                  placeholder="Comment en es-tu arrivé à vouloir ouvrir ton foyer ? Qu'est-ce qui t'a conduit à la prière pour la guérison ?"
+                  placeholder="Comment en êtes-vous arrivé à vouloir ouvrir votre foyer ? Qu'est-ce qui vous a conduit à la prière pour la guérison ?"
                   className={inputCls}
                 />
               </Field>
-              <Field label="Livres ou formations qui t'ont marqué">
+              <Field label="Livres ou formations qui vous ont marqué">
                 <textarea
                   value={form.livres_lus}
                   onChange={(e) => set('livres_lus', e.target.value)}
@@ -380,7 +380,7 @@ export default function QuestionnairePage() {
                   </span>
                 </p>
                 <p className="text-xs text-slate-500">
-                  Aide David à se faire une idée de l&apos;espace où vous accueillerez les visiteurs (salon, salle de prière, etc).
+                  Aidez David à se faire une idée de l&apos;espace où vous accueillerez les visiteurs (salon, salle de prière, etc).
                 </p>
 
                 {roomPhotoPaths.length > 0 && (

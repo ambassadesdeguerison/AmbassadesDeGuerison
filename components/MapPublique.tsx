@@ -510,7 +510,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
   // CTA "première fois" (Phase 4) — masquable, mémorisé en localStorage
   // (même pattern que tz-city) pour ne pas fatiguer les visiteurs récurrents.
   const [discoverDismissed, setDiscoverDismissed] = useState(false);
-  // Hint "Pas d'ambassade dans ta ville ?" — fermable, non mémorisé (dépend du
+  // Hint "Pas d'ambassade dans votre ville ?" — fermable, non mémorisé (dépend du
   // viewport courant, contrairement au CTA "première fois" qui est global).
   const [noAmbassadorHintDismissed, setNoAmbassadorHintDismissed] = useState(false);
   const wasHintVisibleRef = useRef(false);
@@ -852,7 +852,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
             >
               ×
             </button>
-            <p className="text-slate-600 text-xs">Pas d&apos;ambassade dans ta ville&nbsp;?</p>
+            <p className="text-slate-600 text-xs">Pas d&apos;ambassade dans votre ville&nbsp;?</p>
             <a
               href="/inscription"
               className="mt-1.5 inline-flex items-center gap-1 text-indigo-600 text-xs font-medium hover:text-indigo-800 transition-colors"

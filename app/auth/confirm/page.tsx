@@ -73,7 +73,7 @@ function ConfirmContent() {
             <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-6 h-6 text-amber-500" />
             </div>
-            <h1 className="text-lg font-semibold text-slate-800 mb-2">Lien invalide ou expiré</h1>
+            <h1 className="text-lg font-semibold text-slate-800 mb-2">Ce lien ne fonctionne plus</h1>
             <p className="text-slate-500 text-sm mb-1">{errorMsg}</p>
             <p className="text-slate-400 text-xs mt-2">Les liens de connexion sont valables 1 heure.</p>
             <Link href="/auth" className="mt-5 inline-block text-indigo-600 text-sm hover:underline">

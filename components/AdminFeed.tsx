@@ -45,7 +45,7 @@ export default function AdminFeed({ eventId }: { eventId: string | null }) {
     if (prevCountRef.current !== null && signals.length > prevCountRef.current) {
       playBeep(880);
       const orig = document.title;
-      document.title = `🔔 Signal — ${orig}`;
+      document.title = `🔔 Témoignage — ${orig}`;
       setTimeout(() => { document.title = orig; }, 5000);
     }
     prevCountRef.current = signals.length;
@@ -128,7 +128,7 @@ export default function AdminFeed({ eventId }: { eventId: string | null }) {
           <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
             <Mic className="w-6 h-6 text-slate-400" />
           </div>
-          <p className="text-sm">Aucun signal en attente</p>
+          <p className="text-sm">Aucun témoignage en attente</p>
         </div>
       )}
 

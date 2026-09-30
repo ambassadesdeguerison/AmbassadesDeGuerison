@@ -24,17 +24,17 @@ type Field = { key: keyof TimingConfig; label: string; tooltip: string };
 const CAMPAIGN_FIELDS: Field[] = [
   {
     key: 'campaign_ambassadors_days_before',
-    label: 'Campagne ambassadeurs (J avant)',
+    label: 'E-mail aux ambassadeurs (jours avant le live)',
     tooltip: 'Nombre de jours avant le live pour envoyer le mail d\'invitation aux ambassadeurs.',
   },
   {
     key: 'campaign_visitors_days_before',
-    label: 'Campagne visiteurs (J avant)',
-    tooltip: 'Nombre de jours avant le live pour notifier les visiteurs opt-in.',
+    label: 'E-mail aux visiteurs (jours avant le live)',
+    tooltip: 'Nombre de jours avant le live pour notifier les visiteurs qui ont accepté de recevoir des notifications.',
   },
   {
     key: 'feedback_days_after',
-    label: 'Envoi feedback (J après)',
+    label: 'E-mail de retour (jours après le live)',
     tooltip: 'Nombre de jours après le live pour envoyer les mails de retour d\'expérience.',
   },
 ];

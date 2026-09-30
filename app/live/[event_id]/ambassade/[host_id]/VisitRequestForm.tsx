@@ -137,7 +137,7 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
         />
         <span className="text-xs text-slate-500 leading-relaxed">
           Je souhaite être informé(e) des prochains lives de David Théry.
-          <span className="text-slate-400"> Désinscription possible à tout moment.</span>
+          <span className="text-slate-400"> Vous pouvez vous désabonner à tout moment.</span>
         </span>
       </label>
 

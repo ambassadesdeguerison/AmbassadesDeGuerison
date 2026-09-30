@@ -31,7 +31,7 @@ export default function Nav({ variant = 'default' }: NavProps) {
             }`}
           >
             <UserPlus className="w-4 h-4" />
-            <span className="hidden sm:inline">Devenir hôte</span>
+            <span className="hidden sm:inline">Devenir ambassadeur</span>
           </Link>
           <Link
             href="/dashboard"

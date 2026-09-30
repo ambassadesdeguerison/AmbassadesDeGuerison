@@ -27,7 +27,7 @@ export default async function AdminSettingsPage() {
       <AdminPage width="narrow">
         <AdminPageHeader
           title="Paramètres"
-          subtitle="Contenu d'onboarding des candidats et délais des envois automatiques."
+          subtitle="Contenu d'accueil des candidats et délais des envois automatiques."
         />
 
         <div className="space-y-4">

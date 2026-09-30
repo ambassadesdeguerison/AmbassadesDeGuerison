@@ -14,15 +14,15 @@ const STEPS: Step[] = [
     description: 'Regardez la vidéo et acceptez les conditions',
   },
   {
-    label: 'Conditions acceptées',
-    description: 'Complétez votre profil enrichi',
+    label: 'Engagement pris',
+    description: 'Parlez-nous de vous',
   },
   {
-    label: 'Profil enrichi',
-    description: 'David examine votre dossier…',
+    label: 'Ma présentation',
+    description: 'David regarde votre dossier…',
   },
   {
-    label: 'Validation finale',
+    label: 'Réponse de David',
     description: 'Ambassade active sur la carte',
   },
 ];

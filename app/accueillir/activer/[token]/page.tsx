@@ -69,9 +69,9 @@ export default function ActivationPage() {
 
           {state === 'invalid' && (
             <div className="text-center">
-              <h1 className="text-lg font-semibold text-slate-800 mb-2">Lien invalide ou expiré</h1>
+              <h1 className="text-lg font-semibold text-slate-800 mb-2">Ce lien ne fonctionne plus</h1>
               <p className="text-sm text-slate-500 mb-6">
-                Ce lien d'activation n'est plus valide. Consulte ton espace ambassadeur pour vérifier ton statut.
+                Ce lien n'est plus valable. Rendez-vous dans votre espace ambassadeur pour confirmer votre présence.
               </p>
               <Link href="/dashboard" className="text-indigo-600 text-sm hover:underline">
                 Accéder à mon espace
@@ -85,7 +85,7 @@ export default function ActivationPage() {
                 <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center">
                   <Home className="w-4 h-4 text-indigo-600" />
                 </div>
-                <h1 className="text-base font-semibold text-slate-800">Activation ambassadeur</h1>
+                <h1 className="text-base font-semibold text-slate-800">Confirmer ma présence</h1>
               </div>
               <p className="text-sm text-slate-600 mb-1 font-medium">{ctx.event_title}</p>
               <p className="text-sm text-slate-500 mb-6 capitalize">{eventDate}</p>
@@ -94,7 +94,7 @@ export default function ActivationPage() {
                 <div className="flex items-start gap-2 bg-emerald-50 rounded-xl p-4">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
                   <p className="text-sm text-emerald-700">
-                    Tu es déjà inscrit comme ambassadeur pour ce live. Merci !
+                    Votre présence à ce live est déjà confirmée. Merci !
                   </p>
                 </div>
               ) : (
@@ -104,7 +104,7 @@ export default function ActivationPage() {
                   className="w-full bg-indigo-600 text-white py-3 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                 >
                   {activating && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Je m'inscris comme ambassadeur
+                  Je confirme ma présence
                 </button>
               )}
             </div>
@@ -116,14 +116,14 @@ export default function ActivationPage() {
                 <CheckCircle2 className="w-6 h-6 text-emerald-600" />
               </div>
               <h1 className="text-lg font-semibold text-slate-800 mb-2">
-                Ton ambassade est activée !
+                Votre présence est confirmée !
               </h1>
               <p className="text-sm text-slate-500 mb-2">
                 {ctx?.event_title && <><strong>{ctx.event_title}</strong> — </>}
-                tu apparaîtras sur la carte pendant le live.
+                votre ambassade apparaîtra sur la carte pendant le live.
               </p>
               <p className="text-sm text-slate-400 mb-6">
-                Les visiteurs pourront te contacter directement depuis la carte.
+                Les visiteurs pourront vous contacter directement depuis la carte.
               </p>
               <Link href="/dashboard" className="text-indigo-600 text-sm hover:underline">
                 Accéder à mon espace

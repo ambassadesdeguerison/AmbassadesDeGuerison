@@ -136,7 +136,7 @@ export default function MonEspacePage() {
               </h1>
             </div>
             <p className="text-sm text-slate-500">
-              Connecté avec <span className="font-medium text-slate-700">{email}</span>. Ton téléphone sera pré-rempli automatiquement sur ta prochaine demande de visite.
+              Connecté avec <span className="font-medium text-slate-700">{email}</span>. Votre téléphone sera pré-rempli automatiquement sur votre prochaine demande de visite.
             </p>
 
             <div className="flex items-center gap-4">

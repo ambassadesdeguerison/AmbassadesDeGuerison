@@ -140,7 +140,7 @@ export default function MesInfosSection({ profile }: { profile: Profile }) {
             className={inputCls}
           />
           <p className="text-xs text-slate-400 mt-1">
-            Aide les visiteurs à te retrouver s'ils sont dans le même quartier.
+            Aidez les visiteurs à vous retrouver s'ils sont dans le même quartier.
           </p>
         </div>
 
@@ -158,7 +158,7 @@ export default function MesInfosSection({ profile }: { profile: Profile }) {
             className={inputCls}
           />
           <p className="text-xs text-slate-400 mt-1">
-            {form.presentation_message.length}/240 — Donne envie aux visiteurs de venir chez toi.
+            {form.presentation_message.length}/240 — Donnez envie aux visiteurs de venir chez vous.
           </p>
         </div>
 
@@ -226,7 +226,7 @@ export default function MesInfosSection({ profile }: { profile: Profile }) {
             />
             <span className="text-sm text-slate-700">
               Ce groupe est réservé aux femmes uniquement
-              <span className="block text-xs text-slate-400 mt-0.5">Une mention « Groupe femmes » apparaîtra sur ta fiche publique.</span>
+              <span className="block text-xs text-slate-400 mt-0.5">Une mention « Groupe femmes » apparaîtra sur votre fiche publique.</span>
             </span>
           </label>
         )}

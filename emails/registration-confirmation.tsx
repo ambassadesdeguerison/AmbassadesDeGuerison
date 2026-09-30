@@ -13,7 +13,7 @@ export default function RegistrationConfirmation({ firstName, dashboardUrl }: Pr
     <EmailLayout preview="Bienvenue parmi les Ambassadeurs de Guérison !">
       <Text style={p}>Bonjour {firstName},</Text>
       <Text style={p}>Votre demande pour devenir ambassadeur est bien reçue.</Text>
-      <Text style={p}>Il reste une dernière étape avant de rejoindre le réseau : regarder la vidéo de formation, accepter les conditions, puis compléter votre questionnaire de profil. Votre ambassade apparaîtra sur la carte dès validation par l'équipe de David Théry.</Text>
+      <Text style={p}>Il reste une dernière étape avant de rejoindre le réseau : regarder la vidéo de formation, valider votre engagement, puis vous présenter à David. Votre ambassade apparaîtra sur la carte dès validation par l'équipe de David Théry.</Text>
       <Btn href={dashboardUrl}>Continuer mon inscription</Btn>
     </EmailLayout>
   );

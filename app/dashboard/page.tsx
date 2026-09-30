@@ -491,7 +491,7 @@ export default function DashboardPage() {
                 <UserX className="w-4 h-4 text-red-600" />
               </div>
               <div>
-                <p className="font-semibold text-slate-800 text-sm">Votre compte est suspendu</p>
+                <p className="font-semibold text-slate-800 text-sm">Votre ambassade est en pause</p>
                 <p className="text-sm text-slate-600 mt-0.5">
                   Votre ambassade n&apos;est plus visible sur la carte publique et vous ne pouvez plus recevoir de nouvelles demandes.
                   Contactez l&apos;équipe si vous pensez qu&apos;il s&apos;agit d&apos;une erreur.
@@ -537,8 +537,8 @@ export default function DashboardPage() {
                   <div>
                     <p className="font-semibold text-slate-800 text-sm">Bienvenue, {profile.first_name} !</p>
                     <p className="text-sm text-slate-600 mt-0.5">
-                      Pour rejoindre les Ambassades de Guérison, regarde la vidéo de formation ci-dessous,
-                      télécharge le guide pratique, puis valide ton engagement pour débloquer le questionnaire.
+                      Pour rejoindre les Ambassades de Guérison, regardez la vidéo de formation ci-dessous,
+                      téléchargez le guide pratique, puis validez votre engagement pour accéder à votre présentation.
                     </p>
                   </div>
                 </div>
@@ -553,10 +553,10 @@ export default function DashboardPage() {
                     <UserCheck className="w-4 h-4 text-indigo-600" />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-800 text-sm">Conditions acceptées</p>
+                    <p className="font-semibold text-slate-800 text-sm">Engagement pris</p>
                     <p className="text-sm text-slate-600 mt-0.5">
                       Il reste une dernière étape avant de rejoindre la carte des ambassadeurs :
-                      compléter ton profil enrichi pour que David puisse mieux te connaître.
+                      vous présenter pour que David puisse mieux vous connaître.
                     </p>
                   </div>
                 </div>
@@ -580,9 +580,9 @@ export default function DashboardPage() {
                     <CheckCircle2 className="w-4 h-4 text-purple-600" />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-800 text-sm">Ton dossier est en cours d&apos;examen</p>
+                    <p className="font-semibold text-slate-800 text-sm">David regarde votre dossier</p>
                     <p className="text-sm text-slate-600 mt-0.5">
-                      Merci d&apos;avoir complété ton profil. L&apos;équipe te contactera prochainement pour la validation finale.
+                      Merci d&apos;avoir complété votre présentation. L&apos;équipe vous contactera prochainement pour vous donner la réponse de David.
                     </p>
                   </div>
                 </div>
@@ -663,7 +663,7 @@ export default function DashboardPage() {
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        Activer mon onboarding
+                        Je m&apos;engage et je continue
                       </>
                     )}
                   </button>
@@ -937,7 +937,7 @@ export default function DashboardPage() {
                     className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors"
                   >
                     <ExternalLink className="w-3 h-3" />
-                    Voir mon badge ambassade
+                    Mon image à partager
                   </a>
                 </div>
 

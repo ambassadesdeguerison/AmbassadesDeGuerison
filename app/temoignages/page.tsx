@@ -168,7 +168,7 @@ export default async function TemoignagesPage({
                 className="mt-5 inline-flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-indigo-700 transition-colors"
               >
                 <PenLine className="w-4 h-4" />
-                Partage ton expérience
+                Partagez votre expérience
               </Link>
             </div>
           ) : (
@@ -224,7 +224,7 @@ export default async function TemoignagesPage({
                   className="inline-flex items-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-medium text-sm hover:bg-indigo-700 transition-colors"
                 >
                   <PenLine className="w-4 h-4" />
-                  Partage ton témoignage
+                  Partagez votre témoignage
                 </Link>
 
                 <div className="border-t border-slate-100 pt-6 flex flex-col items-center gap-3">

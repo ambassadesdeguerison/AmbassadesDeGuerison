@@ -99,8 +99,8 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
       const n = res.data.recipients;
       setSuccess(
         n === 0
-          ? 'Campagne planifiée, mais aucun destinataire ne correspond pour le moment.'
-          : `Campagne planifiée pour ${n} destinataire${n > 1 ? 's' : ''} — liste figée maintenant, les inscriptions ultérieures ne la rejoindront pas.`
+          ? 'Envoi planifié, mais aucun destinataire ne correspond pour le moment.'
+          : `Envoi planifié pour ${n} destinataire${n > 1 ? 's' : ''} — liste figée maintenant, les inscriptions ultérieures ne la rejoindront pas.`
       );
       setCampaigns((c) => [
         ...c,
@@ -117,9 +117,9 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
   function askDelete(c: Campaign) {
     const event = allEvents.find((e) => e.id === c.event_id);
     setConfirm({
-      title: 'Annuler cette campagne ?',
-      body: `Campagne ${TYPE_LABELS[c.type] ?? c.type}${event ? ` pour « ${event.title} »` : ''}. La liste de destinataires enregistrée sera supprimée.`,
-      confirmLabel: 'Annuler la campagne',
+      title: 'Annuler cet envoi ?',
+      body: `Envoi ${TYPE_LABELS[c.type] ?? c.type}${event ? ` pour « ${event.title} »` : ''}. La liste de destinataires enregistrée sera supprimée.`,
+      confirmLabel: "Annuler l'envoi",
       onConfirm: async () => {
         setBusy(true);
         const res = await apiCall('/api/admin/campaigns', { method: 'DELETE', body: { id: c.id } });
@@ -137,7 +137,7 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
           « Campagne planifiée. » puis un badge « pending » indéfiniment, sans
           jamais dire qu'aucun envoi n'était déclenché. */}
       <AdminNotice tone="paused" title="Les envois automatiques sont désactivés">
-        Une campagne planifiée ici est enregistrée avec sa liste de destinataires, mais <strong>aucun e-mail ne partira
+        Un envoi planifié ici est enregistré avec sa liste de destinataires, mais <strong>aucun e-mail ne partira
         tant que les envois automatiques ne sont pas activés</strong>. Elle restera au statut « En attente ».
       </AdminNotice>
 
@@ -173,8 +173,8 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
                     <button
                       onClick={() => askDelete(c)}
                       className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-                      title="Annuler cette campagne"
-                      aria-label="Annuler cette campagne"
+                      title="Annuler cet envoi"
+                      aria-label="Annuler cet envoi"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -190,7 +190,7 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
         <form onSubmit={handleSchedule} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Send className="w-4 h-4 text-indigo-500" />
-            <p className="text-sm font-medium text-slate-800">Programmer une campagne</p>
+            <p className="text-sm font-medium text-slate-800">Programmer un envoi groupé</p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
@@ -258,7 +258,7 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
             disabled={saving}
             className="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
           >
-            {saving ? 'Planification…' : 'Planifier la campagne'}
+            {saving ? 'Planification…' : "Planifier l'envoi"}
           </button>
         </form>
       )}
