@@ -365,7 +365,7 @@ export default function QuestionnairePage() {
 
             {/* Formations et livres */}
             <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-5">
-              <p className="text-sm font-medium text-slate-700">Formations et livres</p>
+              <h2 className="text-base font-semibold text-slate-800">Formations et livres</h2>
 
               <ChipGroup
                 legend="Formations gratuites que vous avez suivies"
@@ -408,7 +408,7 @@ export default function QuestionnairePage() {
 
             {/* Pratique ecclésiale */}
             <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
-              <p className="text-sm font-medium text-slate-700">Pratique ecclésiale</p>
+              <h2 className="text-base font-semibold text-slate-800">Pratique ecclésiale</h2>
               <Field label="Fréquentation d'une église">
                 <select
                   value={form.church_attendance}
@@ -450,7 +450,7 @@ export default function QuestionnairePage() {
 
             {/* Parcours personnel + vidéo */}
             <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-5">
-              <p className="text-sm font-medium text-slate-700">Parcours personnel</p>
+              <h2 className="text-base font-semibold text-slate-800">Parcours personnel</h2>
               <Field label="Votre parcours spirituel (en quelques lignes)">
                 <textarea
                   value={form.parcours_spirituel}
@@ -477,7 +477,7 @@ export default function QuestionnairePage() {
             <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-5">
               <div className="flex items-center gap-2">
                 <Camera className="w-4 h-4 text-indigo-500" />
-                <p className="text-sm font-medium text-slate-700">Photos de votre ambassade</p>
+                <h2 className="text-base font-semibold text-slate-800">Photos de votre ambassade</h2>
               </div>
 
               {photoError && (

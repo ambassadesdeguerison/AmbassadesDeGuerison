@@ -255,7 +255,7 @@ export default function VideoAsk({
       <div>
         <div className="flex items-center gap-2">
           <Video className="w-4 h-4 text-indigo-500" />
-          <p className="text-sm font-medium text-slate-700">Votre vidéo de présentation</p>
+          <h3 className="text-sm font-semibold text-slate-800">Votre vidéo de présentation</h3>
           <span className="text-xs text-slate-400">— facultative</span>
         </div>
         <p className="text-sm text-slate-500 mt-1.5">
