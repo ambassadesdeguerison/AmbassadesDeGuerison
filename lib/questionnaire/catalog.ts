@@ -16,11 +16,11 @@ export const BOOKS: readonly CatalogItem[] = [
   { slug: 'a-l-ecoute-de-dieu', label: 'À l’écoute de Dieu' },
   { slug: '21-jours-a-l-ecoute-de-dieu', label: '21 jours à l’écoute de Dieu' },
   { slug: 'guerir-les-malades', label: 'Guérir les malades' },
-  { slug: 'defi-guerison', label: 'Défi Guérison' },
+  { slug: 'defi-guerison', label: 'Défi Guérison (livre)' },
   { slug: 'rencontre-avec-le-saint-esprit', label: 'Rencontre avec le Saint-Esprit' },
   { slug: 'baptises-dans-le-saint-esprit', label: 'Baptisés dans le Saint-Esprit' },
   { slug: 'joie-surnaturelle', label: 'Joie surnaturelle' },
-  { slug: 'vraiment-libre', label: 'Vraiment Libre' },
+  { slug: 'vraiment-libre', label: 'Vraiment Libre (livre)' },
 ];
 
 // Formations gratuites en ligne. `defi_guerison` reste aussi reflété dans la colonne

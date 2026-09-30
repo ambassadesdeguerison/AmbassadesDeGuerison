@@ -368,7 +368,7 @@ export default function QuestionnairePage() {
               <h2 className="text-base font-semibold text-slate-800">Formations et livres</h2>
 
               <ChipGroup
-                legend="Formations gratuites que vous avez suivies"
+                legend="Formations gratuites en ligne que vous avez suivies"
                 items={TRAININGS}
                 selected={form.trainings_done}
                 onChange={(v) => set('trainings_done', v)}
