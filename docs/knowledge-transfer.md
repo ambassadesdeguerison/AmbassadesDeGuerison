@@ -466,7 +466,7 @@ AND hp.id NOT IN (
 - Exposer `SUPABASE_SERVICE_ROLE_KEY` côté client
 - Bypasser RLS dans une route API publique
 - Stocker `action_token` (liens accept/decline) en clair dans les logs
-- Exposer `profile_photo_url` / `room_photo_urls` dans une réponse API publique ou sur la carte
+- Exposer `room_photo_urls` (photos du lieu) dans une réponse API publique ou sur la carte — la photo de profil est la seule exception assumée (avatar carte, hôtes actifs, via `getPublicMapPhotoUrls`)
 
 ---
 

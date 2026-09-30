@@ -105,6 +105,11 @@ const SECTIONS: Section[] = [
             <em>vous</em> acceptez sa demande.
           </li>
           <li>
+            <strong className="text-slate-700">Photo de profil</strong> — vue par
+            l’équipe pour valider votre candidature, puis affichée en petit sur la
+            carte publique tant que votre ambassade est active.
+          </li>
+          <li>
             <strong className="text-slate-700">Photos de votre lieu</strong> — stockées
             de façon privée, visibles par vous et par l’équipe.
           </li>
@@ -125,8 +130,8 @@ const SECTIONS: Section[] = [
         </li>
         <li>Nous n’utilisons pas de cookies publicitaires ni de traceurs tiers.</li>
         <li>
-          Nous ne publions jamais votre photo. Elle n’est visible que par l’ambassadeur
-          que vous avez contacté.
+          Nous ne publions jamais la photo d’un visiteur. Elle n’est visible que par
+          l’ambassadeur que vous avez contacté.
         </li>
       </ul>
     ),
