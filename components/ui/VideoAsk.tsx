@@ -45,6 +45,7 @@ export default function VideoAsk({
   const [phase, setPhase] = useState<Phase>(alreadyUploaded ? 'done' : 'idle');
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState('');
+  const [notesOpen, setNotesOpen] = useState(false);
   const [video, setVideo] = useState<{ blob: Blob; url: string; mime: string } | null>(null);
 
   const streamRef = useRef<MediaStream | null>(null);
@@ -137,6 +138,7 @@ export default function VideoAsk({
         audio: true,
       });
       setPhase('ready');
+      setNotesOpen(true); // les notes doivent être sous les yeux pendant l'enregistrement
     } catch (err) {
       const name = err instanceof DOMException ? err.name : '';
       if (name === 'NotAllowedError' || name === 'SecurityError') {
@@ -265,9 +267,13 @@ export default function VideoAsk({
       </div>
 
       {phase !== 'done' && (
-        <details open className="rounded-xl border border-slate-100 bg-slate-50 px-4 pb-4">
+        <details
+          open={notesOpen}
+          onToggle={(e) => setNotesOpen(e.currentTarget.open)}
+          className="rounded-xl border border-slate-100 bg-slate-50 px-4 pb-4"
+        >
           <summary className="min-h-[44px] flex items-center text-sm font-medium text-slate-700 cursor-pointer">
-            Pistes et notes pour vous aider
+            Préparer mes notes (pistes pour vous aider)
           </summary>
           <ul className="list-disc pl-5 space-y-1 text-sm text-slate-600">
             {prompts.map((p) => (
