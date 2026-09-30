@@ -485,20 +485,14 @@ export default function QuestionnairePage() {
               )}
 
               <div className="rounded-xl bg-slate-50 px-4 py-3">
-                <p className="text-xs font-medium text-slate-600 mb-1.5">Quelques conseils pour de bonnes photos</p>
-                <ul className="list-disc pl-4 space-y-1 text-xs text-slate-500">
-                  <li>Prenez-les avec votre téléphone : c&apos;est largement suffisant.</li>
-                  <li>
-                    Privilégiez la lumière du jour : placez-vous face à une fenêtre plutôt qu&apos;à contre-jour, ou
-                    allumez les lampes de la pièce.
-                  </li>
+                <p className="text-sm font-medium text-slate-700 mb-1.5">Pour de bonnes photos</p>
+                <ul className="list-disc pl-4 space-y-1 text-sm text-slate-600">
+                  <li>Avec votre téléphone, en lumière du jour (face à une fenêtre, pas à contre-jour).</li>
                   <li>Profil : votre visage bien visible et de face, sur un fond simple.</li>
                   <li>
-                    Lieu : tenez le téléphone à l&apos;horizontale et reculez pour montrer toute la pièce où vous
-                    regarderez le live (sièges, écran).
+                    Lieu : téléphone à l&apos;horizontale, reculez pour montrer la pièce où vous regarderez le live.
                   </li>
-                  <li>Rangez un peu avant, sans rien changer à votre intérieur.</li>
-                  <li>Évitez de photographier d&apos;autres personnes, surtout des enfants, ou des documents personnels.</li>
+                  <li>Évitez de photographier d&apos;autres personnes, surtout des enfants.</li>
                 </ul>
               </div>
 
@@ -506,6 +500,10 @@ export default function QuestionnairePage() {
               <div className="space-y-1.5">
                 <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">
                   Photo de profil <RequiredBadge />
+                </p>
+                <p className="text-xs text-slate-500">
+                  Vue par David pour valider votre ambassade, puis affichée en petit sur la carte publique quand votre
+                  ambassade est active.
                 </p>
                 {profileUploading ? (
                   <div className="flex items-center justify-center h-32 rounded-xl border border-slate-200 bg-slate-50">
@@ -516,7 +514,7 @@ export default function QuestionnairePage() {
                     onFile={uploadProfilePhoto}
                     preview={profilePhotoUrl}
                     onRemove={profilePhotoUrl ? removeProfilePhoto : undefined}
-                    label="Photo de profil — vue par David pour valider votre ambassade, puis affichée en petit sur la carte publique quand votre ambassade est active"
+                    label="Ajouter ma photo de profil"
                   />
                 )}
               </div>
