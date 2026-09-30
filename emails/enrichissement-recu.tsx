@@ -10,10 +10,10 @@ interface Props {
 export default function EnrichissementRecu({ ambassadeurFirstName, adminUrl }: Props) {
   return (
     <EmailLayout preview={`Questionnaire soumis — ${ambassadeurFirstName} attend sa validation finale`}>
-      <Text style={p}>L'ambassadeur <strong>{ambassadeurFirstName}</strong> vient de soumettre son questionnaire d'enrichissement.</Text>
+      <Text style={p}>L&apos;ambassadeur <strong>{ambassadeurFirstName}</strong> vient de soumettre son questionnaire d&apos;enrichissement.</Text>
       <Text style={p}>Son profil enrichi est soumis — il attend votre validation finale.</Text>
       <Text style={p}>
-        <Link href={adminUrl} style={link}>Valider dans l'admin →</Link>
+        <Link href={adminUrl} style={link}>Valider dans l&apos;admin →</Link>
       </Text>
     </EmailLayout>
   );

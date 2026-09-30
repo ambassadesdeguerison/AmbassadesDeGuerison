@@ -49,7 +49,7 @@ export default function AuthPage() {
             onClick={() => setSent(false)}
             className="mt-5 text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 mx-auto"
           >
-            <ArrowLeft className="w-3 h-3" /> Changer d'adresse
+            <ArrowLeft className="w-3 h-3" /> Changer d&apos;adresse
           </button>
         </div>
       </main>
@@ -106,7 +106,7 @@ export default function AuthPage() {
           <p className="text-center text-xs text-slate-400 mt-5">
             Pas encore ambassadeur ?{' '}
             <Link href="/inscription" className="text-indigo-600 hover:underline">
-              S'inscrire
+              S&apos;inscrire
             </Link>
           </p>
         </div>

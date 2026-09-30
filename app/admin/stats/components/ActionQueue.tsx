@@ -33,7 +33,7 @@ export default function ActionQueue({ queue }: Props) {
       <Clock className="w-3.5 h-3.5 mt-px shrink-0" />
       <span>
         {queue.awaitingCandidate} candidat{queue.awaitingCandidate > 1 ? 's n\'ont' : ' n\'a'} pas encore accepté les
-        conditions d'engagement.{' '}
+        conditions d&apos;engagement.{' '}
         <Link href="/admin/ambassadeurs?status=pending_review" className="underline underline-offset-2 hover:text-slate-600">
           Voir
         </Link>{' '}

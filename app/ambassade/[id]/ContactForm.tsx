@@ -106,12 +106,12 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
           </div>
           <p className="text-slate-800 font-medium text-sm">Demande envoyée !</p>
           <p className="text-slate-500 text-xs mt-1 leading-relaxed">
-            Vous recevrez une notification par e-mail dès que l'ambassadeur aura répondu.
+            Vous recevrez une notification par e-mail dès que l&apos;ambassadeur aura répondu.
           </p>
         </div>
 
         <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
-          <p className="text-indigo-800 text-xs font-medium">Votre lien d'invitation</p>
+          <p className="text-indigo-800 text-xs font-medium">Votre lien d&apos;invitation</p>
           <p className="text-indigo-600 text-xs break-all font-mono">{inviteUrl}</p>
           <div className="flex gap-2">
             <button
@@ -248,7 +248,7 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
           {error && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
           <p className="text-slate-400 text-xs">
-            L'ambassadeur se réserve le droit d'accepter ou non votre demande.
+            L&apos;ambassadeur se réserve le droit d&apos;accepter ou non votre demande.
           </p>
 
           <button

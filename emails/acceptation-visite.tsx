@@ -27,7 +27,7 @@ export default function AcceptationVisite({
       {hostEmail && <Text style={p}>E-mail : <Link href={`mailto:${hostEmail}`} style={link}>{hostEmail}</Link></Text>}
       {hostWhatsappGroupUrl && <Text style={p}>Groupe WhatsApp : <Link href={hostWhatsappGroupUrl} style={link}>Rejoindre le groupe</Link></Text>}
       <Text style={p}>Présentez-vous quelques minutes avant le début du live.</Text>
-      <Text style={muted}>Un souci ? <Link href={contactEquipeUrl} style={link}>Contactez l'équipe</Link></Text>
+      <Text style={muted}>Un souci ? <Link href={contactEquipeUrl} style={link}>Contactez l&apos;équipe</Link></Text>
     </EmailLayout>
   );
 }

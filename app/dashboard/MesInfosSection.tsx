@@ -140,7 +140,7 @@ export default function MesInfosSection({ profile }: { profile: Profile }) {
             className={inputCls}
           />
           <p className="text-xs text-slate-400 mt-1">
-            Aidez les visiteurs à vous retrouver s'ils sont dans le même quartier.
+            Aidez les visiteurs à vous retrouver s&apos;ils sont dans le même quartier.
           </p>
         </div>
 
@@ -163,7 +163,12 @@ export default function MesInfosSection({ profile }: { profile: Profile }) {
         </div>
 
         <div>
-          <label className="block text-sm text-slate-700 mb-1.5">Adresse privée</label>
+          <label className="block text-sm text-slate-700 mb-1.5">
+            Adresse complète
+            <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-xs font-medium align-middle">
+              <span aria-hidden="true">🔒</span>Privée
+            </span>
+          </label>
           <AddressInput
             value={form.address_private}
             onChange={(v) => {
@@ -186,7 +191,7 @@ export default function MesInfosSection({ profile }: { profile: Profile }) {
             }}
             placeholder="12 rue de la Paix, 75001 Paris"
           />
-          <p className="text-xs text-slate-400 mt-1">Partagée uniquement avec les visiteurs que vous acceptez.</p>
+          <p className="text-xs text-slate-400 mt-1">Jamais affichée sur la carte. Partagée uniquement avec les visiteurs que vous acceptez.</p>
           {form.address_private && !addressConfirmed && (
             <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg mt-1.5">
               Sélectionnez votre adresse dans la liste pour un calcul de distance précis avec les visiteurs.
@@ -200,7 +205,7 @@ export default function MesInfosSection({ profile }: { profile: Profile }) {
             value={form.consignes}
             onChange={(e) => { setForm((f) => ({ ...f, consignes: e.target.value })); setSaved(false); }}
             rows={3}
-            placeholder="Ex. : code interphone B12. Parking libre rue Pasteur."
+            placeholder="Ex. : stationnement facile dans la rue. Accessibilité PMR : accès sans marches. Merci d'arriver entre 14h et 14h30."
             className={inputCls}
           />
         </div>

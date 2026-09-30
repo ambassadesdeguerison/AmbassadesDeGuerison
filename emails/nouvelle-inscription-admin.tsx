@@ -12,7 +12,7 @@ interface Props {
 export default function NouvelleInscriptionAdmin({ firstName, city, country, adminUrl }: Props) {
   return (
     <EmailLayout preview={`Nouvelle candidature — ${firstName}, ${city}`}>
-      <Text style={p}>Un nouveau candidat vient de s'inscrire et attend votre validation :</Text>
+      <Text style={p}>Un nouveau candidat vient de s&apos;inscrire et attend votre validation :</Text>
       <Text style={list}>• <strong>Prénom :</strong> {firstName}</Text>
       <Text style={list}>• <strong>Ville :</strong> {city}</Text>
       <Text style={list}>• <strong>Pays :</strong> {country}</Text>

@@ -58,7 +58,7 @@ export default function OnboardingConfigForm({ initialConfig }: Props) {
         {/* Audit 9.6 : rien n'indiquait où ces réglages apparaissent, ni que la
             vidéo conditionne la progression du candidat. */}
         <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-          Affichés sur le tableau de bord d'un candidat au statut « En attente du candidat ». Il doit lancer la vidéo
+          Affichés sur le tableau de bord d&apos;un candidat au statut « En attente du candidat ». Il doit lancer la vidéo
           pour pouvoir cocher son engagement — un lien cassé le bloque à cette étape.
         </p>
       </div>
@@ -76,12 +76,12 @@ export default function OnboardingConfigForm({ initialConfig }: Props) {
             className={inputCls}
           />
           <p className="text-xs text-slate-400 mt-1">
-            Collez l'adresse de la vidéo telle quelle — elle sera convertie automatiquement au bon format.
+            Collez l&apos;adresse de la vidéo telle quelle — elle sera convertie automatiquement au bon format.
           </p>
 
           {videoUrl.trim() && !previewId && (
             <p className="text-xs text-amber-700 bg-amber-50 border border-amber-100 px-3 py-2 rounded-lg mt-2">
-              Ce lien n'est pas reconnu comme une vidéo YouTube. L'enregistrement sera refusé.
+              Ce lien n&apos;est pas reconnu comme une vidéo YouTube. L&apos;enregistrement sera refusé.
             </p>
           )}
 
@@ -114,9 +114,9 @@ export default function OnboardingConfigForm({ initialConfig }: Props) {
           {/* Audit 9.7 : un lien Drive non partagé publiquement échoue
               silencieusement côté candidat. */}
           <p className="text-xs text-slate-400 mt-1">
-            Google Drive, Dropbox ou tout autre lien. Vérifiez qu'il s'ouvre{' '}
+            Google Drive, Dropbox ou tout autre lien. Vérifiez qu&apos;il s&apos;ouvre{' '}
             <strong className="font-medium text-slate-500">sans être connecté</strong> — sinon le candidat verra une
-            page d'erreur.
+            page d&apos;erreur.
           </p>
           {pdfUrl.trim() && (
             <a

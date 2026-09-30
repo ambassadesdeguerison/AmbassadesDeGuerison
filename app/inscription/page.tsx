@@ -80,7 +80,7 @@ export default function InscriptionPage() {
             </div>
             <h2 className="text-xl font-semibold text-slate-800 mb-2">Inscription confirmée !</h2>
             <p className="text-slate-500 text-sm max-w-sm mx-auto mb-1">
-              Un e-mail vient d'être envoyé à <span className="font-medium text-slate-700">{form.email}</span>.
+              Un e-mail vient d&apos;être envoyé à <span className="font-medium text-slate-700">{form.email}</span>.
             </p>
             <p className="text-slate-500 text-sm max-w-sm mx-auto">
               Connectez-vous à votre espace ambassadeur pour démarrer : vidéo de formation, engagement à valider, puis votre présentation.
@@ -202,7 +202,7 @@ export default function InscriptionPage() {
               <Field label="Capacité d'accueil (personnes)" required>
                 <input type="number" min="1" max="500" value={form.capacity} onChange={(e) => set('capacity', e.target.value)} required className={inputCls} />
               </Field>
-              <Field label="Adresse complète — privée, partagée uniquement avec un visiteur que vous avez accepté" required>
+              <Field label="Adresse complète" badge="Privée" required>
                 <AddressInput
                   value={form.address_private}
                   onChange={(v) => {
@@ -226,7 +226,7 @@ export default function InscriptionPage() {
                   placeholder="12 rue des Lilas, 69001 Lyon"
                   required
                 />
-                <p className="text-xs text-slate-400 mt-1">Vous validez chaque demande avant que l'adresse soit dévoilée.</p>
+                <p className="text-xs text-slate-400 mt-1">Jamais affichée sur la carte. Partagée uniquement avec les visiteurs que vous acceptez.</p>
                 {form.address_private && !addressConfirmed && (
                   <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg mt-1.5">
                     Sélectionnez votre adresse dans la liste pour un calcul de distance précis avec les visiteurs.
@@ -234,7 +234,7 @@ export default function InscriptionPage() {
                 )}
               </Field>
               <Field label="Détails utiles pour vos visiteurs (optionnel)">
-                <textarea value={form.consignes} onChange={(e) => set('consignes', e.target.value)} rows={3} className={inputCls} placeholder={form.type === 'church' ? "Ex. : entrée par la porte latérale. Parking sur le parvis. Préférable d'arriver entre 14h et 14h30." : "Ex. : code interphone B12. Parking libre rue Pasteur. Wifi : invité2024. Préférable d'arriver entre 14h et 14h30."} />
+                <textarea value={form.consignes} onChange={(e) => set('consignes', e.target.value)} rows={3} className={inputCls} placeholder={form.type === 'church' ? "Ex. : stationnement sur le parvis. Accessibilité PMR : accès de plain-pied. Merci d'arriver entre 14h et 14h30." : "Ex. : stationnement facile dans la rue. Accessibilité PMR : accès sans marches. Merci d'arriver entre 14h et 14h30."} />
                 <p className="text-xs text-slate-400 mt-1">Sera transmis aux visiteurs acceptés. Tout détail qui facilite leur arrivée.</p>
               </Field>
               {form.type === 'individual' && (
@@ -282,16 +282,16 @@ export default function InscriptionPage() {
                 {showWhatsAppHelp && (
                   <div className="mt-2 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600 space-y-2">
                     <p><span className="font-medium text-slate-700">À quoi ça sert ?</span> Ce lien apparaît sur votre page ambassade publique. Les visiteurs peuvent rejoindre votre groupe directement — avant même de vous contacter personnellement.</p>
-                    <p><span className="font-medium text-slate-700">Particulièrement utile pour une église.</span> Votre groupe devient un canal de mobilisation : les fidèles partagent le lien, coordonnent l'arrivée et restent en contact après le live.</p>
+                    <p><span className="font-medium text-slate-700">Particulièrement utile pour une église.</span> Votre groupe devient un canal de mobilisation : les fidèles partagent le lien, coordonnent l&apos;arrivée et restent en contact après le live.</p>
                     <div>
                       <p className="font-medium text-slate-700 mb-1">Comment créer le lien ?</p>
                       <ol className="list-decimal list-inside space-y-0.5 text-slate-500">
                         <li>Ouvrez votre groupe WhatsApp</li>
                         <li>Appuyez sur le nom du groupe → <strong>Infos du groupe</strong></li>
-                        <li>→ <strong>Lien d'invitation</strong> → <strong>Copier le lien</strong></li>
+                        <li>→ <strong>Lien d&apos;invitation</strong> → <strong>Copier le lien</strong></li>
                       </ol>
                     </div>
-                    <p className="text-amber-600 font-medium">⚠️ Ce lien est public — tout visiteur qui consulte votre fiche peut rejoindre le groupe. Ne l'utilisez que si votre groupe est ouvert.</p>
+                    <p className="text-amber-600 font-medium">⚠️ Ce lien est public — tout visiteur qui consulte votre fiche peut rejoindre le groupe. Ne l&apos;utilisez que si votre groupe est ouvert.</p>
                   </div>
                 )}
               </div>
@@ -312,7 +312,7 @@ export default function InscriptionPage() {
               {error && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
               <p className="text-xs text-slate-500 leading-relaxed">
-                En soumettant cette demande, vous reconnaissez que l'équipe de David Thery se réserve le droit d'accepter ou de refuser toute candidature, sans avoir à en justifier les raisons.
+                En soumettant cette demande, vous reconnaissez que l&apos;équipe de David Thery se réserve le droit d&apos;accepter ou de refuser toute candidature, sans avoir à en justifier les raisons.
               </p>
 
               <div className="flex gap-3">
@@ -337,11 +337,16 @@ export default function InscriptionPage() {
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, required, badge, children }: { label: string; required?: boolean; badge?: string; children: React.ReactNode }) {
   return (
     <div>
       <label className="block text-sm font-medium text-slate-700 mb-1.5">
         {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+        {badge && (
+          <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-xs font-medium align-middle">
+            <span aria-hidden="true">🔒</span>{badge}
+          </span>
+        )}
       </label>
       {children}
     </div>

@@ -215,13 +215,13 @@ function CreerCompteContent() {
                 {emailStatus === 'collision' && (
                   <div className="mt-2 bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-800">
                     Cet e-mail est déjà utilisé pour un autre type de compte sur Ambassades de Guérison.
-                    Merci d'utiliser une autre adresse pour votre compte visiteur.
+                    Merci d&apos;utiliser une autre adresse pour votre compte visiteur.
                   </div>
                 )}
 
                 {emailStatus !== 'collision' && emailStatus !== 'visitor_existing' && (
                   <p className="text-xs text-slate-400 mt-2">
-                    Sert à vous connecter et à recevoir la réponse de l'ambassadeur.
+                    Sert à vous connecter et à recevoir la réponse de l&apos;ambassadeur.
                   </p>
                 )}
               </div>
@@ -236,7 +236,7 @@ function CreerCompteContent() {
                   placeholder="+33 6 12 34 56 78"
                 />
                 <p className="text-xs text-slate-400 mt-2">
-                  Permet à l'ambassadeur de vous joindre s'il accepte votre demande — jamais affiché publiquement.
+                  Permet à l&apos;ambassadeur de vous joindre s&apos;il accepte votre demande — jamais affiché publiquement.
                 </p>
               </div>
 
@@ -277,7 +277,7 @@ function CreerCompteContent() {
                 )}
                 {photoError && <p className="text-red-600 text-xs mt-1.5">{photoError}</p>}
                 <p className="text-xs text-slate-400 mt-2">
-                  Aide l'ambassadeur à savoir qui il accueille — jamais publiée, visible uniquement par lui.
+                  Aide l&apos;ambassadeur à savoir qui il accueille — jamais publiée, visible uniquement par lui.
                 </p>
               </div>
 

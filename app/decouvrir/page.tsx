@@ -63,7 +63,7 @@ export default async function DecouvrirPage() {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 mb-6">
             <h1 className="text-xl font-semibold text-slate-800 mb-2">Votre première visite</h1>
             <p className="text-sm text-slate-500 leading-relaxed">
-              Découvrir un groupe de prière n'a rien de compliqué. Voici comment ça se passe, sans surprise.
+              Découvrir un groupe de prière n&apos;a rien de compliqué. Voici comment ça se passe, sans surprise.
             </p>
           </div>
 
@@ -94,7 +94,7 @@ export default async function DecouvrirPage() {
           {/* 4. Témoignage vedette */}
           {testimonial && (
             <section className="mb-8">
-              <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-3">Ce que d'autres ont vécu</h2>
+              <h2 className="text-sm font-semibold text-slate-800 uppercase tracking-wide mb-3">Ce que d&apos;autres ont vécu</h2>
               <div className="bg-white rounded-2xl border border-slate-100 p-5">
                 <Quote className="w-5 h-5 text-indigo-400 mb-2" />
                 <p className="text-sm text-slate-700 italic leading-relaxed mb-3">{testimonial.content}</p>

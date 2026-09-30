@@ -13,7 +13,7 @@ export default function MagicLink({ magicLinkUrl }: Props) {
       <Text style={p}>Bonjour,</Text>
       <Text style={p}>Cliquez sur le lien ci-dessous pour vous connecter à votre espace ambassadeur :</Text>
       <Btn href={magicLinkUrl}>Me connecter</Btn>
-      <Text style={muted}>Ce lien expire dans 1 heure. Si vous n'avez pas demandé ce lien, ignorez cet email.</Text>
+      <Text style={muted}>Ce lien expire dans 1 heure. Si vous n&apos;avez pas demandé ce lien, ignorez cet email.</Text>
     </EmailLayout>
   );
 }

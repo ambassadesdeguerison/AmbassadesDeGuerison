@@ -111,7 +111,7 @@ export default function HostFeedbackForm({ eventId, hostProfileId, contactReques
             className="mt-0.5 w-5 h-5 shrink-0 accent-amber-600"
           />
           <span className="text-xs text-amber-800 leading-relaxed">
-            Ne plus recevoir de demande de la part de cette personne. Elle pourra toujours contacter d'autres ambassades.
+            Ne plus recevoir de demande de la part de cette personne. Elle pourra toujours contacter d&apos;autres ambassades.
           </span>
         </label>
       )}

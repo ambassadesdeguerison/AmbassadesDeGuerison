@@ -46,7 +46,7 @@ export default async function AdminSettingsPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-slate-800">Délais et affichage</p>
               <p className="text-xs text-slate-400 mt-0.5">
-                Quand les e-mails de campagne et de retour d'expérience partent, et à partir de quand la carte annonce
+                Quand les e-mails de campagne et de retour d&apos;expérience partent, et à partir de quand la carte annonce
                 un live imminent.
               </p>
             </div>

@@ -192,7 +192,7 @@ export default function TeamClient({ members: initial, currentRole, currentUserI
                   créer, et aucun écran ne le permettait (audit 8.1). */}
               <p className="flex items-start gap-1.5 text-xs text-slate-400 mt-1.5 leading-relaxed">
                 <Mail className="w-3 h-3 mt-0.5 shrink-0" />
-                Si cette personne n'a pas encore de compte, elle en recevra un par e-mail avec un lien pour l'activer.
+                Si cette personne n&apos;a pas encore de compte, elle en recevra un par e-mail avec un lien pour l&apos;activer.
               </p>
             </div>
 

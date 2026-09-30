@@ -147,7 +147,7 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
       {error && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
       <p className="text-slate-400 text-xs leading-relaxed">
-        L'ambassadeur se réserve le droit d'accepter ou non votre demande.
+        L&apos;ambassadeur se réserve le droit d&apos;accepter ou non votre demande.
       </p>
 
       <button

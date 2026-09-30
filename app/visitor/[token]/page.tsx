@@ -133,7 +133,7 @@ export default async function VisitorConfirmationPage({ params }: Props) {
                 Pas de place cette fois
               </p>
               <p className="text-amber-700 text-xs mb-4">
-                D'autres ambassades sont peut-être disponibles près de chez vous.
+                D&apos;autres ambassades sont peut-être disponibles près de chez vous.
               </p>
               <Link
                 href="/"

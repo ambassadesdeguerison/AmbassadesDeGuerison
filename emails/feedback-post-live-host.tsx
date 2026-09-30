@@ -13,8 +13,8 @@ export default function FeedbackPostLiveHost({ firstName, eventTitle, feedbackUr
   return (
     <EmailLayout preview={`Comment s'est passé votre accueil ? — ${eventTitle}`}>
       <Text style={p}>Bonjour {firstName},</Text>
-      <Text style={p}>Merci d'avoir ouvert votre porte pour le live <strong>{eventTitle}</strong>.</Text>
-      <Text style={p}>En une minute, dites-nous comment ça s'est passé avec vos visiteurs — ça reste entre vous et l'équipe :</Text>
+      <Text style={p}>Merci d&apos;avoir ouvert votre porte pour le live <strong>{eventTitle}</strong>.</Text>
+      <Text style={p}>En une minute, dites-nous comment ça s&apos;est passé avec vos visiteurs — ça reste entre vous et l&apos;équipe :</Text>
       <Btn href={feedbackUrl}>Donner mon avis</Btn>
       <Text style={muted}>Ce lien est personnel et valable 7 jours.</Text>
     </EmailLayout>

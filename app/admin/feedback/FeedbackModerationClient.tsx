@@ -220,8 +220,8 @@ export default function FeedbackModerationClient({ feedbacks: initial }: Props) 
           {reportedFeedbacks.length > 0 && (
             <AdminNotice tone="info">
               « Prendre en charge », « Résoudre » et « Classer » sont des marqueurs internes : ils ne notifient
-              personne et n'ont aucun effet sur le visiteur ou l'ambassade. Pour agir, utilisez « Bloquer ce visiteur »
-              ou suspendez l'ambassade depuis l'écran Ambassadeurs.
+              personne et n&apos;ont aucun effet sur le visiteur ou l&apos;ambassade. Pour agir, utilisez « Bloquer ce visiteur »
+              ou suspendez l&apos;ambassade depuis l&apos;écran Ambassadeurs.
             </AdminNotice>
           )}
 
@@ -270,7 +270,7 @@ export default function FeedbackModerationClient({ feedbacks: initial }: Props) 
                 )}
 
                 {fb.free_text && (
-                  <p className="text-slate-600 text-sm italic">"{fb.free_text}"</p>
+                  <p className="text-slate-600 text-sm italic">&quot;{fb.free_text}&quot;</p>
                 )}
 
                 {(isPending || isReviewing) && (
@@ -392,7 +392,7 @@ export default function FeedbackModerationClient({ feedbacks: initial }: Props) 
                     </span>
                   )}
                 </div>
-                {fb.free_text && <p className="text-slate-600 text-sm italic">"{fb.free_text}"</p>}
+                {fb.free_text && <p className="text-slate-600 text-sm italic">&quot;{fb.free_text}&quot;</p>}
               </div>
             );
           })}

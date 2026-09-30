@@ -45,7 +45,7 @@ export default function ContactEquipeForm({ token }: Props) {
         <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-4" />
         <p className="text-slate-800 font-semibold mb-2">Message envoyé</p>
         <p className="text-slate-500 text-sm leading-relaxed">
-          L'équipe vous recontacte rapidement par e-mail.
+          L&apos;équipe vous recontacte rapidement par e-mail.
         </p>
       </div>
     );

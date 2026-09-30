@@ -28,13 +28,13 @@ export default function ContactReceivedHost({
         <Text style={p}>Numéro : <Link href={`https://wa.me/${visitorWhatsapp.replace(/\D/g, '')}`} style={link}>{visitorWhatsapp}</Link></Text>
       )}
       {visitorMessage && (
-        <Text style={p}>Message : <em>"{visitorMessage}"</em></Text>
+        <Text style={p}>Message : <em>&quot;{visitorMessage}&quot;</em></Text>
       )}
       {dashboardUrl && (
         <Text style={p}>{visitorFirstName} a ajouté une photo de profil — <Link href={dashboardUrl} style={link}>voir dans mon tableau de bord</Link></Text>
       )}
-      <Btn href={acceptUrl} color="green">J'accueille {visitorFirstName}</Btn>
-      <Text style={muted}>Si vous n'êtes pas en mesure de l'accueillir :</Text>
+      <Btn href={acceptUrl} color="green">J&apos;accueille {visitorFirstName}</Btn>
+      <Text style={muted}>Si vous n&apos;êtes pas en mesure de l&apos;accueillir :</Text>
       <Btn href={declineUrl} color="red">Refuser cette demande</Btn>
     </EmailLayout>
   );

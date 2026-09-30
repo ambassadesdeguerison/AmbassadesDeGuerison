@@ -18,7 +18,7 @@ export default function CampagneAmbassadeurs({ firstName, eventTitle, eventDate,
       {customMessage && <Text style={{ ...p, fontStyle: 'italic' }}>{customMessage}</Text>}
       <Text style={p}>Le prochain live de David Théry — <strong>{eventTitle}</strong> — a lieu le <strong>{eventDate}</strong>.</Text>
       <Text style={p}>Allez-vous ouvrir votre ambassade pour accueillir des visiteurs ce soir-là ?</Text>
-      <Btn href={activateUrl}>Oui, j'ouvre mon ambassade</Btn>
+      <Btn href={activateUrl}>Oui, j&apos;ouvre mon ambassade</Btn>
       <Text style={muted}>Vous pouvez aussi préciser le nombre de places disponibles depuis votre espace ambassadeur.</Text>
       <Text style={muted}>Si vous ne pouvez pas cette fois, pas de problème — votre ambassade restera inactive pour ce live uniquement.</Text>
     </EmailLayout>

@@ -18,12 +18,12 @@ export default function VisitorCompteCree({ firstName, confirmUrl }: Props) {
     <EmailLayout preview="Votre compte a bien été créé — Ambassades de Guérison">
       <Text style={p}>Bonjour {firstName},</Text>
       <Text style={p}>
-        Votre compte visiteur vient d'être créé sur Ambassades de Guérison. Il vous permettra de
+        Votre compte visiteur vient d&apos;être créé sur Ambassades de Guérison. Il vous permettra de
         retrouver vos prochaines demandes de visite sans tout retaper.
       </Text>
       <Text style={p}>Ce lien vous connecte à votre espace :</Text>
       <Btn href={confirmUrl}>Accéder à mon espace</Btn>
-      <Text style={muted}>Ce lien expire dans 1 heure. Si vous n'êtes pas à l'origine de cette création de compte, contactez-nous.</Text>
+      <Text style={muted}>Ce lien expire dans 1 heure. Si vous n&apos;êtes pas à l&apos;origine de cette création de compte, contactez-nous.</Text>
     </EmailLayout>
   );
 }

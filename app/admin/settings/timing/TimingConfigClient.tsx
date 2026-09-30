@@ -114,7 +114,7 @@ export default function TimingConfigClient({ config }: Props) {
 
           <AdminNotice tone="paused">
             Les envois automatiques sont <strong>désactivés</strong> pour le moment. Ces délais seront appliqués dès
-            leur activation, mais aucun e-mail ne part automatiquement aujourd'hui.
+            leur activation, mais aucun e-mail ne part automatiquement aujourd&apos;hui.
           </AdminNotice>
 
           {CAMPAIGN_FIELDS.map(renderField)}

@@ -12,7 +12,7 @@ interface Props {
 export default function NouvelleActivationAdmin({ firstName, city, country, adminUrl }: Props) {
   return (
     <EmailLayout preview={`Nouvelle ambassade activée — ${firstName}, ${city}`}>
-      <Text style={p}>Une nouvelle ambassade vient d'être activée :</Text>
+      <Text style={p}>Une nouvelle ambassade vient d&apos;être activée :</Text>
       <Text style={list}>• <strong>Prénom :</strong> {firstName}</Text>
       <Text style={list}>• <strong>Ville :</strong> {city}</Text>
       <Text style={list}>• <strong>Pays :</strong> {country}</Text>

@@ -225,7 +225,7 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
 
           <div>
             <label className="block text-xs text-slate-500 mb-1.5">
-              Date d'envoi <span className="text-slate-400">(heure La Réunion)</span>
+              Date d&apos;envoi <span className="text-slate-400">(heure La Réunion)</span>
             </label>
             <input
               type="datetime-local"
@@ -246,7 +246,7 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
                 className={inputCls}
                 placeholder="Bonjour à toutes et tous, le prochain live aura lieu…"
               />
-              <p className="text-xs text-slate-400 mt-1">Apparaîtra dans l'e-mail ambassadeur avant le bouton d'activation.</p>
+              <p className="text-xs text-slate-400 mt-1">Apparaîtra dans l&apos;e-mail ambassadeur avant le bouton d&apos;activation.</p>
             </div>
           )}
 
@@ -265,7 +265,7 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
 
       {futureEvents.length === 0 && (
         <p className="text-slate-400 text-sm text-center py-6">
-          Aucun live à venir — créez d'abord un live dans la section ci-dessus.
+          Aucun live à venir — créez d&apos;abord un live dans la section ci-dessus.
         </p>
       )}
 

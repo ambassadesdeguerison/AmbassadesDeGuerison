@@ -13,8 +13,8 @@ export default function RefusVisite({ visitorFirstName, hostFirstName, carteUrl 
   return (
     <EmailLayout preview={`Votre demande auprès de ${hostFirstName} — mise à jour`}>
       <Text style={p}>Bonjour {visitorFirstName},</Text>
-      <Text style={p}>{hostFirstName} n'est malheureusement pas en mesure de vous accueillir pour ce live.</Text>
-      <Text style={p}>D'autres ambassades sont peut-être disponibles près de chez vous :</Text>
+      <Text style={p}>{hostFirstName} n&apos;est malheureusement pas en mesure de vous accueillir pour ce live.</Text>
+      <Text style={p}>D&apos;autres ambassades sont peut-être disponibles près de chez vous :</Text>
       <Btn href={carteUrl}>Voir la carte</Btn>
       <Text style={muted}>Ne vous découragez pas — les ambassades grandissent à chaque live.</Text>
     </EmailLayout>

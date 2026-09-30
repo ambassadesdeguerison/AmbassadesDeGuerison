@@ -13,8 +13,8 @@ export default function ContactDeclined({ visitorFirstName, hostFirstName, appUr
   return (
     <EmailLayout preview={`Votre demande auprès de ${hostFirstName} n'a pas pu être confirmée`}>
       <Text style={p}>Bonjour {visitorFirstName},</Text>
-      <Text style={p}>{hostFirstName} n'est malheureusement pas en mesure de vous accueillir pour ce live.</Text>
-      <Text style={p}>D'autres ambassades sont peut-être disponibles près de chez vous :</Text>
+      <Text style={p}>{hostFirstName} n&apos;est malheureusement pas en mesure de vous accueillir pour ce live.</Text>
+      <Text style={p}>D&apos;autres ambassades sont peut-être disponibles près de chez vous :</Text>
       <Btn href={appUrl}>Voir la carte</Btn>
     </EmailLayout>
   );

@@ -169,7 +169,7 @@ export default function NouveauTemoignageForm({ events, defaultEventId }: Props)
   if (events.length === 0) {
     return (
       <div className="text-center py-16">
-        <p className="text-slate-400 text-sm">Aucun live disponible pour l'instant.</p>
+        <p className="text-slate-400 text-sm">Aucun live disponible pour l&apos;instant.</p>
         <Link href="/temoignages" className="mt-4 inline-flex items-center gap-1.5 text-indigo-600 text-sm hover:underline">
           <ArrowLeft className="w-3.5 h-3.5" /> Retour aux témoignages
         </Link>
@@ -185,7 +185,7 @@ export default function NouveauTemoignageForm({ events, defaultEventId }: Props)
         </div>
         <h2 className="text-xl font-semibold text-slate-800 mb-2">Merci pour votre témoignage</h2>
         <p className="text-slate-500 text-sm max-w-xs mx-auto">
-          Il sera relu avant d'être publié. Ce que Dieu fait mérite d'être partagé.
+          Il sera relu avant d&apos;être publié. Ce que Dieu fait mérite d&apos;être partagé.
         </p>
         <Link
           href="/temoignages"
@@ -240,7 +240,7 @@ export default function NouveauTemoignageForm({ events, defaultEventId }: Props)
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
         <h1 className="text-xl font-semibold text-slate-800 mb-1">Partagez votre témoignage</h1>
         <p className="text-slate-500 text-sm mb-6">
-          Qu'avez-vous vécu pendant ce live ?
+          Qu&apos;avez-vous vécu pendant ce live ?
         </p>
 
         {ambassadorCity && (

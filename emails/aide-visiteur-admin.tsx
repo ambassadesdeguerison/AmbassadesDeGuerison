@@ -11,12 +11,12 @@ interface Props {
 export default function AideVisiteurAdmin({ visitorEmail, message, adminUrl }: Props) {
   return (
     <EmailLayout preview={`Demande d'aide visiteur — ${visitorEmail}`}>
-      <Text style={p}>Un visiteur a besoin d'aide :</Text>
+      <Text style={p}>Un visiteur a besoin d&apos;aide :</Text>
       <Text style={list}>• <strong>Email :</strong> {visitorEmail}</Text>
       <Text style={label}>Message :</Text>
       <Text style={quote}>{message}</Text>
       <Text style={{ marginTop: '16px' }}>
-        <Link href={adminUrl} style={link}>Voir dans l'admin →</Link>
+        <Link href={adminUrl} style={link}>Voir dans l&apos;admin →</Link>
       </Text>
     </EmailLayout>
   );

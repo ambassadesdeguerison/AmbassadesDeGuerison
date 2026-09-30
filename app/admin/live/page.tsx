@@ -60,7 +60,7 @@ export default async function AdminLivePage() {
                 était indiscernable d'une panne. */}
             <p className="text-xs text-slate-400 mb-4 leading-relaxed">
               Les ambassadeurs signalent depuis leur tableau de bord les moments forts vécus chez eux pendant le live.
-              David peut les citer à l'antenne.
+              David peut les citer à l&apos;antenne.
             </p>
             <AdminFeed eventId={event?.id ?? null} />
           </section>

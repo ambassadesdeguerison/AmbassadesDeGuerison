@@ -107,8 +107,8 @@ export default function BlacklistClient({ entries: initial }: Props) {
               choix éthique assumé du projet — refus honnête plutôt que
               shadow-ban — mais l'admin pouvait croire à un blocage silencieux. */}
           <AdminNotice tone="info">
-            La personne bloquée reçoit un message neutre l'invitant à contacter l'équipe si elle pense qu'il s'agit
-            d'une erreur. Ce n'est pas un blocage silencieux : elle sait que sa demande n'a pas été prise en compte.
+            La personne bloquée reçoit un message neutre l&apos;invitant à contacter l&apos;équipe si elle pense qu&apos;il s&apos;agit
+            d&apos;une erreur. Ce n&apos;est pas un blocage silencieux : elle sait que sa demande n&apos;a pas été prise en compte.
           </AdminNotice>
 
           <div className="grid sm:grid-cols-2 gap-3">
@@ -153,7 +153,7 @@ export default function BlacklistClient({ entries: initial }: Props) {
               className={inputCls}
               placeholder="Spam, harcèlement, fausses demandes…"
             />
-            <p className="text-xs text-slate-400 mt-1">Visible uniquement par l'équipe — jamais communiqué à la personne.</p>
+            <p className="text-xs text-slate-400 mt-1">Visible uniquement par l&apos;équipe — jamais communiqué à la personne.</p>
           </div>
 
           {addError && <ErrorMessage>{addError}</ErrorMessage>}
