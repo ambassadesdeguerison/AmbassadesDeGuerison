@@ -19,7 +19,7 @@ function ConfirmContent() {
 
     if (!token_hash || !type) {
       setStatus('error');
-      setErrorMsg('Lien invalide ou incomplet.');
+      setErrorMsg('Ce lien est incomplet. Copiez-le en entier depuis votre e-mail.');
       return;
     }
 
@@ -27,7 +27,7 @@ function ConfirmContent() {
     supabase.auth.verifyOtp({ token_hash, type }).then(({ data, error }) => {
       if (error) {
         setStatus('error');
-        setErrorMsg(error.message);
+        setErrorMsg("Ce lien a déjà été utilisé ou n'est plus valable.");
       } else {
         setStatus('success');
         // Redirection vers la page d'origine (ex : reprendre une demande de
