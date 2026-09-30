@@ -731,7 +731,7 @@ export default function DashboardPage() {
                     <button
                       onClick={submitTestimonial}
                       disabled={testimonialSubmitting || !testimonialContent.trim()}
-                      className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                      className="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                     >
                       <Send className="w-4 h-4" />
                       {testimonialSubmitting ? 'Envoi…' : 'Envoyer le témoignage'}
@@ -883,7 +883,7 @@ export default function DashboardPage() {
                               <button
                                 onClick={() => handleContactAction(r.action_token, 'decline')}
                                 disabled={isActioning}
-                                className="flex-1 flex items-center justify-center gap-1.5 text-sm px-3 py-2 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 disabled:opacity-50 transition-colors font-medium"
+                                className="flex-1 flex items-center justify-center gap-1.5 text-sm px-3 py-2 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 disabled:opacity-50 transition-colors font-medium"
                               >
                                 {isDeclining ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
                                 Refuser

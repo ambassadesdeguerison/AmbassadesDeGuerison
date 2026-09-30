@@ -59,11 +59,11 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
 // enrichment_pending est volontairement absent d'ici : Valider/Refuser vivent uniquement dans le
 // panneau déplié (sticky en bas), pour éviter de trancher sur un dossier photos/questionnaire non lu.
 const STATUS_ACTIONS: Record<string, { action: string; label: string; className: string }[]> = {
-  pending_review:     [{ action: 'rejected', label: 'Refuser', className: 'bg-slate-50 text-slate-600 hover:bg-slate-100' }],
-  pre_approved:       [{ action: 'rejected', label: 'Refuser', className: 'bg-slate-50 text-slate-600 hover:bg-slate-100' }],
+  pending_review:     [{ action: 'rejected', label: 'Refuser', className: 'bg-red-50 text-red-700 hover:bg-red-100' }],
+  pre_approved:       [{ action: 'rejected', label: 'Refuser', className: 'bg-red-50 text-red-700 hover:bg-red-100' }],
   validated:          [{ action: 'suspended',       label: 'Suspendre',          className: 'bg-red-50 text-red-700 hover:bg-red-100' }],
   suspended:          [{ action: 'reactiver',       label: 'Réactiver',          className: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' }],
-  rejected:           [{ action: 'reactiver',       label: 'Réintégrer',         className: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' }],
+  rejected:           [{ action: 'reactiver',       label: 'Réintégrer',         className: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' }],
 };
 
 const HOST_TYPE_LABELS: Record<string, string> = {
@@ -414,7 +414,7 @@ function AmbassadeurCard({
                 <button
                   onClick={() => onAction('rejected')}
                   disabled={isLoading}
-                  className="px-4 py-2.5 bg-slate-100 text-slate-600 text-xs rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors font-medium"
+                  className="px-4 py-2.5 bg-red-50 text-red-700 text-xs rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors font-medium"
                 >
                   {isLoading ? '…' : 'Refuser'}
                 </button>
@@ -844,7 +844,7 @@ export default function AmbassadeursTable({
                                     <button
                                       onClick={() => handleAction(a, 'rejected')}
                                       disabled={isLoading}
-                                      className="px-4 py-2 bg-slate-100 text-slate-600 text-xs rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors font-medium"
+                                      className="px-4 py-2 bg-red-50 text-red-700 text-xs rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors font-medium"
                                     >
                                       {isLoading ? '…' : 'Refuser'}
                                     </button>

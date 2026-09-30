@@ -102,14 +102,14 @@ export default function AccueillirClient({
         <button
           onClick={() => handleAction('accept')}
           disabled={!!loading}
-          className="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          className="w-full bg-emerald-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
         >
           {loading === 'accept' ? 'En cours…' : "J'accueille"}
         </button>
         <button
           onClick={() => handleAction('decline')}
           disabled={!!loading}
-          className="w-full border border-slate-200 text-slate-600 py-3 rounded-xl font-medium text-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
+          className="w-full border border-red-200 text-red-700 py-3 rounded-xl font-medium text-sm hover:bg-red-50 disabled:opacity-50 transition-colors"
         >
           {loading === 'decline' ? 'En cours…' : 'Je ne peux pas'}
         </button>

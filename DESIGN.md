@@ -41,6 +41,7 @@
 - **Neutral strong:** `slate-800` (#1e293b) — titres, labels importants
 - **Success (emerald-600):** `#059669` — WhatsApp, states positifs, badges actifs
 - **Error (red-600):** `#dc2626` — actions destructives (Suspendre, Supprimer)
+- **Couleur des actions (règle d'usage) :** positif (Accepter, Valider, Approuver, Publier, Réactiver, Réintégrer) = emerald ; refus ou destructif (Refuser, Suspendre, Supprimer, Bloquer) = red, jamais gris ; annulation ou retour = neutre (slate) ; envoi de formulaire et CTA générique = indigo. Un bouton « Refuser » est au minimum en `bg-red-50 text-red-700` (liste, action secondaire) ou en contour rouge / rouge plein (décision principale). Même règle dans les e-mails (`Btn` : `green` / `red`).
 - **Dark mode:** Non implémenté en v1. Aucune `@media (prefers-color-scheme: dark)` dans `globals.css`.
 
 ## Spacing

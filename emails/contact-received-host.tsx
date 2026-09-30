@@ -33,7 +33,7 @@ export default function ContactReceivedHost({
       {dashboardUrl && (
         <Text style={p}>{visitorFirstName} a ajouté une photo de profil — <Link href={dashboardUrl} style={link}>voir dans mon tableau de bord</Link></Text>
       )}
-      <Btn href={acceptUrl}>J'accueille {visitorFirstName}</Btn>
+      <Btn href={acceptUrl} color="green">J'accueille {visitorFirstName}</Btn>
       <Text style={muted}>Si vous n'êtes pas en mesure de l'accueillir :</Text>
       <Btn href={declineUrl} color="red">Refuser cette demande</Btn>
     </EmailLayout>

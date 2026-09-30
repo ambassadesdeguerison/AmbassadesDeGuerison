@@ -9,8 +9,8 @@ interface Props {
 
 const COLORS = {
   indigo: '#4F46E5',
-  green:  '#16A34A',
-  red:    '#ef4444',
+  green:  '#059669',
+  red:    '#dc2626',
 };
 
 export function Btn({ href, children, color = 'indigo' }: Props) {
