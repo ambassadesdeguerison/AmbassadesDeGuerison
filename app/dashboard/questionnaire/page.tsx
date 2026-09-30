@@ -347,7 +347,7 @@ export default function QuestionnairePage() {
       <AppHeader />
       <main className="flex-1 bg-slate-50 px-4 py-8">
         <div className="max-w-lg mx-auto">
-          <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 mb-6 transition-colors">
+          <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6 transition-colors">
             <ArrowLeft className="w-4 h-4" /> Mon espace
           </Link>
 
@@ -401,7 +401,7 @@ export default function QuestionnairePage() {
                   className={inputCls}
                 />
               </Field>
-              <p className="text-xs text-slate-400 -mt-3">
+              <p className="text-xs text-slate-500 -mt-3">
                 Ces réponses aident David à situer votre parcours. Elles ne sont vues que par l&apos;équipe.
               </p>
             </div>
@@ -465,7 +465,7 @@ export default function QuestionnairePage() {
                 value={form.has_seen_healings}
                 onChange={(v) => set('has_seen_healings', v)}
               />
-              <p className="text-xs text-slate-400 -mt-3">
+              <p className="text-xs text-slate-500 -mt-3">
                 Ces réponses aident David à mieux vous connaître avant de valider votre ambassade. Elles ne sont
                 vues que par l&apos;équipe.
               </p>
@@ -525,7 +525,7 @@ export default function QuestionnairePage() {
               <div className="space-y-2">
                 <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">
                   Photos du lieu d&apos;accueil <RequiredBadge />
-                  <span className="font-normal text-slate-400 normal-case ml-1">
+                  <span className="font-normal text-slate-500 normal-case ml-1">
                     (max 5, {roomPhotoPaths.length}/5)
                   </span>
                 </p>
@@ -584,7 +584,7 @@ export default function QuestionnairePage() {
               </p>
             )}
 
-            <p className="text-xs text-slate-400 text-center" role="status" aria-live="polite">
+            <p className="text-xs text-slate-500 text-center" role="status" aria-live="polite">
               {saveState === 'saving' && 'Enregistrement…'}
               {saveState === 'saved' &&
                 savedAt &&
@@ -626,4 +626,4 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition bg-white';
+const inputCls = 'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition bg-white';

@@ -32,7 +32,7 @@ const btnPrimary = `${btnBase} bg-indigo-600 text-white hover:bg-indigo-700`;
 const btnNeutral = `${btnBase} border border-slate-200 text-slate-700 bg-white hover:bg-slate-50`;
 const btnStop = `${btnBase} bg-slate-800 text-white hover:bg-slate-900`;
 const inputCls =
-  'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition bg-white';
+  'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition bg-white';
 
 export default function VideoAsk({
   onSubmit,
@@ -256,7 +256,7 @@ export default function VideoAsk({
         <div className="flex items-center gap-2">
           <Video className="w-4 h-4 text-indigo-500" />
           <h3 className="text-sm font-semibold text-slate-800">Votre vidéo de présentation</h3>
-          <span className="text-xs text-slate-400">— facultative</span>
+          <span className="text-xs text-slate-500">— facultative</span>
         </div>
         <p className="text-sm text-slate-500 mt-1.5">
           Présentez-vous en quelques mots, comme si vous parliez à David. Durée maximale :{' '}
@@ -285,7 +285,7 @@ export default function VideoAsk({
             placeholder="Notez ici ce que vous voulez dire…"
             className={inputCls}
           />
-          <p className="text-xs text-slate-400 mt-2">
+          <p className="text-xs text-slate-500 mt-2">
             Ces notes restent sur votre appareil : elles ne sont pas envoyées et personne d&apos;autre ne les voit.
           </p>
         </details>
@@ -407,7 +407,7 @@ export default function VideoAsk({
         tabIndex={-1}
       />
 
-      <p className="text-xs text-slate-400">
+      <p className="text-xs text-slate-500">
         Cette vidéo aide l&apos;équipe de David à mieux vous connaître avant de valider votre ambassade. Elle est vue
         uniquement par les administrateurs et n&apos;est jamais publiée.
       </p>
