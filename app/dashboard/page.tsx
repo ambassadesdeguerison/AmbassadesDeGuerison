@@ -127,8 +127,9 @@ export default function DashboardPage() {
       .from('host_profiles')
       .select('id, first_name, city, country, status, email, profile_photo_url, room_photo_urls, address_private, consignes, phone, quartier, presentation_message, host_type, is_women_only')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
+    // Connecté sans profil ambassadeur : /auth l'explique et propose de s'inscrire.
     if (!prof) { router.replace('/auth'); return; }
 
     const { data: acts } = await supabase

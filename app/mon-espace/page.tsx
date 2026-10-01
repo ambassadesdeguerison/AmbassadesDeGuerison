@@ -34,6 +34,7 @@ export default function MonEspacePage() {
     if (!user) { router.replace('/auth'); return; }
 
     const res = await fetch('/api/visitor/profile');
+    if (res.status === 404) { router.replace('/mon-espace/creer'); return; }
     if (!res.ok) { router.replace('/'); return; }
     const data = await res.json();
     setEmail(data.email ?? user.email ?? '');

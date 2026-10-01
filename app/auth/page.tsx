@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, MailCheck, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import AppHeader from '@/components/AppHeader';
+import { createClient } from '@/lib/supabase/browser';
 
 export default function AuthPage() {
   const [email, setEmail] = useState('');
@@ -12,6 +13,38 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   // Adresse sans compte : aucun e-mail n'est envoyé, on guide vers l'inscription.
   const [noAccount, setNoAccount] = useState(false);
+  // Déjà connecté : on le dit (et on propose la suite) plutôt que de réafficher un formulaire de
+  // connexion muet. `destination` vaut null quand le compte n'a ni profil ambassadeur ni profil visiteur.
+  const [session, setSession] = useState<{ email: string; destination: string | null } | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const user = data.user;
+      if (!user) return;
+      const role = user.user_metadata?.role;
+      let destination: string | null = null;
+      if (role === 'admin') {
+        destination = '/admin/stats';
+      } else if (role === 'visitor') {
+        const res = await fetch('/api/visitor/profile');
+        if (res.ok) destination = '/mon-espace';
+      } else {
+        const { data: host } = await supabase
+          .from('host_profiles')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (host) destination = '/dashboard';
+      }
+      setSession({ email: user.email ?? '', destination });
+    });
+  }, []);
+
+  async function signOut() {
+    await createClient().auth.signOut();
+    setSession(null);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -33,6 +66,56 @@ export default function AuthPage() {
       setSent(true);
     }
     setLoading(false);
+  }
+
+  if (session) {
+    return (
+      <>
+        <AppHeader />
+        <main className="flex-1 flex items-center justify-center bg-slate-50 px-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
+            <h1 className="text-xl font-semibold text-slate-800 mb-2">Vous êtes déjà connecté</h1>
+            <p className="text-slate-500 text-sm mb-6">
+              Connecté avec <span className="font-medium text-slate-700">{session.email}</span>.
+              {session.destination
+                ? ''
+                : ' Ce compte n\u2019a pas encore d\u2019espace : ni ambassade, ni espace visiteur.'}
+            </p>
+            <div className="space-y-2">
+              {session.destination ? (
+                <Link
+                  href={session.destination}
+                  className="flex items-center justify-center min-h-[44px] w-full bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+                >
+                  Aller à mon espace
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/inscription"
+                    className="flex items-center justify-center min-h-[44px] w-full bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+                  >
+                    Devenir ambassadeur
+                  </Link>
+                  <Link
+                    href="/mon-espace/creer"
+                    className="flex items-center justify-center min-h-[44px] w-full border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
+                  >
+                    Créer mon espace visiteur
+                  </Link>
+                </>
+              )}
+              <button
+                onClick={signOut}
+                className="flex items-center justify-center min-h-[44px] w-full text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
+              >
+                Se déconnecter
+              </button>
+            </div>
+          </div>
+        </main>
+      </>
+    );
   }
 
   if (noAccount) {
