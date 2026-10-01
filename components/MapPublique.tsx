@@ -877,7 +877,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
           le hint "pas d'ambassade" (centré) ni la recherche (haut-gauche) */}
       {!discoverDismissed && (
         <div className="absolute bottom-6 right-3 z-[500] max-w-[220px]">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-slate-100 shadow-md px-4 py-3 relative">
+          <div className="discover-cta bg-white/95 backdrop-blur-sm rounded-xl border border-indigo-100 shadow-md px-4 py-3 relative">
             <button
               type="button"
               onClick={dismissDiscoverCta}
@@ -886,7 +886,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
             >
               ×
             </button>
-            <p className="text-slate-600 text-xs pr-4">C&apos;est votre première fois&nbsp;?</p>
+            <p className="text-slate-800 text-sm font-medium pr-4">C&apos;est votre première fois&nbsp;?</p>
             <a
               href="/decouvrir"
               className="mt-1.5 inline-flex items-center gap-1 text-indigo-600 text-xs font-medium hover:text-indigo-800 transition-colors"
