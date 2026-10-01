@@ -170,6 +170,8 @@ export default function DashboardPage() {
           setVisitorPhotosLoaded(true);
         })
         .catch(() => {});
+    } else {
+      setVisitorPhotosLoaded(true);
     }
 
     const windowMs = LIVE_WINDOW_HOURS * 60 * 60 * 1000;
