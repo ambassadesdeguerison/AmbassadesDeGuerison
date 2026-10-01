@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, UserPlus, ChevronRight, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import AppHeader from '@/components/AppHeader';
+import InscriptionSuccess from '@/components/InscriptionSuccess';
+import { createClient } from '@/lib/supabase/browser';
 import CityInput from '@/components/ui/CityInput';
 import CountrySelect from '@/components/ui/CountrySelect';
 import PhoneInput from '@/components/ui/PhoneInput';
@@ -19,6 +21,8 @@ export default function InscriptionPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  // Session ouverte avec la même adresse que l'inscription : l'écran de confirmation n'a pas à redemander de se connecter.
+  const [connected, setConnected] = useState(false);
   const [showWhatsAppHelp, setShowWhatsAppHelp] = useState(false);
   const [addressConfirmed, setAddressConfirmed] = useState(false);
 
@@ -64,6 +68,12 @@ export default function InscriptionPage() {
       return;
     }
 
+    try {
+      const { data: { user } } = await createClient().auth.getUser();
+      setConnected(user?.email?.toLowerCase() === form.email.trim().toLowerCase());
+    } catch {
+      // Pas de session lisible : on garde l'écran « connectez-vous »
+    }
     setSubmitted(true);
   }
 
@@ -74,29 +84,7 @@ export default function InscriptionPage() {
       <>
         <AppHeader />
         <main className="flex-1 bg-slate-50 px-4 py-8">
-          <div className="max-w-lg mx-auto text-center py-16">
-            <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
-              <CheckCircle2 className="w-7 h-7 text-emerald-600" />
-            </div>
-            <h2 className="text-xl font-semibold text-slate-800 mb-2">Inscription confirmée !</h2>
-            <p className="text-slate-500 text-sm max-w-sm mx-auto mb-1">
-              Un e-mail vient d&apos;être envoyé à <span className="font-medium text-slate-700">{form.email}</span>.
-            </p>
-            <p className="text-slate-500 text-sm max-w-sm mx-auto">
-              Connectez-vous à votre espace ambassadeur pour démarrer : vidéo de formation, engagement à valider, puis votre présentation.
-            </p>
-            <Link
-              href="/auth"
-              className="mt-6 inline-flex items-center gap-2 bg-indigo-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Accéder à mon espace ambassadeur
-            </Link>
-            <div className="mt-4">
-              <Link href="/" className="inline-flex items-center gap-1.5 text-slate-400 text-sm hover:text-slate-600 transition-colors">
-                <ArrowLeft className="w-3.5 h-3.5" /> Retour à la carte
-              </Link>
-            </div>
-          </div>
+          <InscriptionSuccess email={form.email} connected={connected} />
         </main>
       </>
     );
