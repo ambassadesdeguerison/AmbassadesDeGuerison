@@ -16,21 +16,21 @@ export default function InscriptionSuccess({ email, connected }: Props) {
       <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
         <CheckCircle2 className="w-7 h-7 text-emerald-600" />
       </div>
-      <h2 className="text-xl font-semibold text-slate-800 mb-2">Inscription confirmée !</h2>
+      <h2 className="text-xl font-semibold text-slate-800 mb-2">Votre demande est bien reçue !</h2>
       {connected ? (
         <p className="text-slate-500 text-sm max-w-sm mx-auto">
-          Il reste à regarder la vidéo de formation, valider votre engagement, puis vous présenter.
-          Un e-mail de confirmation a aussi été envoyé à{' '}
+          Il reste trois choses à faire : regarder la courte vidéo de formation, confirmer votre engagement,
+          puis vous présenter à David et à son équipe. Nous avons aussi écrit à{' '}
           <span className="font-medium text-slate-700">{email}</span>.
         </p>
       ) : (
         <>
           <p className="text-slate-500 text-sm max-w-sm mx-auto mb-1">
-            Un e-mail vient d&apos;être envoyé à <span className="font-medium text-slate-700">{email}</span>.
+            Nous venons d&apos;écrire à <span className="font-medium text-slate-700">{email}</span>.
           </p>
           <p className="text-slate-500 text-sm max-w-sm mx-auto">
-            Connectez-vous à votre espace ambassadeur pour démarrer : vidéo de formation, engagement à valider,
-            puis votre présentation.
+            Appuyez sur le bouton dans ce message pour vous connecter et continuer : courte vidéo de formation,
+            engagement, puis votre présentation.
           </p>
         </>
       )}
@@ -38,7 +38,7 @@ export default function InscriptionSuccess({ email, connected }: Props) {
         href={connected ? '/dashboard' : '/auth'}
         className="mt-6 inline-flex items-center gap-2 bg-indigo-600 text-white text-sm font-medium px-5 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors"
       >
-        {connected ? 'Continuer mon inscription' : 'Accéder à mon espace ambassadeur'}
+        {connected ? 'Continuer mon inscription' : 'Me connecter pour continuer'}
       </Link>
       <div className="mt-4">
         <Link

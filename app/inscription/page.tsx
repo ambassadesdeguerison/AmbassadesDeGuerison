@@ -164,7 +164,7 @@ function InscriptionContent() {
 
             {proofState === 'checking' ? (
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex items-center justify-center gap-2 text-slate-400 text-sm">
-                <Loader2 className="w-4 h-4 animate-spin" /> Vérification de votre lien…
+                <Loader2 className="w-4 h-4 animate-spin" /> Vérification en cours…
               </div>
             ) : linkSent ? (
               <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center space-y-3">
@@ -173,14 +173,14 @@ function InscriptionContent() {
                 </div>
                 <h1 className="text-lg font-semibold text-slate-800">Regardez votre boîte mail</h1>
                 <p className="text-slate-500 text-sm">
-                  Nous venons d&apos;écrire à <strong className="text-slate-700">{form.email.trim()}</strong>. Un clic sur le lien
-                  confirme votre adresse et ouvre le formulaire.
+                  Nous venons d&apos;écrire à <strong className="text-slate-700">{form.email.trim()}</strong>. Appuyez sur le bouton dans ce
+                  message : il vérifie votre adresse et ouvre le formulaire.
                 </p>
-                <p className="text-slate-400 text-xs">Rien ne vous est parvenu ? Pensez à regarder dans les courriers indésirables.</p>
+                <p className="text-slate-400 text-xs">Rien reçu ? Regardez dans les courriers indésirables.</p>
                 {linkError && <p className="text-red-600 text-sm">{linkError}</p>}
                 <div className="flex items-center justify-center gap-4 pt-1 text-sm">
                   <button type="button" onClick={() => sendVerificationLink()} disabled={linkSending} className="text-indigo-600 font-medium hover:underline disabled:opacity-50">
-                    {linkSending ? 'Envoi…' : 'Renvoyer le lien'}
+                    {linkSending ? 'Envoi…' : 'Renvoyer l\u2019e-mail'}
                   </button>
                   <button type="button" onClick={() => { setLinkSent(false); setLinkError(''); }} className="text-slate-500 hover:underline">
                     Changer d&apos;adresse
@@ -201,7 +201,7 @@ function InscriptionContent() {
 
                 {proofState === 'invalid' && (
                   <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
-                    Ce lien n&apos;est plus valable (il dure 24 heures). Recevez-en un nouveau ci-dessous.
+                    Ce bouton ne fonctionne plus (il dure 24 heures). Demandez-en un nouveau ci-dessous.
                   </p>
                 )}
                 {error && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
@@ -218,13 +218,13 @@ function InscriptionContent() {
                     placeholder="marie@exemple.com"
                   />
                   <p className="text-xs text-slate-400 mt-1">
-                    Pour commencer, nous vous écrivons à cette adresse afin de la confirmer. Elle vous servira ensuite à vous connecter (sans mot de passe) et à recevoir les demandes de visite.
+                    Pour commencer, nous vous écrivons à cette adresse pour vérifier qu&apos;elle est bien la vôtre. Elle vous servira ensuite à vous connecter (sans mot de passe) et à recevoir les demandes de visite.
                   </p>
                 </Field>
                 {linkError && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{linkError}</p>}
                 <button type="submit" disabled={linkSending || !form.email.includes('@')} className={`${btnPrimary} flex items-center gap-2 justify-center`}>
                   {linkSending && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Recevoir le lien de confirmation
+                  Recevoir l&apos;e-mail de vérification
                 </button>
                 <p className="text-center text-xs text-slate-400">
                   Déjà ambassadeur ? <Link href="/auth" className="text-indigo-600 hover:underline">Se connecter</Link>
@@ -287,7 +287,7 @@ function InscriptionContent() {
                 {/* Adresse confirmée par le lien reçu : non modifiable (la preuve est liée à cette adresse). */}
                 <input type="email" value={form.email} readOnly className={`${inputCls} bg-slate-50 text-slate-500`} />
                 <p className="text-xs text-emerald-700 mt-1 flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Adresse confirmée — elle vous servira à vous connecter et à recevoir les demandes de visite.
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Adresse vérifiée : elle vous servira à vous connecter et à recevoir les demandes de visite.
                 </p>
               </Field>
               <Field label="Téléphone" required>

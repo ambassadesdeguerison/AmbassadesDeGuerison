@@ -82,7 +82,7 @@ export default function AuthPage() {
               Connecté avec <span className="font-medium text-slate-700">{session.email}</span>.
               {session.destination
                 ? ''
-                : ' Il reste \u00e0 choisir comment continuer : ce compte n\u2019a pas encore d\u2019ambassade ni d\u2019espace visiteur.'}
+                : ' Ce compte n\u2019a pas encore d\u2019ambassade ni d\u2019espace visiteur : que souhaitez-vous faire ?'}
             </p>
             <div className="space-y-2">
               {session.destination ? (
@@ -104,7 +104,7 @@ export default function AuthPage() {
                     href="/mon-espace/creer"
                     className="flex items-center justify-center min-h-[44px] w-full border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
                   >
-                    Créer mon espace visiteur
+                    Je cherche une ambassade
                   </Link>
                 </>
               )}
@@ -130,7 +130,7 @@ export default function AuthPage() {
             <h1 className="text-xl font-semibold text-slate-800 mb-2">Aucun compte avec cette adresse</h1>
             <p className="text-slate-500 text-sm mb-6">
               Nous n&apos;avons pas trouvé de compte pour{' '}
-              <span className="font-medium text-slate-700">{email}</span>. Aucun lien n&apos;a été envoyé.
+              <span className="font-medium text-slate-700">{email}</span>. Aucun e-mail n&apos;a été envoyé.
             </p>
             <div className="space-y-2">
               <Link
@@ -143,7 +143,7 @@ export default function AuthPage() {
                 href="/mon-espace/creer"
                 className="flex items-center justify-center min-h-[44px] w-full border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
               >
-                Créer mon espace visiteur
+                Je cherche une ambassade
               </Link>
             </div>
             <button
@@ -167,11 +167,12 @@ export default function AuthPage() {
           <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <MailCheck className="w-7 h-7 text-emerald-600" />
           </div>
-          <h1 className="text-xl font-semibold text-slate-800 mb-2">Vérifiez votre messagerie</h1>
+          <h1 className="text-xl font-semibold text-slate-800 mb-2">Regardez votre boîte mail</h1>
           <p className="text-slate-500 text-sm">
-            Un lien de connexion a été envoyé à{' '}
-            <span className="font-medium text-slate-700">{email}</span>.
+            Nous venons d&apos;écrire à{' '}
+            <span className="font-medium text-slate-700">{email}</span>. Appuyez sur le bouton dans ce message pour vous connecter.
           </p>
+          <p className="text-slate-400 text-xs mt-2">Rien reçu ? Regardez dans les courriers indésirables.</p>
           <button
             onClick={() => setSent(false)}
             className="mt-5 text-xs text-slate-400 hover:text-slate-600 transition-colors flex items-center gap-1 mx-auto"
@@ -198,7 +199,7 @@ export default function AuthPage() {
             <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center mb-4">
               <Mail className="w-5 h-5 text-indigo-600" />
             </div>
-            <h1 className="text-xl font-semibold text-slate-800">Connexion</h1>
+            <h1 className="text-xl font-semibold text-slate-800">Se connecter</h1>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -215,6 +216,9 @@ export default function AuthPage() {
                 placeholder="vous@exemple.com"
                 className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
               />
+              <p className="text-xs text-slate-400 mt-1.5">
+                Pas de mot de passe : nous vous envoyons un e-mail avec un bouton pour vous connecter.
+              </p>
             </div>
 
             {error && (
@@ -226,14 +230,14 @@ export default function AuthPage() {
               disabled={loading}
               className="w-full bg-indigo-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
             >
-              {loading ? 'Envoi en cours…' : 'Recevoir le lien de connexion'}
+              {loading ? 'Envoi en cours…' : 'M\u2019envoyer un e-mail pour me connecter'}
             </button>
           </form>
 
           <p className="text-center text-xs text-slate-400 mt-5">
             Pas encore ambassadeur ?{' '}
             <Link href="/inscription" className="text-indigo-600 hover:underline">
-              S&apos;inscrire
+              Devenir ambassadeur
             </Link>
           </p>
         </div>

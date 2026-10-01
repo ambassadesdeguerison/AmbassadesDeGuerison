@@ -53,18 +53,18 @@ test.describe('Ambassadeur — adresse confirmée AVANT toute création', () => 
     await expect(page.getByRole('heading', { name: 'Devenir ambassadeur' })).toBeVisible();
     await expect(page.getByLabel('Votre adresse e-mail')).toBeVisible();
     await expect(page.getByText('Prénom')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Recevoir le lien de confirmation' })).toBeDisabled();
+    await expect(page.getByRole('button', { name: /Recevoir l.e-mail de vérification/ })).toBeDisabled();
   });
 
   test('le lien reçu par e-mail ouvre le formulaire, adresse verrouillée, sans créer de compte', async ({ page }) => {
     const email = track(throwawayEmail('amb-link'));
     await page.goto('/inscription');
     await page.getByLabel('Votre adresse e-mail').fill(email);
-    await page.getByRole('button', { name: 'Recevoir le lien de confirmation' }).click();
+    await page.getByRole('button', { name: /Recevoir l.e-mail de vérification/ }).click();
     await expect(page.getByRole('heading', { name: 'Regardez votre boîte mail' })).toBeVisible();
 
     const mail = await waitForMail(email);
-    expect(mail.subject).toContain('Confirmez votre adresse');
+    expect(mail.subject).toContain('Vérifiez votre adresse e-mail');
     const link = findLink(mail.html, '/inscription?verify=');
 
     // Aucun compte tant que le formulaire n'est pas envoyé
@@ -74,7 +74,7 @@ test.describe('Ambassadeur — adresse confirmée AVANT toute création', () => 
     await expect(page.getByText('Récapitulatif')).toHaveCount(0);
     const emailField = page.locator('input[type="email"][readonly]');
     await expect(emailField).toHaveValue(email);
-    await expect(page.getByText('Adresse confirmée')).toBeVisible();
+    await expect(page.getByText('Adresse vérifiée')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Continuer' })).toBeVisible();
 
     expect(await authUserByEmail(db, email)).toBeNull();
@@ -82,19 +82,19 @@ test.describe('Ambassadeur — adresse confirmée AVANT toute création', () => 
 
   test('un lien falsifié ne mène pas au formulaire et propose d’en recevoir un nouveau', async ({ page }) => {
     await page.goto('/inscription?verify=faux.jeton');
-    await expect(page.getByText(/n.est plus valable/)).toBeVisible();
+    await expect(page.getByText(/ne fonctionne plus/)).toBeVisible();
     await expect(page.getByLabel('Votre adresse e-mail')).toBeVisible();
   });
 
-  test('« Renvoyer le lien » envoie un second e-mail', async ({ page }) => {
+  test("« Renvoyer l'e-mail » envoie un second e-mail", async ({ page }) => {
     const email = track(throwawayEmail('amb-resend'));
     await page.goto('/inscription');
     await page.getByLabel('Votre adresse e-mail').fill(email);
-    await page.getByRole('button', { name: 'Recevoir le lien de confirmation' }).click();
+    await page.getByRole('button', { name: /Recevoir l.e-mail de vérification/ }).click();
     await waitForMail(email);
     const before = await mailCount(email);
 
-    await page.getByRole('button', { name: 'Renvoyer le lien' }).click();
+    await page.getByRole('button', { name: /Renvoyer l.e-mail/ }).click();
     await expect.poll(() => mailCount(email), { timeout: 15_000 }).toBeGreaterThan(before);
   });
 });
@@ -130,7 +130,7 @@ test.describe('Visiteur — adresse confirmée avant toute session', () => {
   test('le compte est créé mais AUCUNE session ne s’ouvre avant le clic sur le lien', async ({ page }) => {
     const email = track(throwawayEmail('vis-verify'));
     const mail = await createVisitorAndVerify(page, email, '/');
-    expect(mail.subject).toContain('Confirmez votre adresse');
+    expect(mail.subject).toContain('Vérifiez votre adresse e-mail');
 
     // Pas de session : le profil est refusé et une demande de visite aussi
     expect((await page.request.get('/api/visitor/profile', { headers: ipHeaders })).status()).toBe(401);

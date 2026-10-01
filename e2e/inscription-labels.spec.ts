@@ -25,10 +25,10 @@ async function openVerifiedForm(page: Page) {
 
   await page.goto('/inscription');
   await page.getByLabel('Votre adresse e-mail').fill(email);
-  await page.getByRole('button', { name: 'Recevoir le lien de confirmation' }).click();
+  await page.getByRole('button', { name: /Recevoir l.e-mail de vérification/ }).click();
   const mail = await waitForMail(email);
   await page.goto(findLink(mail.html, '/inscription?verify='));
-  await expect(page.getByText('Adresse confirmée')).toBeVisible();
+  await expect(page.getByText('Adresse vérifiée')).toBeVisible();
 }
 
 async function fillStep1(page: Page) {

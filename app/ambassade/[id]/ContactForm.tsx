@@ -91,7 +91,7 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
   if (!eventId) {
     return (
       <p className="text-slate-500 text-sm text-center py-2">
-        Aucun live à venir pour cette ambassade pour le moment.
+        Cette ambassade n&apos;a pas de live prévu pour le moment.
       </p>
     );
   }
@@ -106,12 +106,12 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
           </div>
           <p className="text-slate-800 font-medium text-sm">Demande envoyée !</p>
           <p className="text-slate-500 text-xs mt-1 leading-relaxed">
-            Vous recevrez une notification par e-mail dès que l&apos;ambassadeur aura répondu.
+            Vous recevrez un e-mail dès que l&apos;ambassadeur aura répondu.
           </p>
         </div>
 
         <div className="bg-indigo-50 rounded-xl p-4 space-y-3">
-          <p className="text-indigo-800 text-xs font-medium">Votre lien d&apos;invitation</p>
+          <p className="text-indigo-800 text-xs font-medium">Pour suivre votre demande</p>
           <p className="text-indigo-600 text-xs break-all font-mono">{inviteUrl}</p>
           <div className="flex gap-2">
             <button
@@ -119,14 +119,14 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
               className="flex-1 flex items-center justify-center gap-1.5 bg-white border border-indigo-200 text-indigo-700 text-xs font-medium py-2 rounded-lg hover:bg-indigo-50 transition-colors"
             >
               <Copy className="w-3.5 h-3.5" />
-              {copied ? 'Copié !' : 'Copier'}
+              {copied ? 'Copié !' : 'Copier le lien'}
             </button>
             <a
               href={inviteUrl}
               className="flex-1 flex items-center justify-center gap-1.5 bg-indigo-600 text-white text-xs font-medium py-2 rounded-lg hover:bg-indigo-700 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              Accéder
+              Ouvrir
             </a>
           </div>
         </div>
@@ -194,7 +194,7 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
       {(!isWomenOnly || gender === 'female') && visitorEmail === null && (
         <div className={`space-y-3 text-center py-2 ${isWomenOnly ? 'form-reveal' : ''}`}>
           <p className="text-slate-500 text-sm">
-            Créez votre compte visiteur pour contacter {hostName} — vos informations seront réutilisées pour vos prochaines demandes.
+            Pour écrire à {hostName}, créez d&apos;abord votre compte : c&apos;est rapide, et vous n&apos;aurez pas à tout retaper la prochaine fois.
           </p>
           <Link
             href={`/mon-espace/creer?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '')}`}
@@ -203,7 +203,7 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
             Créer mon compte
           </Link>
           <p className="text-center text-xs text-slate-400">
-            Déjà venu ? <Link href="/auth" className="text-indigo-600 hover:underline">Se connecter</Link>
+            Vous avez déjà un compte ? <Link href="/auth" className="text-indigo-600 hover:underline">Se connecter</Link>
           </p>
         </div>
       )}
@@ -214,7 +214,7 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
             Connecté avec <span className="text-slate-600 font-medium">{visitorEmail}</span>
           </p>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Nombre de personnes</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Combien de personnes viendront (vous compris) ?</label>
             <input
               type="number"
               min={1}
@@ -225,7 +225,7 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Message (optionnel)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Votre message <span className="text-slate-400 font-normal">(si vous le souhaitez)</span></label>
             <textarea value={form.visitor_message} onChange={(e) => set('visitor_message', e.target.value)} rows={2} className={inputCls} placeholder="Je serai avec ma famille de 3 personnes…" />
             <p className="text-xs text-slate-400 mt-2">
               Dites en une phrase qui vous êtes et pourquoi vous voulez venir. L&apos;ambassadeur lit ce message avant de répondre.
@@ -251,7 +251,7 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
           {error && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
           <p className="text-slate-400 text-xs">
-            L&apos;ambassadeur se réserve le droit d&apos;accepter ou non votre demande.
+            L&apos;ambassadeur décide d&apos;accepter ou non votre demande. Vous aurez sa réponse par e-mail.
           </p>
 
           <button
