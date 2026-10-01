@@ -205,17 +205,32 @@ export function PastoralSignals({ a }: { a: Ambassadeur }) {
   );
 }
 
-function QuestionnairPanel({ a }: { a: Ambassadeur }) {
+// Groupe réservé aux femmes : rose, comme sur la carte publique (pin et fiche). Affiché dans le dossier,
+// là où l'admin décide, et non seulement en petit badge à côté du nom.
+function WomenOnlyNotice() {
+  return (
+    <p className="inline-flex items-center gap-1.5 bg-pink-50 text-pink-700 text-xs font-medium px-2.5 py-1 rounded-lg border border-pink-100">
+      <Flower2 className="w-3.5 h-3.5" aria-hidden="true" />
+      Groupe réservé aux femmes
+    </p>
+  );
+}
+
+export function QuestionnairPanel({ a }: { a: Ambassadeur }) {
   const hasQuestionnaire = a.parcours_spirituel || a.church_attendance || a.denomination || a.livres_lus || a.books_read?.length || a.trainings_done?.length || a.has_seen_healings != null || a.has_leadership_role != null || a.intro_video_path || a.healing_challenge_done || a.conferences_assistees || a.phone;
 
   if (!hasQuestionnaire) {
     return (
-      <p className="text-xs text-slate-400 italic">Présentation pas encore remplie.</p>
+      <div className="space-y-3">
+        {a.is_women_only && <WomenOnlyNotice />}
+        <p className="text-xs text-slate-400 italic">Présentation pas encore remplie.</p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {a.is_women_only && <WomenOnlyNotice />}
       <PastoralSignals a={a} />
       {a.phone && (
         <div className="text-xs">
@@ -395,7 +410,7 @@ function AmbassadeurCard({
                 className="inline-flex items-center gap-1 bg-pink-50 text-pink-600 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-pink-100 shrink-0"
               >
                 <Flower2 className="w-2.5 h-2.5" />
-                Femmes
+                Femmes uniquement
               </span>
             )}
           </div>
@@ -786,7 +801,7 @@ export default function AmbassadeursTable({
                                 className="inline-flex items-center gap-1 bg-pink-50 text-pink-600 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-pink-100"
                               >
                                 <Flower2 className="w-2.5 h-2.5" />
-                                Femmes
+                                Femmes uniquement
                               </span>
                             )}
                           </div>

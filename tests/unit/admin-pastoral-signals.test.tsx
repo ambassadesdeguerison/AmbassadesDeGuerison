@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('@/lib/admin/api-call', () => ({ apiCall: vi.fn() }));
 
-import { PastoralSignals } from '@/components/AmbassadeursTable';
+import { PastoralSignals, QuestionnairPanel } from '@/components/AmbassadeursTable';
 
 type Props = ComponentProps<typeof PastoralSignals>['a'];
 
@@ -102,5 +102,43 @@ describe('PastoralSignals (admin)', () => {
     );
     expect(screen.queryByText('Non fournie')).toBeNull();
     expect(screen.getByRole('link', { name: /télécharger le fichier/i }).getAttribute('href')).toBe('https://signed/dl');
+  });
+});
+
+// Demande de David (2026-10-01) : l'admin doit voir le label « femmes uniquement » quand il est présent.
+// Le petit badge « Femmes » à côté du nom passait inaperçu : la mention figure aussi dans le dossier déplié.
+describe('QuestionnairPanel — groupe réservé aux femmes', () => {
+  it('affiche la mention quand is_women_only est vrai', () => {
+    render(<QuestionnairPanel a={{ ...base, is_women_only: true } as unknown as Props} />);
+    expect(screen.getByText('Groupe réservé aux femmes')).toBeTruthy();
+  });
+
+  it('n\u2019affiche rien quand le groupe est mixte (faux ou null)', () => {
+    const { unmount } = render(<QuestionnairPanel a={{ ...base, is_women_only: false } as unknown as Props} />);
+    expect(screen.queryByText('Groupe réservé aux femmes')).toBeNull();
+    unmount();
+    render(<QuestionnairPanel a={{ ...base, is_women_only: null } as unknown as Props} />);
+    expect(screen.queryByText('Groupe réservé aux femmes')).toBeNull();
+  });
+
+  it('s\u2019affiche aussi quand le questionnaire n\u2019est pas encore rempli', () => {
+    const empty = {
+      is_women_only: true,
+      phone: null,
+      parcours_spirituel: null,
+      church_attendance: null,
+      denomination: null,
+      livres_lus: null,
+      books_read: [],
+      trainings_done: [],
+      has_seen_healings: null,
+      has_leadership_role: null,
+      intro_video_path: null,
+      healing_challenge_done: false,
+      conferences_assistees: false,
+    } as unknown as Props;
+    render(<QuestionnairPanel a={empty} />);
+    expect(screen.getByText('Groupe réservé aux femmes')).toBeTruthy();
+    expect(screen.getByText('Présentation pas encore remplie.')).toBeTruthy();
   });
 });
