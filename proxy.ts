@@ -3,10 +3,13 @@ import { createServerClient } from '@supabase/ssr';
 
 // ── Rate limiting — routes POST publiques ─────────────────────────────────────
 
+// L'ordre compte : `find` retient la première route qui préfixe le chemin, donc les routes plus
+// spécifiques (ex. /api/inscriptions/verify-email) doivent précéder leur parent.
 const RATE_LIMITED_ROUTES = [
   '/api/visit-requests',
   '/api/feedbacks',
   '/api/temoignages',
+  '/api/inscriptions/verify-email',
   '/api/inscriptions',
   '/api/visitor-help-request',
   '/api/distance',
@@ -20,6 +23,9 @@ const LIMITS: Record<string, { max: number; windowMs: number }> = {
   '/api/feedbacks':            { max: 5, windowMs: 60_000 },
   '/api/temoignages':          { max: 3, windowMs: 60_000 },
   '/api/inscriptions':         { max: 2, windowMs: 60_000 },
+  // Envoie un e-mail à n'importe quelle adresse saisie : même plafond que la connexion par lien,
+  // et compteur distinct de l'inscription pour que « Renvoyer le lien » ne la bloque pas.
+  '/api/inscriptions/verify-email': { max: 3, windowMs: 60_000 },
   '/api/visitor-help-request': { max: 3, windowMs: 60_000 },
   // Mitigation "oracle de position" (cf /plan-eng-review, Codex) : un visiteur
   // légitime clique "Trier par distance" une poignée de fois max par minute ;

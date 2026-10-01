@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, UserPlus, ChevronRight, HelpCircle } from 'lucide-react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { ArrowLeft, ArrowRight, CheckCircle2, UserPlus, ChevronRight, HelpCircle, Loader2, Mail } from 'lucide-react';
 import Link from 'next/link';
 import AppHeader from '@/components/AppHeader';
 import InscriptionSuccess from '@/components/InscriptionSuccess';
@@ -17,6 +18,23 @@ const TYPES = [
 ];
 
 export default function InscriptionPage() {
+  return (
+    <Suspense fallback={null}>
+      <InscriptionContent />
+    </Suspense>
+  );
+}
+
+function InscriptionContent() {
+  const verifyToken = useSearchParams().get('verify');
+  // Preuve que l'adresse est la leur (lien reçu par e-mail) : sans elle, le formulaire ne s'ouvre pas
+  // et aucun compte n'est créé.
+  const [proof, setProof] = useState<string | null>(null);
+  const [proofState, setProofState] = useState<'idle' | 'checking' | 'invalid'>(verifyToken ? 'checking' : 'idle');
+  const [linkSending, setLinkSending] = useState(false);
+  const [linkSent, setLinkSent] = useState(false);
+  const [linkError, setLinkError] = useState('');
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -50,6 +68,43 @@ export default function InscriptionPage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  // Arrivée par le lien de l'e-mail : le serveur confirme le jeton et renvoie l'adresse prouvée.
+  useEffect(() => {
+    if (!verifyToken) return;
+    let cancelled = false;
+    fetch(`/api/inscriptions/verify-email?token=${encodeURIComponent(verifyToken)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((data: { email: string }) => {
+        if (cancelled) return;
+        setProof(verifyToken);
+        setForm((prev) => ({ ...prev, email: data.email }));
+        setProofState('idle');
+      })
+      .catch(() => {
+        if (!cancelled) setProofState('invalid');
+      });
+    return () => { cancelled = true; };
+  }, [verifyToken]);
+
+  async function sendVerificationLink(e?: React.FormEvent) {
+    e?.preventDefault();
+    setLinkSending(true);
+    setLinkError('');
+    const res = await fetch('/api/inscriptions/verify-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: form.email }),
+    }).catch(() => null);
+    const data = await res?.json().catch(() => ({}));
+    setLinkSending(false);
+    if (!res?.ok) {
+      setLinkError(data?.error ?? 'Une erreur est survenue. Réessayez dans un instant.');
+      return;
+    }
+    setProofState('idle');
+    setLinkSent(true);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -58,11 +113,17 @@ export default function InscriptionPage() {
     const res = await fetch('/api/inscriptions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, capacity: parseInt(form.capacity, 10) }),
+      body: JSON.stringify({ ...form, capacity: parseInt(form.capacity, 10), email_proof: proof }),
     });
 
     const data = await res.json();
     if (!res.ok) {
+      if (data.code === 'email_not_verified') {
+        // Lien périmé ou adresse modifiée : on repart de la confirmation de l'adresse.
+        setProof(null);
+        setLinkSent(false);
+        setStep(1);
+      }
       setError(data.error ?? 'Une erreur est survenue.');
       setLoading(false);
       return;
@@ -85,6 +146,92 @@ export default function InscriptionPage() {
         <AppHeader />
         <main className="flex-1 bg-slate-50 px-4 py-8">
           <InscriptionSuccess email={form.email} connected={connected} />
+        </main>
+      </>
+    );
+  }
+
+  // Étape 0 — confirmer l'adresse AVANT d'ouvrir le formulaire (aucun compte n'est créé à ce stade).
+  if (!proof) {
+    return (
+      <>
+        <AppHeader />
+        <main className="flex-1 bg-slate-50 px-4 py-8">
+          <div className="max-w-lg mx-auto">
+            <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-600 mb-6 transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Retour à la carte
+            </Link>
+
+            {proofState === 'checking' ? (
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 flex items-center justify-center gap-2 text-slate-400 text-sm">
+                <Loader2 className="w-4 h-4 animate-spin" /> Vérification de votre lien…
+              </div>
+            ) : linkSent ? (
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center space-y-3">
+                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto">
+                  <Mail className="w-6 h-6 text-indigo-500" />
+                </div>
+                <h1 className="text-lg font-semibold text-slate-800">Regardez votre boîte mail</h1>
+                <p className="text-slate-500 text-sm">
+                  Nous venons d&apos;écrire à <strong className="text-slate-700">{form.email.trim()}</strong>. Un clic sur le lien
+                  confirme votre adresse et ouvre le formulaire.
+                </p>
+                <p className="text-slate-400 text-xs">Rien ne vous est parvenu ? Pensez à regarder dans les courriers indésirables.</p>
+                {linkError && <p className="text-red-600 text-sm">{linkError}</p>}
+                <div className="flex items-center justify-center gap-4 pt-1 text-sm">
+                  <button type="button" onClick={() => sendVerificationLink()} disabled={linkSending} className="text-indigo-600 font-medium hover:underline disabled:opacity-50">
+                    {linkSending ? 'Envoi…' : 'Renvoyer le lien'}
+                  </button>
+                  <button type="button" onClick={() => { setLinkSent(false); setLinkError(''); }} className="text-slate-500 hover:underline">
+                    Changer d&apos;adresse
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={sendVerificationLink} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 space-y-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+                      <UserPlus className="w-4 h-4 text-white" />
+                    </div>
+                    <h1 className="text-xl font-semibold text-slate-800">Devenir ambassadeur</h1>
+                  </div>
+                  <p className="text-sm text-slate-500 ml-9">Accueillez des personnes lors des lives de David Théry</p>
+                </div>
+
+                {proofState === 'invalid' && (
+                  <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">
+                    Ce lien n&apos;est plus valable (il dure 24 heures). Recevez-en un nouveau ci-dessous.
+                  </p>
+                )}
+                {error && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+
+                <Field label="Votre adresse e-mail" required htmlFor="inscription-email">
+                  <input
+                    id="inscription-email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => set('email', e.target.value)}
+                    required
+                    autoComplete="email"
+                    className={inputCls}
+                    placeholder="marie@exemple.com"
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Pour commencer, nous vous écrivons à cette adresse afin de la confirmer. Elle vous servira ensuite à vous connecter (sans mot de passe) et à recevoir les demandes de visite.
+                  </p>
+                </Field>
+                {linkError && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{linkError}</p>}
+                <button type="submit" disabled={linkSending || !form.email.includes('@')} className={`${btnPrimary} flex items-center gap-2 justify-center`}>
+                  {linkSending && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Recevoir le lien de confirmation
+                </button>
+                <p className="text-center text-xs text-slate-400">
+                  Déjà ambassadeur ? <Link href="/auth" className="text-indigo-600 hover:underline">Se connecter</Link>
+                </p>
+              </form>
+            )}
+          </div>
         </main>
       </>
     );
@@ -137,8 +284,11 @@ export default function InscriptionPage() {
                 <input type="text" value={form.last_name} onChange={(e) => set('last_name', e.target.value)} required className={inputCls} placeholder="Votre nom" />
               </Field>
               <Field label="E-mail" required>
-                <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)} required className={inputCls} placeholder="Votre e-mail" />
-                <p className="text-xs text-slate-400 mt-1">Sert à vous connecter (lien de connexion, sans mot de passe) et à recevoir les notifications de demandes de visite.</p>
+                {/* Adresse confirmée par le lien reçu : non modifiable (la preuve est liée à cette adresse). */}
+                <input type="email" value={form.email} readOnly className={`${inputCls} bg-slate-50 text-slate-500`} />
+                <p className="text-xs text-emerald-700 mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Adresse confirmée — elle vous servira à vous connecter et à recevoir les demandes de visite.
+                </p>
               </Field>
               <Field label="Téléphone" required>
                 <PhoneInput
@@ -325,10 +475,10 @@ export default function InscriptionPage() {
   );
 }
 
-function Field({ label, required, badge, children }: { label: string; required?: boolean; badge?: string; children: React.ReactNode }) {
+function Field({ label, required, badge, htmlFor, children }: { label: string; required?: boolean; badge?: string; htmlFor?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1.5">
+      <label htmlFor={htmlFor} className="block text-sm font-medium text-slate-700 mb-1.5">
         {label}{required && <span className="text-red-400 ml-0.5">*</span>}
         {badge && (
           <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-xs font-medium align-middle">

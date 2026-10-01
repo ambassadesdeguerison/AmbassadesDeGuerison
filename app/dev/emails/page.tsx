@@ -20,6 +20,7 @@ import NouvelleActivationAdmin from '@/emails/nouvelle-activation-admin';
 import EnrichissementRecu from '@/emails/enrichissement-recu';
 import AdminAlerteNoActivations from '@/emails/admin-alerte-no-activations';
 import VisitorCompteCree from '@/emails/visitor-compte-cree';
+import InscriptionVerification from '@/emails/inscription-verification';
 
 export default async function EmailPreviewPage() {
   if (process.env.EMAIL_PREVIEW !== 'true') notFound();
@@ -44,6 +45,7 @@ export default async function EmailPreviewPage() {
     htmlNouvelleActivation,
     htmlEnrichissement,
     htmlAlerte,
+    htmlInscriptionVerification,
   ] = await Promise.all([
     render(<MagicLink magicLinkUrl={m.magicLink} />),
     render(<ValidationFinale firstName={m.marie.firstName} dashboardUrl={m.dashboardUrl} carteUrl={m.carteUrl} />),
@@ -62,9 +64,11 @@ export default async function EmailPreviewPage() {
     render(<NouvelleActivationAdmin firstName={m.marie.firstName} city={m.marie.city} country={m.marie.country} adminUrl={m.adminUrl} />),
     render(<EnrichissementRecu ambassadeurFirstName={m.marie.firstName} adminUrl={m.adminUrl} />),
     render(<AdminAlerteNoActivations eventTitle={m.liveTitle} eventDate={m.liveDate} adminUrl={m.adminUrl} />),
+    render(<InscriptionVerification verifyUrl={m.magicLink} />),
   ]);
 
   const ambassadeur = [
+    { label: 'Inscription — confirmer son adresse (avant le formulaire)', html: htmlInscriptionVerification },
     { label: 'Magic link (connexion standard)', html: htmlMagicLink },
     { label: 'Validation finale — ambassade active', html: htmlValidation },
     { label: 'Candidature refusée', html: htmlRefusCandidature },

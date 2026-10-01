@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getAuthUsersByEmail } from '@/lib/auth/list-all-users';
 import { buildConfirmUrl } from '@/lib/auth/confirm-url';
+import { normalizeEmail, verifyEmailProof } from '@/lib/auth/email-proof';
 import { sendRegistrationConfirmation, sendNouvelleInscriptionAdmin } from '@/lib/email/templates';
 import { FEATURES } from '@/config/features';
 
@@ -18,8 +19,17 @@ export async function POST(req: NextRequest) {
   // Honeypot
   if (body.website) return NextResponse.json({}, { status: 200 });
 
+  // L'adresse doit avoir été confirmée par e-mail AVANT toute création (compte, profil, rôle,
+  // notification à l'équipe) : la preuve signée est émise par /api/inscriptions/verify-email.
+  const email = verifyEmailProof(body.email_proof, 'inscription');
+  if (!email || email !== normalizeEmail(String(body.email ?? ''))) {
+    return NextResponse.json(
+      { error: "Votre adresse e-mail n'est pas confirmée. Reprenez l'inscription depuis le début.", code: 'email_not_verified' },
+      { status: 403 },
+    );
+  }
+
   const {
-    email,
     first_name,
     last_name,
     phone,

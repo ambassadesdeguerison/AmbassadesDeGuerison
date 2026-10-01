@@ -15,8 +15,13 @@ vi.mock('@/lib/email/templates', () => ({
   sendNouvelleInscriptionAdmin: mockSendAdmin,
 }));
 
+import { createEmailProof } from '@/lib/auth/email-proof';
+
+process.env.EMAIL_PROOF_SECRET = 'test-secret';
+
 const payload = {
   email: 'nouveau@example.com',
+  email_proof: createEmailProof('nouveau@example.com', 'inscription'),
   first_name: 'Jean',
   last_name: 'Dupont',
   phone: '+33612345678',

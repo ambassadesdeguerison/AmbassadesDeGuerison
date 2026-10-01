@@ -22,6 +22,7 @@ import EnrichissementRecu from '@/emails/enrichissement-recu';
 import AdminAlerteNoActivations from '@/emails/admin-alerte-no-activations';
 import AmbassadeurModificationAdmin from '@/emails/ambassadeur-modification-admin';
 import VisitorCompteCree from '@/emails/visitor-compte-cree';
+import InscriptionVerification from '@/emails/inscription-verification';
 
 const FROM = () => process.env.RESEND_FROM_EMAIL!;
 const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL!;
@@ -40,8 +41,18 @@ export async function sendMagicLink(to: string, magicLinkUrl: string) {
 export async function sendVisitorCompteCree(to: string, firstName: string, confirmUrl: string) {
   return getMailer().emails.send({
     from: FROM(), to,
-    subject: 'Votre compte a bien été créé — Ambassades de Guérison',
+    subject: 'Confirmez votre adresse — Ambassades de Guérison',
     react: React.createElement(VisitorCompteCree, { firstName, confirmUrl }),
+  });
+}
+
+// Première étape de « Devenir ambassadeur » : le formulaire ne s'ouvre qu'après le clic sur ce lien.
+// Aucun compte n'existe encore (cf lib/auth/email-proof.ts).
+export async function sendInscriptionEmailVerification(to: string, verifyUrl: string) {
+  return getMailer().emails.send({
+    from: FROM(), to,
+    subject: 'Confirmez votre adresse pour devenir ambassadeur — Ambassades de Guérison',
+    react: React.createElement(InscriptionVerification, { verifyUrl }),
   });
 }
 

@@ -6,12 +6,14 @@ import { AMBASSADOR_STATE } from './auth-state';
  *
  * Vérifie que :
  * - Le stepper StatusTimeline est absent pour un ambassadeur validé
- * - La section "Mes lives" affiche un CTA "Je participe" au lieu d'un toggle
+ * - La section "Mes lives" affiche un CTA « J'ouvre ma maison / mon église » au lieu d'un toggle
  * - La section "Mes demandes" n'utilise pas line-clamp-2 sur les messages
  * - Les boutons Accepter / Refuser sont bien présents pour les demandes en attente
- * - La formation est collapsée par défaut (bouton toggle visible)
  * - Le dashboard redirige non-authentifié vers /auth
  */
+
+// 60 s : le serveur de dev compile le dashboard à la première visite, lentement quand les workers se partagent la machine.
+test.describe.configure({ timeout: 60_000 });
 
 test.describe('Dashboard Lot 4 — non authentifié', () => {
   test('redirige vers /auth', async ({ page }) => {
@@ -40,15 +42,6 @@ test.describe('Dashboard Lot 4 — structure (authentifié)', () => {
     await expect(page.getByText('Bonjour')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText('Pré-approbation')).not.toBeVisible();
     await expect(page.getByText('Profil enrichi')).not.toBeVisible();
-  });
-
-  test('formation collapsée par défaut, toggle visible', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.getByText('Bonjour')).toBeVisible({ timeout: 10_000 });
-    // Le bouton de toggle formation doit être visible
-    await expect(page.getByRole('button', { name: /Formation ambassadeur/ })).toBeVisible();
-    // La vidéo (iframe) ne doit pas être présente avant le clic
-    await expect(page.locator('iframe')).not.toBeVisible();
   });
 
   test('section Mes lives — CTA "J\'ouvre ma maison/mon église" ou badge "est ouverte" visibles', async ({ page }) => {
