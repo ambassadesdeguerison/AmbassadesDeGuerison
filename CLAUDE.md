@@ -148,24 +148,24 @@ Deux mécanismes orthogonaux : **suspendre une ambassade** (`host_profiles.statu
 
 **Choix éthique — pas de shadow-ban.** Un visiteur blacklisté qui envoie une demande reçoit un **403** avec un message neutre : *« Votre demande ne peut pas être prise en compte. Si vous pensez qu'il s'agit d'une erreur, contactez l'équipe. »* Pas de faux 201 silencieux. Le pattern shadow-ban (Twitter/Reddit) est efficace contre l'énumération mais incompatible avec une éthique pastorale : David ne ment pas à ses utilisateurs, même problématiques.
 
+**Deux façons de refuser une demande de visite** (2026-10-01, composant `components/DeclineChoice.tsx`, utilisé dans `/dashboard`, `/accueillir/[token]` et `/refuser/[token]`) : **« Pas disponible cette fois »** (`status = 'declined'`, la personne peut redemander pour un autre live) et **« Ne plus accueillir cette personne »** (`declined_permanently = TRUE`, avec une confirmation car irréversible). Seul le second bloque : `lib/visitor/declined-by-host.ts`, appelé par `POST /api/visit-requests`, répond 403 avec un message honnête qui renvoie vers d'autres ambassades, pour aucun live de cette ambassade. Les autres ambassades restent ouvertes — c'est ce qui le distingue de la blacklist globale. Les deux routes `decline` n'acceptent `permanent` que s'il vaut exactement `true` (sans corps de requête : refus simple, jamais définitif par défaut). Les libellés sont volontairement en français simple (public peu à l'aise avec le numérique) : ne pas les durcir. Le refus définitif n'a pas de recours dans l'app. Migration : `scripts/migration-declined-permanently.sql` (idempotente) ; sans elle, refuser une demande échoue (colonne absente).
+
 Voir [app/api/visit-requests/route.ts](app/api/visit-requests/route.ts) et [app/api/visitor-help-request/route.ts](app/api/visitor-help-request/route.ts).
 
 ## Transparence des données visiteur (RGPD)
-**Deux façons de refuser une demande de visite** (2026-10-01, composant `components/DeclineChoice.tsx`, utilisé dans `/dashboard`, `/accueillir/[token]` et `/refuser/[token]`) : **« Pas disponible cette fois »** (`status = 'declined'`, la personne peut redemander pour un autre live) et **« Ne plus accueillir cette personne »** (`declined_permanently = TRUE`, avec une confirmation car irréversible). Seul le second bloque : `lib/visitor/declined-by-host.ts`, appelé par `POST /api/visit-requests`, répond 403 avec un message honnête qui renvoie vers d'autres ambassades, pour aucun live de cette ambassade. Les autres ambassades restent ouvertes — c'est ce qui le distingue de la blacklist globale. Les deux routes `decline` n'acceptent `permanent` que s'il vaut exactement `true` (sans corps de requête : refus simple, jamais définitif par défaut). Les libellés sont volontairement en français simple (public peu à l'aise avec le numérique) : ne pas les durcir. Le refus définitif n'a pas de recours dans l'app. Migration : `scripts/migration-declined-permanently.sql` (idempotente) ; sans elle, refuser une demande échoue (colonne absente).
-
 
 Page `/confidentialite` + légendes inline, ajoutées le 2026-08-07 (TODO-23). Détail complet : ARCHITECTURE.md § Transparence des données. Deux règles à ne pas défaire :
 
 - **Tout champ collecté dit sa finalité à côté du champ** (`text-xs text-slate-400 mt-2` sous l'input). Modèle : la légende de la photo (finalité + destinataire + non-publication). Un audit a trouvé que la photo — facultative — était bien expliquée alors que le **téléphone, seul champ obligatoire**, n'avait aucune légende.
 - **`visitor_notifications_optin` est initialisé à `false`**, dans `ContactForm.tsx` *et* `VisitRequestForm.tsx`. Ce n'est pas un arbitrage produit : une case pré-cochée ne vaut pas consentement (CJUE, 1er oct. 2019 — le RGPD exige un acte positif clair). Ne jamais repasser à `true` pour gonfler le volume d'inscrits.
 
+- **Le téléphone du visiteur n'est visible par l'hôte qu'après acceptation** (2026-10-01) : absent de l'e-mail `contact-received-host`, affiché dans `/dashboard` seulement si `status === 'accepted'`. Il reste obligatoire pour deux usages réels, dits dans la légende et sur `/confidentialite` : joindre le visiteur le jour du live, et faire respecter la blacklist (e-mail *ou* téléphone). Ne pas le remettre dans l'e-mail de notification. Limite connue : masquage côté affichage uniquement, la clé anon du dashboard le reçoit encore (voir ARCHITECTURE.md § Transparence des données).
+
 `app/confidentialite/page.tsx` porte **3 placeholders `[À COMPLÉTER]`** (entité juridique, adresse du siège, e-mail de contact) laissés volontairement visibles — une valeur plausible mais inventée passerait la relecture sans être corrigée. Ils bloquent la publication publique, pas le développement.
 
 Les durées de conservation annoncées sur la page **ne sont appliquées par aucune purge automatique** — écart à combler avant un lancement public.
 
 ## Règles importantes
-- **Le téléphone du visiteur n'est visible par l'hôte qu'après acceptation** (2026-10-01) : absent de l'e-mail `contact-received-host`, affiché dans `/dashboard` seulement si `status === 'accepted'`. Il reste obligatoire pour deux usages réels, dits dans la légende et sur `/confidentialite` : joindre le visiteur le jour du live, et faire respecter la blacklist (e-mail *ou* téléphone). Ne pas le remettre dans l'e-mail de notification. Limite connue : masquage côté affichage uniquement, la clé anon du dashboard le reçoit encore (voir ARCHITECTURE.md § Transparence des données).
-
 
 - `lib/supabase/server.ts` (service_role) : JAMAIS importé depuis un Client Component
 - `lib/supabase/browser.ts` (anon key) : uniquement dans les Client Components

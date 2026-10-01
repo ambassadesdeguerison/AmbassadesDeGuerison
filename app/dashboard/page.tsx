@@ -835,6 +835,11 @@ export default function DashboardPage() {
             {activeTab === 'demandes' && (
               <section>
                 <h2 className="font-semibold text-slate-800 mb-3 text-sm uppercase tracking-wide">Mes demandes</h2>
+                {pendingCount > 0 && (
+                  <p className="text-slate-500 text-sm leading-relaxed bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mb-4">
+                    Vous pouvez refuser quelle qu&apos;en soit la raison, par exemple le nombre de places. La personne ne saura pas pourquoi vous avez refusé.
+                  </p>
+                )}
                 {contactRequests.length === 0 ? (
                   <p className="text-slate-400 text-sm">Aucune demande pour l&apos;instant.</p>
                 ) : (
@@ -843,11 +848,6 @@ export default function DashboardPage() {
                       const s = REQUEST_STATUS[r.status] ?? { label: r.status, cls: 'bg-slate-100 text-slate-500' };
                       const isPending = r.status === 'pending';
                       const isAccepting = requestActionLoading?.token === r.action_token && requestActionLoading.action === 'accept';
-                {pendingCount > 0 && (
-                  <p className="text-slate-500 text-sm leading-relaxed bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mb-4">
-                    Vous pouvez refuser quelle qu&apos;en soit la raison, par exemple le nombre de places. La personne ne saura pas pourquoi vous avez refusé.
-                  </p>
-                )}
                       const isDeclining = requestActionLoading?.token === r.action_token && requestActionLoading.action === 'decline';
                       const isActioning = isAccepting || isDeclining;
                       const liveTitle = r.host_activation_id
@@ -866,11 +866,11 @@ export default function DashboardPage() {
                               )}
                               <div className="min-w-0">
                                 <p className="font-medium text-slate-900 text-sm">{r.visitor_first_name}</p>
-                                {liveTitle && (
-                                  <p className="text-indigo-600 text-xs mt-0.5">Pour le live : {liveTitle}</p>
                                 {visitorPhotosLoaded && !visitorPhotoUrls[r.id] && (
                                   <p className="text-slate-400 text-xs mt-0.5">Sans photo</p>
                                 )}
+                                {liveTitle && (
+                                  <p className="text-indigo-600 text-xs mt-0.5">Pour le live : {liveTitle}</p>
                                 )}
                                 {/* Bouton "Signaler cette photo" masqué — TODO-25 : le signalement
                                     (visitor_profiles.photo_reported) n'a aujourd'hui aucune conséquence

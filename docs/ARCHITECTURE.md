@@ -220,16 +220,16 @@ Pendant le live — visiteur contacte un hôte
   │  → email contact-received-host (hôte notifié : prénom, e-mail, message + lien /accueillir/[token] + lien /refuser/[token] — sans téléphone)
   │  → hôte accepte via /accueillir/[token] → email acceptation-visite (adresse + email + WhatsApp de l'hôte)
   │     ou hôte refuse via /refuser/[token] → email refus-visite (visiteur redirigé vers la carte)
-  │
-  ▼
-Après le live
-  │  Hôte soumet un signal → POST /api/live-signals
-  │  Visiteur soumet un témoignage → POST /api/temoignages
      (deux refus possibles, composant `DeclineChoice` : « Pas disponible cette fois » → la personne peut redemander
       pour un autre live ; « Ne plus accueillir cette personne » → `contact_requests.declined_permanently = TRUE`,
       plus aucune demande de ce visiteur chez cette ambassade, tous lives confondus — `lib/visitor/declined-by-host.ts`,
       403 dans POST /api/visit-requests. Le second demande une confirmation et n'a pas de recours dans l'app :
       si c'était une erreur, l'équipe repasse `declined_permanently` à FALSE en base.)
+  │
+  ▼
+Après le live
+  │  Hôte soumet un signal → POST /api/live-signals
+  │  Visiteur soumet un témoignage → POST /api/temoignages
   │  Admin modère → /admin/temoignages
   │
   ▼
@@ -452,26 +452,6 @@ contact actif pour un contact/prospect), déclarées en constantes en tête de
 n'existe. Écart à combler avant un lancement public : soit un cron de purge, soit
 une révision du texte.
 
-### Lien vers /confidentialite depuis la homepage
-
-Corrigé 2026-08-08 : le lien n'existait auparavant que sur `/mon-espace/creer`,
-inatteignable pour un visiteur qui consulte la carte publique sans jamais créer
-de compte — la page la plus visitée du site. La correction précédente de cette
-doc affirmait que l'app "n'a pas de footer" et qu'en ajouter un "casserait la
-carte plein écran" ; c'était inexact. `app/page.tsx` a **déjà** un footer
-(`shrink-0`, sous la carte `flex-1`, layout `h-screen flex-col`) — le lien y a
-été ajouté directement, sans nouveau composant ni décision de layout. Ne pas
-réintroduire l'idée que la home n'a pas de footer sans revérifier le fichier.
-
-### Points ouverts
-
-- **Suppression de compte visiteur** — aucun chemin dans l'app. La politique
-  renvoie vers l'e-mail de contact (acceptable en v1, un bouton dans
-  `/mon-espace` serait plus propre).
-- **Registre des traitements** — obligatoire pour une association même sans
-  déclaration CNIL. Document interne, hors code.
-
----
 ### Règle : le téléphone du visiteur n'est montré à l'hôte qu'après acceptation
 
 Corrigé 2026-10-01. Avant, le numéro partait à l'hôte dès l'envoi de la demande
@@ -497,6 +477,26 @@ clé anon (RLS) : `visitor_phone` reste dans la réponse réseau pour les demand
 attente. Un vrai blocage demanderait une route serveur qui ne renvoie le numéro
 qu'aux demandes acceptées.
 
+### Lien vers /confidentialite depuis la homepage
+
+Corrigé 2026-08-08 : le lien n'existait auparavant que sur `/mon-espace/creer`,
+inatteignable pour un visiteur qui consulte la carte publique sans jamais créer
+de compte — la page la plus visitée du site. La correction précédente de cette
+doc affirmait que l'app "n'a pas de footer" et qu'en ajouter un "casserait la
+carte plein écran" ; c'était inexact. `app/page.tsx` a **déjà** un footer
+(`shrink-0`, sous la carte `flex-1`, layout `h-screen flex-col`) — le lien y a
+été ajouté directement, sans nouveau composant ni décision de layout. Ne pas
+réintroduire l'idée que la home n'a pas de footer sans revérifier le fichier.
+
+### Points ouverts
+
+- **Suppression de compte visiteur** — aucun chemin dans l'app. La politique
+  renvoie vers l'e-mail de contact (acceptable en v1, un bouton dans
+  `/mon-espace` serait plus propre).
+- **Registre des traitements** — obligatoire pour une association même sans
+  déclaration CNIL. Document interne, hors code.
+
+---
 
 ## Sécurité — points critiques
 
