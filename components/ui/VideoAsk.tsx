@@ -420,8 +420,7 @@ export default function VideoAsk({
       />
 
       <p className="text-xs text-slate-500">
-        Cette vidéo aide l&apos;équipe de David à mieux vous connaître avant de valider votre ambassade. Elle est vue
-        uniquement par les administrateurs et n&apos;est jamais publiée.
+        Vue uniquement par les administrateurs, jamais publiée.
       </p>
     </section>
   );

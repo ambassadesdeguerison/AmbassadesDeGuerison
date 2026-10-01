@@ -26,21 +26,13 @@ const CHURCH_ATTENDANCE_OPTIONS = [
   { value: 'none', label: 'Je ne fréquente pas une église actuellement' },
 ];
 
-// Liste « formations et livres » : formations en haut, livres ensuite, puis deux choix annexes.
-// Les identifiants sont préfixés (t: formation, b: livre, c: conférence, o: autres) pour retrouver
-// la colonne à mettre à jour sans collision entre un livre et une formation homonymes.
-const CONFERENCE_ID = 'c:conference';
-const OTHER_ID = 'o:other';
+// Liste « formations et livres » : formations en haut, livres ensuite. Les identifiants sont préfixés
+// (t: formation, b: livre) pour ne pas confondre un livre et une formation homonymes.
+// La conférence et « autres livres » ne sont PAS dans la liste : trop loin en bas, ils s'oubliaient.
+// Ce sont deux cases visibles sous la liste.
 const LIBRARY_GROUPS: ComboGroup[] = [
   { label: 'Formations gratuites', options: TRAININGS.map((t) => ({ id: `t:${t.slug}`, label: t.label })) },
   { label: 'Livres de David', options: BOOKS.map((b) => ({ id: `b:${b.slug}`, label: b.label })) },
-  {
-    label: 'Autres',
-    options: [
-      { id: CONFERENCE_ID, label: 'J’ai assisté à une conférence de David Théry' },
-      { id: OTHER_ID, label: 'D’autres livres ou formations m’ont marqué' },
-    ],
-  },
 ];
 
 type FormState = {
@@ -185,26 +177,26 @@ export default function QuestionnairePage() {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  // La liste déroulante porte quatre sortes de choix : on les redistribue dans les bonnes colonnes.
+  // La liste déroulante porte formations et livres : on les redistribue dans leurs deux colonnes.
   function onLibraryChange(next: string[]) {
     dirtyRef.current = true;
-    const other = next.includes(OTHER_ID);
-    setOtherChecked(other);
     setForm((prev) => ({
       ...prev,
       trainings_done: next.filter((id) => id.startsWith('t:')).map((id) => id.slice(2)),
       books_read: next.filter((id) => id.startsWith('b:')).map((id) => id.slice(2)),
-      conferences_assistees: next.includes(CONFERENCE_ID),
-      // Décocher « autres » efface ce qui avait été saisi (sinon l'admin le verrait sans que le candidat s'en souvienne).
-      livres_lus: other ? prev.livres_lus : '',
     }));
+  }
+
+  // Décocher « autres » efface ce qui avait été saisi (sinon l'admin le verrait sans que le candidat s'en souvienne).
+  function onOtherToggle(checked: boolean) {
+    dirtyRef.current = true;
+    setOtherChecked(checked);
+    if (!checked) setForm((prev) => ({ ...prev, livres_lus: '' }));
   }
 
   const librarySelection = [
     ...form.trainings_done.map((slug) => `t:${slug}`),
     ...form.books_read.map((slug) => `b:${slug}`),
-    ...(form.conferences_assistees ? [CONFERENCE_ID] : []),
-    ...(otherChecked ? [OTHER_ID] : []),
   ];
 
   async function saveDraft(values: FormState, keepalive: boolean) {
@@ -424,9 +416,10 @@ export default function QuestionnairePage() {
           </Link>
 
           <h1 className="text-xl font-semibold text-slate-800 mb-1">Parlez-nous de vous</h1>
+          {/* Finalité et destinataire dits ici une seule fois, pour tout le formulaire (même usage pour tous les champs). */}
           <p className="text-sm text-slate-500">
-            Aidez David à mieux vous connaître avant sa réponse.
-            Ces informations restent confidentielles.
+            Aidez David à mieux vous connaître avant de valider votre ambassade.
+            Seule l&apos;équipe voit vos réponses.
           </p>
           <p className="text-xs text-slate-500 mt-2 mb-5">
             Tous les champs sont obligatoires, sauf la vidéo et la liste des formations et livres.
@@ -441,17 +434,29 @@ export default function QuestionnairePage() {
               sectionId="section-formations"
               open={openSections.formations}
               onToggle={() => toggleSection('formations')}
+              hint="Facultatif"
             >
               <CheckboxCombobox
                 label="Formations et livres"
                 groups={LIBRARY_GROUPS}
                 selected={librarySelection}
                 onChange={onLibraryChange}
-                placeholder="Choisir dans la liste"
+                placeholder="Formations et livres de David"
                 searchPlaceholder="Rechercher une formation ou un livre"
               />
+              <div className="space-y-2">
+                <CheckRow
+                  checked={form.conferences_assistees}
+                  onChange={(v) => set('conferences_assistees', v)}
+                >
+                  J&apos;ai assisté à une conférence de David Théry
+                </CheckRow>
+                <CheckRow checked={otherChecked} onChange={onOtherToggle}>
+                  D&apos;autres livres ou formations m&apos;ont marqué
+                </CheckRow>
+              </div>
               {otherChecked && (
-                <Field label="Lesquels ?">
+                <Field label="Quels autres livres ou formations vous ont marqué ?">
                   <input
                     type="text"
                     value={form.livres_lus}
@@ -460,9 +465,6 @@ export default function QuestionnairePage() {
                   />
                 </Field>
               )}
-              <p className="text-xs text-slate-500">
-                Facultatif. Ces réponses aident David à situer votre parcours. Elles ne sont vues que par l&apos;équipe.
-              </p>
             </CollapsibleSection>
 
             {/* Pratique ecclésiale */}
@@ -525,11 +527,6 @@ export default function QuestionnairePage() {
                 value={form.has_seen_healings}
                 onChange={(v) => set('has_seen_healings', v)}
               />
-              <p className="text-xs text-slate-500 -mt-3">
-                Ces réponses aident David à mieux vous connaître avant de valider votre ambassade. Elles ne sont
-                vues que par l&apos;équipe.
-              </p>
-
               <VideoAsk
                 embedded
                 onSubmit={uploadIntroVideo}
@@ -674,6 +671,29 @@ export default function QuestionnairePage() {
         </div>
       </main>
     </>
+  );
+}
+
+// Case à cocher dans une ligne de 44 px (cible tactile confortable), visible en permanence.
+function CheckRow({
+  checked,
+  onChange,
+  children,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer min-h-[44px] rounded-xl border border-slate-200 px-3.5 py-2 hover:bg-slate-50 transition-colors">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="w-5 h-5 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+      />
+      <span className="text-sm text-slate-700">{children}</span>
+    </label>
   );
 }
 
