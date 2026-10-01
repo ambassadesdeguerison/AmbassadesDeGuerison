@@ -74,12 +74,15 @@ export default function AuthPage() {
         <AppHeader />
         <main className="flex-1 flex items-center justify-center bg-slate-50 px-4">
           <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
-            <h1 className="text-xl font-semibold text-slate-800 mb-2">Vous êtes déjà connecté</h1>
+            {/* Pas de « déjà » : on arrive le plus souvent ici juste après avoir cliqué sur le lien reçu par e-mail. */}
+            <h1 className="text-xl font-semibold text-slate-800 mb-2">
+              {session.destination ? 'Vous êtes connecté' : 'Connexion réussie'}
+            </h1>
             <p className="text-slate-500 text-sm mb-6">
               Connecté avec <span className="font-medium text-slate-700">{session.email}</span>.
               {session.destination
                 ? ''
-                : ' Ce compte n\u2019a pas encore d\u2019espace : ni ambassade, ni espace visiteur.'}
+                : ' Il reste \u00e0 choisir comment continuer : ce compte n\u2019a pas encore d\u2019ambassade ni d\u2019espace visiteur.'}
             </p>
             <div className="space-y-2">
               {session.destination ? (
