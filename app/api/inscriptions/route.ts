@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getAuthUsersByEmail } from '@/lib/auth/list-all-users';
+import { buildConfirmUrl } from '@/lib/auth/confirm-url';
 import { sendRegistrationConfirmation, sendNouvelleInscriptionAdmin } from '@/lib/email/templates';
 import { FEATURES } from '@/config/features';
 
@@ -152,7 +153,22 @@ export async function POST(req: NextRequest) {
   const profileId = profileData?.id;
 
   if (FEATURES.EMAIL_NOTIFICATIONS) {
-    await sendRegistrationConfirmation(email, first_name).catch((e) => {
+    // « Continuer mon inscription » doit connecter le candidat, pas l'envoyer sur un /dashboard
+    // qui le renverrait vers l'écran de connexion. Lien généré ici (un seul par envoi : un nouveau
+    // lien invalide le précédent). Best-effort : sans lien, on retombe sur /dashboard comme avant.
+    let continueUrl: string | undefined;
+    try {
+      const { data: link, error: linkError } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+      });
+      if (linkError || !link?.properties) throw linkError ?? new Error('lien absent');
+      continueUrl = buildConfirmUrl(link.properties, '/dashboard');
+    } catch (e) {
+      console.error('[inscriptions] Lien de connexion non généré, repli sur /dashboard:', e);
+    }
+
+    await sendRegistrationConfirmation(email, first_name, continueUrl).catch((e) => {
       console.error('[inscriptions] Échec envoi confirmation candidat:', e);
     });
     await sendNouvelleInscriptionAdmin(first_name, city, country).catch((e) => {

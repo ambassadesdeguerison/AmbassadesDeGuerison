@@ -65,13 +65,14 @@ export async function sendRefusCandidature(to: string, firstName: string, reason
   });
 }
 
-export async function sendRegistrationConfirmation(to: string, firstName: string) {
+export async function sendRegistrationConfirmation(to: string, firstName: string, continueUrl?: string) {
   return getMailer().emails.send({
     from: FROM(), to,
     subject: `${firstName}, votre inscription est confirmée !`,
     react: React.createElement(RegistrationConfirmation, {
       firstName,
-      dashboardUrl: `${APP_URL()}/dashboard`,
+      // Lien de connexion direct quand il est fourni ; sinon /dashboard (repli).
+      dashboardUrl: continueUrl ?? `${APP_URL()}/dashboard`,
     }),
   });
 }
