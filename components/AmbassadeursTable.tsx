@@ -98,50 +98,34 @@ const FILTERS = [
 ];
 
 // Signal pastoral : ce que Camille regarde en premier pour juger l'engagement spirituel du candidat.
-function PastoralSignals({ a }: { a: Ambassadeur }) {
-  const trainingLabels = labelsFor(TRAININGS, a.trainings_done);
+// Une absence est une information : « rien indiqué » et « non » s'affichent toujours, jamais un blanc
+// (l'écran du candidat ne présente pas la vidéo ni la liste comme facultatives, mais l'envoi les laisse passer).
+export function PastoralSignals({ a }: { a: Ambassadeur }) {
+  // Le Défi Guérison cochait autrefois une case dédiée (healing_challenge_done) : on le fusionne dans la liste.
+  const trainingSlugs = [...(a.trainings_done ?? [])];
+  if (a.healing_challenge_done && !trainingSlugs.includes('defi_guerison')) trainingSlugs.push('defi_guerison');
+  const trainingLabels = labelsFor(TRAININGS, trainingSlugs);
   const bookLabels = labelsFor(BOOKS, a.books_read);
+  const nothingListed = trainingLabels.length === 0 && bookLabels.length === 0 && !a.conferences_assistees && !a.livres_lus;
+
   return (
     <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4">
       <p className="text-xs font-medium text-indigo-700 uppercase tracking-wide mb-3">Engagement spirituel</p>
-      <div className="flex gap-6 mb-3">
+
+      <div className="flex flex-wrap gap-x-6 gap-y-3 mb-3">
         <div>
-          <p className="text-slate-400 text-xs mb-0.5">Défi Guérison</p>
-          <p className={`text-sm font-medium ${a.healing_challenge_done ? 'text-emerald-700' : 'text-slate-500'}`}>
-            {a.healing_challenge_done ? 'Oui' : 'Non'}
+          <p className="text-slate-500 text-xs mb-0.5">Fréquentation église</p>
+          <p className="text-sm font-medium text-slate-700">
+            {a.church_attendance ? (CHURCH_ATTENDANCE_LABELS[a.church_attendance] ?? a.church_attendance) : 'Non renseigné'}
           </p>
         </div>
         <div>
-          <p className="text-slate-400 text-xs mb-0.5">Conférence DT</p>
-          <p className={`text-sm font-medium ${a.conferences_assistees ? 'text-emerald-700' : 'text-slate-500'}`}>
-            {a.conferences_assistees ? 'Oui' : 'Non'}
-          </p>
-        </div>
-        {a.church_attendance && (
-          <div>
-            <p className="text-slate-400 text-xs mb-0.5">Fréquentation église</p>
-            <p className="text-sm font-medium text-slate-700">
-              {CHURCH_ATTENDANCE_LABELS[a.church_attendance] ?? a.church_attendance}
-            </p>
-          </div>
-        )}
-      </div>
-      {a.parcours_spirituel && (
-        <div className="mb-3">
-          <p className="text-slate-400 text-xs mb-0.5">Parcours spirituel</p>
-          <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.parcours_spirituel}</p>
-        </div>
-      )}
-      <div className="flex gap-6 mb-3">
-        <div>
-          <p className="text-slate-400 text-xs mb-0.5">A déjà vu des guérisons</p>
-          <p className={`text-sm font-medium ${a.has_seen_healings ? 'text-emerald-700' : 'text-slate-500'}`}>
-            {a.has_seen_healings == null ? 'Non renseigné' : a.has_seen_healings ? 'Oui' : 'Non'}
-          </p>
+          <p className="text-slate-500 text-xs mb-0.5">Dénomination</p>
+          <p className="text-sm font-medium text-slate-700">{a.denomination || 'Non renseigné'}</p>
         </div>
         <div>
-          <p className="text-slate-400 text-xs mb-0.5">Fonction de responsabilité</p>
-          <p className={`text-sm font-medium ${a.has_leadership_role ? 'text-emerald-700' : 'text-slate-500'}`}>
+          <p className="text-slate-500 text-xs mb-0.5">Fonction de responsabilité</p>
+          <p className={`text-sm font-medium ${a.has_leadership_role ? 'text-emerald-700' : 'text-slate-600'}`}>
             {a.has_leadership_role == null
               ? 'Non renseigné'
               : a.has_leadership_role
@@ -149,45 +133,72 @@ function PastoralSignals({ a }: { a: Ambassadeur }) {
                 : 'Non'}
           </p>
         </div>
+        <div>
+          <p className="text-slate-500 text-xs mb-0.5">A déjà vu des guérisons</p>
+          <p className={`text-sm font-medium ${a.has_seen_healings ? 'text-emerald-700' : 'text-slate-600'}`}>
+            {a.has_seen_healings == null ? 'Non renseigné' : a.has_seen_healings ? 'Oui' : 'Non'}
+          </p>
+        </div>
       </div>
-      {(trainingLabels.length > 0 || bookLabels.length > 0 || a.livres_lus) && (
-        <div className="mb-3 space-y-2">
-          <p className="text-slate-400 text-xs">Formations et livres</p>
-          {trainingLabels.length > 0 && (
+
+      <div className="mb-3 space-y-2">
+        <p className="text-slate-500 text-xs">Formations, livres et conférence</p>
+        {nothingListed ? (
+          <p className="text-sm text-slate-600">Aucune indiquée</p>
+        ) : (
+          <>
             <div className="flex flex-wrap gap-1.5">
               {trainingLabels.map((l) => (
-                <span key={l} className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full">{l}</span>
+                <span key={`t-${l}`} className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full">
+                  {l} (formation)
+                </span>
               ))}
-            </div>
-          )}
-          {bookLabels.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
+              {a.conferences_assistees && (
+                <span className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full">
+                  Conférence de David Théry
+                </span>
+              )}
               {bookLabels.map((l) => (
-                <span key={l} className="bg-white border border-indigo-100 text-slate-700 text-xs px-2 py-0.5 rounded-full">{l}</span>
+                <span key={`b-${l}`} className="bg-white border border-indigo-100 text-slate-700 text-xs px-2 py-0.5 rounded-full">
+                  {l}
+                </span>
               ))}
             </div>
-          )}
-          {a.livres_lus && <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.livres_lus}</p>}
-        </div>
-      )}
-      {a.intro_video_path && (
-        <div>
-          <p className="text-slate-400 text-xs mb-1">Vidéo de présentation</p>
-          {a.intro_video_play_url ? (
-            <>
-              <video controls preload="metadata" playsInline className="w-full max-w-md rounded-lg bg-slate-900">
-                <source src={a.intro_video_play_url} type={a.intro_video_mime ?? undefined} />
-              </video>
-              <p className="text-xs text-slate-500 mt-1.5">
-                La vidéo ne s&apos;affiche pas ?{' '}
-                <a href={a.intro_video_download_url ?? a.intro_video_play_url} download className="text-indigo-600 hover:underline">
-                  Télécharger le fichier
-                </a>
+            {a.livres_lus && (
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                <span className="text-slate-500 text-xs">Autres : </span>
+                {a.livres_lus}
               </p>
-            </>
-          ) : (
-            <p className="text-xs text-red-600">Vidéo introuvable dans le stockage.</p>
-          )}
+            )}
+          </>
+        )}
+      </div>
+
+      <div className="mb-3">
+        <p className="text-slate-500 text-xs mb-1">Vidéo de présentation</p>
+        {!a.intro_video_path ? (
+          <p className="text-sm text-slate-600">Non fournie</p>
+        ) : a.intro_video_play_url ? (
+          <>
+            <video controls preload="metadata" playsInline className="w-full max-w-md rounded-lg bg-slate-900">
+              <source src={a.intro_video_play_url} type={a.intro_video_mime ?? undefined} />
+            </video>
+            <p className="text-xs text-slate-500 mt-1.5">
+              La vidéo ne s&apos;affiche pas ?{' '}
+              <a href={a.intro_video_download_url ?? a.intro_video_play_url} download className="text-indigo-600 hover:underline">
+                Télécharger le fichier
+              </a>
+            </p>
+          </>
+        ) : (
+          <p className="text-xs text-red-600">Vidéo introuvable dans le stockage.</p>
+        )}
+      </div>
+
+      {a.parcours_spirituel && (
+        <div>
+          <p className="text-slate-500 text-xs mb-0.5">Parcours écrit (en secours de la vidéo)</p>
+          <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.parcours_spirituel}</p>
         </div>
       )}
     </div>
@@ -206,20 +217,10 @@ function QuestionnairPanel({ a }: { a: Ambassadeur }) {
   return (
     <div className="space-y-4">
       <PastoralSignals a={a} />
-      {(a.phone || a.denomination) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          {a.phone && (
-            <div>
-              <p className="text-slate-400 mb-0.5">Téléphone</p>
-              <p className="text-slate-700">{a.phone}</p>
-            </div>
-          )}
-          {a.denomination && (
-            <div>
-              <p className="text-slate-400 mb-0.5">Dénomination</p>
-              <p className="text-slate-700">{a.denomination}</p>
-            </div>
-          )}
+      {a.phone && (
+        <div className="text-xs">
+          <p className="text-slate-500 mb-0.5">Téléphone</p>
+          <p className="text-slate-700">{a.phone}</p>
         </div>
       )}
     </div>
