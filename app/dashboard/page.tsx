@@ -835,6 +835,11 @@ export default function DashboardPage() {
                       const s = REQUEST_STATUS[r.status] ?? { label: r.status, cls: 'bg-slate-100 text-slate-500' };
                       const isPending = r.status === 'pending';
                       const isAccepting = requestActionLoading?.token === r.action_token && requestActionLoading.action === 'accept';
+                {pendingCount > 0 && (
+                  <p className="text-slate-500 text-sm leading-relaxed bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mb-4">
+                    Vous pouvez refuser quelle qu&apos;en soit la raison, par exemple le nombre de places. La personne ne saura pas pourquoi vous avez refusé.
+                  </p>
+                )}
                       const isDeclining = requestActionLoading?.token === r.action_token && requestActionLoading.action === 'decline';
                       const isActioning = isAccepting || isDeclining;
                       const liveTitle = r.host_activation_id
