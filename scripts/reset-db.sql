@@ -320,17 +320,11 @@ CREATE TABLE event_timing_config (
 INSERT INTO event_timing_config (id) VALUES (1) ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- 3. VUE PUBLIQUE (colonnes admin-only exclues)
+-- 3. (vue publique supprimée le 2026-10-01)
 -- ============================================================
-
-CREATE VIEW host_profiles_public AS
-SELECT
-  id, user_id, first_name, last_name, host_type, church_subtype,
-  city, country, lat, lng, geocoding_failed,
-  whatsapp_group_url,
-  capacity, consignes, viewing_setup, profile_photo_url,
-  status, created_at
-FROM host_profiles;
+-- host_profiles_public n'était utilisée nulle part et n'avait pas de filtre sur le statut (noms, consignes
+-- et lien WhatsApp des candidats lisibles par tous). Les données publiques passent par les routes serveur
+-- (/api/host-activations, pages /ambassade/[id]) qui sélectionnent explicitement leurs colonnes.
 
 -- ============================================================
 -- 4. FONCTIONS ADMIN (SECURITY DEFINER — bypass RLS sur admin_users)
@@ -498,11 +492,12 @@ CREATE POLICY "events_public_read" ON events
 CREATE POLICY "events_admin_write" ON events
   FOR ALL USING (is_admin(auth.uid()));
 
--- host_profiles : validés visibles publiquement, owner full, admin full
-CREATE POLICY "host_profiles_public_read" ON host_profiles
-  FOR SELECT USING (status = 'validated');
-CREATE POLICY "host_profiles_owner_full" ON host_profiles
-  FOR ALL USING (auth.uid() = user_id);
+-- host_profiles : AUCUNE lecture publique (corrigé le 2026-10-01 : la lecture publique des profils validés
+-- exposait téléphone, adresse privée et réponses du questionnaire à n'importe qui avec la clé publique).
+-- Le propriétaire lit sa ligne mais ne l'écrit pas directement (une écriture libre lui permettait de changer
+-- son propre `status`) : toutes les écritures passent par les routes serveur (clé service). Admin : tout.
+CREATE POLICY "host_profiles_owner_read" ON host_profiles
+  FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "host_profiles_admin_full" ON host_profiles
   FOR ALL USING (is_admin(auth.uid()));
 

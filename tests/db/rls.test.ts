@@ -20,19 +20,16 @@ describe('RLS — events', () => {
 });
 
 describe('RLS — host_profiles', () => {
-  it('un visiteur anon ne voit que les hôtes actifs', async () => {
-    const { data } = await anonClient.from('host_profiles').select('id, status');
-    const allActive = (data ?? []).every((h) => h.status === 'active');
-    expect(allActive).toBe(true);
+  // Corrigé le 2026-10-01 : la lecture publique des profils validés exposait téléphone, adresse privée et
+  // réponses du questionnaire. Désormais un anonyme ne lit AUCUNE ligne de la table (les données publiques
+  // passent par les routes serveur). Sonde équivalente sur la base liée : node scripts/probe-access.js
+  it('un visiteur anon ne lit aucune ligne de host_profiles', async () => {
+    const { data } = await anonClient.from('host_profiles').select('id, address_private, phone');
+    expect(data ?? []).toHaveLength(0);
   });
 
-  it('un visiteur anon ne voit pas address_private', async () => {
-    const { error } = await anonClient
-      .from('host_profiles')
-      .select('address_private')
-      .limit(1);
-    // L'accès à address_private via anon doit être bloqué par RLS
-    // (la view host_profiles_public exclut cette colonne)
+  it('la vue host_profiles_public n\u2019existe plus', async () => {
+    const { error } = await anonClient.from('host_profiles_public').select('id').limit(1);
     expect(error).not.toBeNull();
   });
 });
