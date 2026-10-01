@@ -220,6 +220,11 @@ Pendant le live — visiteur contacte un hôte
 Après le live
   │  Hôte soumet un signal → POST /api/live-signals
   │  Visiteur soumet un témoignage → POST /api/temoignages
+     (deux refus possibles, composant `DeclineChoice` : « Pas disponible cette fois » → la personne peut redemander
+      pour un autre live ; « Ne plus accueillir cette personne » → `contact_requests.declined_permanently = TRUE`,
+      plus aucune demande de ce visiteur chez cette ambassade, tous lives confondus — `lib/visitor/declined-by-host.ts`,
+      403 dans POST /api/visit-requests. Le second demande une confirmation et n'a pas de recours dans l'app :
+      si c'était une erreur, l'équipe repasse `declined_permanently` à FALSE en base.)
   │  Admin modère → /admin/temoignages
   │
   ▼

@@ -7,13 +7,19 @@ interface Props {
   visitorFirstName: string;
   hostFirstName: string;
   carteUrl: string;
+  // « Ne plus accueillir cette personne » : aucune nouvelle demande possible chez cette ambassade.
+  permanent?: boolean;
 }
 
-export default function RefusVisite({ visitorFirstName, hostFirstName, carteUrl }: Props) {
+export default function RefusVisite({ visitorFirstName, hostFirstName, carteUrl, permanent = false }: Props) {
   return (
     <EmailLayout preview={`Votre demande auprès de ${hostFirstName} — mise à jour`}>
       <Text style={p}>Bonjour {visitorFirstName},</Text>
-      <Text style={p}>{hostFirstName} n&apos;est malheureusement pas en mesure de vous accueillir pour ce live.</Text>
+      {permanent ? (
+        <Text style={p}>{hostFirstName} n&apos;est malheureusement pas en mesure de vous accueillir. Vous ne pourrez pas lui envoyer de nouvelle demande.</Text>
+      ) : (
+        <Text style={p}>{hostFirstName} n&apos;est malheureusement pas disponible pour ce live. Vous pourrez lui écrire de nouveau pour un prochain live.</Text>
+      )}
       <Text style={p}>D&apos;autres ambassades sont peut-être disponibles près de chez vous :</Text>
       <Btn href={carteUrl}>Voir la carte</Btn>
       <Text style={muted}>Ne vous découragez pas — les ambassades grandissent à chaque live.</Text>

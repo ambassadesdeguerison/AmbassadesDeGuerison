@@ -3,6 +3,7 @@ import { createServerClient } from '@supabase/ssr';
 import { createServiceClient } from '@/lib/supabase/server';
 import { sendNewContactRequestHost } from '@/lib/email/templates';
 import { FEATURES } from '@/config/features';
+import { wasDeclinedByHost, DECLINED_BY_HOST_MESSAGE } from '@/lib/visitor/declined-by-host';
 
 function getAnonClient(req: NextRequest) {
   return createServerClient(
@@ -80,6 +81,16 @@ export async function POST(req: NextRequest) {
 
   // Vérifier que l'event existe et que les inscriptions ne sont pas fermées.
   // Pas de gate d'ouverture : dès qu'une fiche d'ambassade est visible, l'inscription
+  // Refusé une fois par cette ambassade → plus de nouvelle demande chez elle, quel que
+  // soit le live. Ne touche pas aux autres ambassades (contrairement à la blacklist globale).
+  const declined = await wasDeclinedByHost(supabase, visitorProfile.id, host_profile_id);
+  if (declined === null) {
+    return NextResponse.json({ error: 'Une erreur est survenue. Réessayez dans un instant.' }, { status: 500 });
+  }
+  if (declined) {
+    return NextResponse.json({ error: DECLINED_BY_HOST_MESSAGE }, { status: 403 });
+  }
+
   // est possible. La fermeture (registration_closes_at) est posée automatiquement
   // par le trigger DB à event_date.
   const now = new Date().toISOString();

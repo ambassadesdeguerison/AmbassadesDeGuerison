@@ -7,8 +7,10 @@ interface Props {
   params: Promise<{ token: string }>;
 }
 
-export async function POST(_req: NextRequest, { params }: Props) {
+export async function POST(req: NextRequest, { params }: Props) {
   const { token } = await params;
+  // « Ne plus accueillir cette personne » (true) ou « pas disponible cette fois » (absent/false).
+  const permanent = (await req.json().catch(() => null))?.permanent === true;
   const supabase = createServiceClient();
 
   const { data: contact } = await supabase
@@ -31,7 +33,7 @@ export async function POST(_req: NextRequest, { params }: Props) {
 
   const { error } = await supabase
     .from('contact_requests')
-    .update({ status: 'declined' })
+    .update({ status: 'declined', declined_permanently: permanent })
     .eq('id', contact.id);
 
   if (error) {
@@ -45,7 +47,7 @@ export async function POST(_req: NextRequest, { params }: Props) {
     const host = Array.isArray(ha?.host_profiles) ? ha.host_profiles[0] : ha?.host_profiles;
     if (host) {
       Promise.allSettled([
-        sendRefusVisite(contact.visitor_email, contact.visitor_first_name, host.first_name),
+        sendRefusVisite(contact.visitor_email, contact.visitor_first_name, host.first_name, permanent),
       ]);
     }
   }

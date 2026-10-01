@@ -43,10 +43,12 @@ export async function GET(
 
 // POST — effectue le refus
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+  // « Ne plus accueillir cette personne » (true) ou « pas disponible cette fois » (absent/false).
+  const permanent = (await req.json().catch(() => null))?.permanent === true;
   const supabase = createServiceClient();
   const expiresAt = new Date(Date.now() - TOKEN_TTL_MS).toISOString();
 
@@ -71,7 +73,7 @@ export async function POST(
 
   const { error: updateError } = await supabase
     .from('contact_requests')
-    .update({ status: 'declined' })
+    .update({ status: 'declined', declined_permanently: permanent })
     .eq('id', data.id);
 
   if (updateError) {
@@ -83,7 +85,8 @@ export async function POST(
     sendContactRequestDeclined(
       data.visitor_email,
       data.visitor_first_name,
-      hp.first_name
+      hp.first_name,
+      permanent,
     ).catch(() => {});
   }
 

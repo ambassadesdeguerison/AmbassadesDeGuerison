@@ -15,6 +15,7 @@ import MissionDuMoment from '@/components/dashboard/MissionDuMoment';
 import { participationLabels } from '@/lib/dashboard/participation-labels';
 import DashboardTabs, { type DashboardTab } from '@/components/dashboard/DashboardTabs';
 import MesInfosSection from '@/app/dashboard/MesInfosSection';
+import DeclineChoice from '@/components/DeclineChoice';
 import { useBrowserTimezone } from '@/lib/hooks/use-browser-timezone';
 
 const LIVE_WINDOW_HOURS = parseInt(process.env.NEXT_PUBLIC_LIVE_SIGNAL_WINDOW_HOURS ?? '4');
@@ -89,7 +90,9 @@ export default function DashboardPage() {
   const [testimonialError, setTestimonialError] = useState('');
 
   // Accept/decline loading state
-  const [requestActionLoading, setRequestActionLoading] = useState<{ token: string; action: 'accept' | 'decline' } | null>(null);
+  const [requestActionLoading, setRequestActionLoading] = useState<{ token: string; action: 'accept' | 'decline'; permanent?: boolean } | null>(null);
+  // Demande dont le panneau « Refuser » est ouvert (une seule à la fois).
+  const [decliningToken, setDecliningToken] = useState<string | null>(null);
 
   // Photos visiteur (Phase 3 PR3) — signed URLs récupérées via une route
   // dédiée (ownership vérifié serveur), et signalements en cours (optimiste).
@@ -388,9 +391,12 @@ export default function DashboardPage() {
     }).catch(() => {});
   }
 
-  async function handleContactAction(token: string, action: 'accept' | 'decline') {
-    setRequestActionLoading({ token, action });
-    const res = await fetch(`/api/visit-requests/${token}/${action}`, { method: 'POST' });
+  async function handleContactAction(token: string, action: 'accept' | 'decline', permanent = false) {
+    setRequestActionLoading({ token, action, permanent });
+    const res = await fetch(`/api/visit-requests/${token}/${action}`, {
+      method: 'POST',
+      ...(action === 'decline' && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ permanent }) }),
+    });
     if (res.ok) {
       const newStatus = action === 'accept' ? 'accepted' : 'declined';
       setContactRequests((prev) =>
@@ -890,13 +896,23 @@ export default function DashboardPage() {
                                 Accepter
                               </button>
                               <button
-                                onClick={() => handleContactAction(r.action_token, 'decline')}
+                                onClick={() => setDecliningToken(decliningToken === r.action_token ? null : r.action_token)}
                                 disabled={isActioning}
                                 className="flex-1 flex items-center justify-center gap-1.5 text-sm px-3 py-2 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 disabled:opacity-50 transition-colors font-medium"
                               >
-                                {isDeclining ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
+                                <UserX className="w-4 h-4" />
                                 Refuser
                               </button>
+                            </div>
+                          )}
+                          {isPending && decliningToken === r.action_token && (
+                            <div className="mt-3 pt-3 border-t border-slate-100">
+                              <p className="text-sm font-medium text-slate-700 mb-3">Que répondez-vous à {r.visitor_first_name} ?</p>
+                              <DeclineChoice
+                                visitorName={r.visitor_first_name}
+                                loading={isDeclining ? { permanent: !!requestActionLoading?.permanent } : false}
+                                onDecline={(permanent) => handleContactAction(r.action_token, 'decline', permanent)}
+                              />
                             </div>
                           )}
                         </div>

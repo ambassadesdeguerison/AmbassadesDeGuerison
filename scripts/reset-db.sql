@@ -178,6 +178,10 @@ CREATE TABLE contact_requests (
   visitor_message             TEXT,
   status                      TEXT        NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled_no_response')),
+  -- TRUE seulement si l'ambassadeur a choisi « ne plus accueillir cette personne » :
+  -- plus aucune demande chez cette ambassade, pour aucun live. Un refus simple
+  -- (« pas disponible cette fois ») laisse FALSE.
+  declined_permanently        BOOLEAN     NOT NULL DEFAULT FALSE,
   action_token                UUID        NOT NULL DEFAULT gen_random_uuid(),
   visitor_notifications_optin BOOLEAN     DEFAULT TRUE,
   UNIQUE (host_activation_id, visitor_email),

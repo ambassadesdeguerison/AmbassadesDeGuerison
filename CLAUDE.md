@@ -148,6 +148,8 @@ Deux mécanismes orthogonaux : **suspendre une ambassade** (`host_profiles.statu
 Voir [app/api/visit-requests/route.ts](app/api/visit-requests/route.ts) et [app/api/visitor-help-request/route.ts](app/api/visitor-help-request/route.ts).
 
 ## Transparence des données visiteur (RGPD)
+**Deux façons de refuser une demande de visite** (2026-10-01, composant `components/DeclineChoice.tsx`, utilisé dans `/dashboard`, `/accueillir/[token]` et `/refuser/[token]`) : **« Pas disponible cette fois »** (`status = 'declined'`, la personne peut redemander pour un autre live) et **« Ne plus accueillir cette personne »** (`declined_permanently = TRUE`, avec une confirmation car irréversible). Seul le second bloque : `lib/visitor/declined-by-host.ts`, appelé par `POST /api/visit-requests`, répond 403 avec un message honnête qui renvoie vers d'autres ambassades, pour aucun live de cette ambassade. Les autres ambassades restent ouvertes — c'est ce qui le distingue de la blacklist globale. Les deux routes `decline` n'acceptent `permanent` que s'il vaut exactement `true` (sans corps de requête : refus simple, jamais définitif par défaut). Les libellés sont volontairement en français simple (public peu à l'aise avec le numérique) : ne pas les durcir. Le refus définitif n'a pas de recours dans l'app. Migration : `scripts/migration-declined-permanently.sql` (idempotente) ; sans elle, refuser une demande échoue (colonne absente).
+
 
 Page `/confidentialite` + légendes inline, ajoutées le 2026-08-07 (TODO-23). Détail complet : ARCHITECTURE.md § Transparence des données. Deux règles à ne pas défaire :
 

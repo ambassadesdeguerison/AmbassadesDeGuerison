@@ -127,11 +127,11 @@ export async function sendNewContactRequestHost(
   });
 }
 
-export async function sendContactRequestDeclined(to: string, visitorFirstName: string, hostFirstName: string) {
+export async function sendContactRequestDeclined(to: string, visitorFirstName: string, hostFirstName: string, permanent = false) {
   return getMailer().emails.send({
     from: FROM(), to,
     subject: `Votre demande auprès de ${hostFirstName} n'a pas pu être confirmée`,
-    react: React.createElement(ContactDeclined, { visitorFirstName, hostFirstName, appUrl: APP_URL() }),
+    react: React.createElement(ContactDeclined, { visitorFirstName, hostFirstName, appUrl: APP_URL(), permanent }),
   });
 }
 
@@ -156,11 +156,11 @@ export async function sendAcceptationVisite(
   });
 }
 
-export async function sendRefusVisite(to: string, visitorFirstName: string, hostFirstName: string) {
+export async function sendRefusVisite(to: string, visitorFirstName: string, hostFirstName: string, permanent = false) {
   return getMailer().emails.send({
     from: FROM(), to,
     subject: `Votre demande auprès de ${hostFirstName} — mise à jour`,
-    react: React.createElement(RefusVisite, { visitorFirstName, hostFirstName, carteUrl: APP_URL() }),
+    react: React.createElement(RefusVisite, { visitorFirstName, hostFirstName, carteUrl: APP_URL(), permanent }),
   });
 }
 

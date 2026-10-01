@@ -5,12 +5,13 @@ import { useParams } from 'next/navigation';
 import { CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import AppHeader from '@/components/AppHeader';
+import DeclineChoice from '@/components/DeclineChoice';
 
 export default function RefuserPage() {
   const { token } = useParams<{ token: string }>();
   const [step, setStep] = useState<'loading' | 'confirm' | 'done' | 'already' | 'error'>('loading');
   const [names, setNames] = useState<{ visitor_first_name: string; host_first_name: string } | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<false | { permanent: boolean }>(false);
 
   useEffect(() => {
     fetch(`/api/contact-requests/${token}/decline`)
@@ -24,9 +25,13 @@ export default function RefuserPage() {
       .catch(() => setStep('error'));
   }, [token]);
 
-  async function handleDecline() {
-    setSubmitting(true);
-    const res = await fetch(`/api/contact-requests/${token}/decline`, { method: 'POST' });
+  async function handleDecline(permanent: boolean) {
+    setSubmitting({ permanent });
+    const res = await fetch(`/api/contact-requests/${token}/decline`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ permanent }),
+    });
     const d = await res.json();
     if (res.ok || d.already_declined) {
       setStep('done');
@@ -93,18 +98,16 @@ export default function RefuserPage() {
       <AppHeader />
       <main className="flex-1 flex items-center justify-center bg-slate-50 px-4">
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 max-w-sm w-full text-center">
-          <h1 className="text-slate-800 font-semibold text-lg mb-2">Refuser la demande de {names?.visitor_first_name} ?</h1>
+          <h1 className="text-slate-800 font-semibold text-lg mb-2">Que répondez-vous à {names?.visitor_first_name} ?</h1>
           <p className="text-slate-500 text-sm mb-6 leading-relaxed">
-            {names?.visitor_first_name} sera prévenu par e-mail et pourra chercher une autre ambassade.
+            {names?.visitor_first_name} sera prévenu par e-mail.
           </p>
           <div className="space-y-3">
-            <button
-              onClick={handleDecline}
-              disabled={submitting}
-              className="w-full bg-red-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-red-700 disabled:opacity-50 transition-colors"
-            >
-              {submitting ? 'En cours…' : 'Refuser'}
-            </button>
+            <DeclineChoice
+              visitorName={names?.visitor_first_name ?? 'Cette personne'}
+              loading={submitting}
+              onDecline={handleDecline}
+            />
             <Link
               href="/dashboard"
               className="block w-full border border-slate-200 text-slate-600 py-3 rounded-xl font-medium text-sm hover:bg-slate-50 transition-colors"
