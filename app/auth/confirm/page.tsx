@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import AppHeader from '@/components/AppHeader';
+import type { EmailOtpType } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/browser';
 
 function ConfirmContent() {
@@ -21,7 +22,8 @@ function ConfirmContent() {
 
   useEffect(() => {
     const token_hash = searchParams.get('token_hash');
-    const type = searchParams.get('type') as 'magiclink' | 'email' | null;
+    // Le type vient du jeton lui-même (`signup`, `magiclink`…), cf lib/auth/confirm-url.ts.
+    const type = searchParams.get('type') as EmailOtpType | null;
 
     if (!token_hash || !type) return;
 

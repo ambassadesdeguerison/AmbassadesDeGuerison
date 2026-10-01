@@ -10,6 +10,8 @@ export default function AuthPage() {
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  // Adresse sans compte : aucun e-mail n'est envoyé, on guide vers l'inscription.
+  const [noAccount, setNoAccount] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,12 +25,51 @@ export default function AuthPage() {
     });
 
     const data = await res.json();
-    if (!res.ok) {
+    if (res.status === 404 && data.error === 'no_account') {
+      setNoAccount(true);
+    } else if (!res.ok) {
       setError(data.error ?? 'Une erreur est survenue.');
     } else {
       setSent(true);
     }
     setLoading(false);
+  }
+
+  if (noAccount) {
+    return (
+      <>
+        <AppHeader />
+        <main className="flex-1 flex items-center justify-center bg-slate-50 px-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-slate-100 shadow-sm p-8">
+            <h1 className="text-xl font-semibold text-slate-800 mb-2">Aucun compte avec cette adresse</h1>
+            <p className="text-slate-500 text-sm mb-6">
+              Nous n&apos;avons pas trouvé de compte pour{' '}
+              <span className="font-medium text-slate-700">{email}</span>. Aucun lien n&apos;a été envoyé.
+            </p>
+            <div className="space-y-2">
+              <Link
+                href="/inscription"
+                className="flex items-center justify-center min-h-[44px] w-full bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors"
+              >
+                Devenir ambassadeur
+              </Link>
+              <Link
+                href="/mon-espace/creer"
+                className="flex items-center justify-center min-h-[44px] w-full border border-slate-200 text-slate-700 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
+              >
+                Créer mon espace visiteur
+              </Link>
+            </div>
+            <button
+              onClick={() => setNoAccount(false)}
+              className="mt-5 text-sm text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1 mx-auto"
+            >
+              <ArrowLeft className="w-3 h-3" /> Essayer une autre adresse
+            </button>
+          </div>
+        </main>
+      </>
+    );
   }
 
   if (sent) {
