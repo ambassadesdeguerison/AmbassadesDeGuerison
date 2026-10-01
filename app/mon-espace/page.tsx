@@ -7,12 +7,12 @@ import { ArrowLeft, CheckCircle2, Loader2, Camera, X } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import PhoneInput from '@/components/ui/PhoneInput';
 import Avatar from '@/components/ui/Avatar';
+import MesDemandes from '@/components/MesDemandes';
 import { createClient } from '@/lib/supabase/browser';
 
-// Espace visiteur minimal (Phase 2bis) — pas un espace visiteur complet
-// (Phase 5, fermée sine die : pas de "mes demandes", pas de dashboard).
-// Seul but : confirmer la connexion et permettre de mettre à jour le
-// téléphone réutilisé automatiquement sur la prochaine demande de visite.
+// Espace visiteur minimal (Phase 2bis) — pas un dashboard complet. But :
+// confirmer la connexion, mettre à jour le téléphone réutilisé sur la prochaine
+// demande, et suivre l'état de ses demandes (« Mes demandes », lecture seule).
 export default function MonEspacePage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -215,6 +215,10 @@ export default function MonEspacePage() {
             >
               Se déconnecter
             </button>
+          </div>
+
+          <div className="mt-6">
+            <MesDemandes />
           </div>
         </div>
       </main>

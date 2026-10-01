@@ -294,7 +294,10 @@ message, consentement notifications) → POST /api/visit-requests
   │  (event_timing_config, lib/visitor/request-limit.ts)
   ▼
 /mon-espace — espace minimal (email, téléphone éditable, photo de profil éditable, déconnexion)
-  │  PAS un dashboard complet — juste assez pour ne pas retaper ses infos
+  │  + « Mes demandes » (`components/MesDemandes.tsx`, `GET /api/visitor/requests`) : liste en lecture
+  │  seule des demandes avec leur statut. N'expose jamais `action_token` (c'est aussi le jeton
+  │  d'acceptation côté hôte) ; `declined_permanently` apparaît comme un refus ordinaire.
+  │  PAS un dashboard complet — juste assez pour ne pas retaper ses infos et suivre ses demandes
 ```
 
 **Photo de profil visiteur.** Distincte des photos ambassadeur (`ambassador-photos`) :
