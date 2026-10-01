@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getAuthUsersByEmail } from '@/lib/auth/list-all-users';
 import { buildConfirmUrl } from '@/lib/auth/confirm-url';
+import { safeRedirect } from '@/lib/auth/safe-redirect';
 import { sendMagicLink } from '@/lib/email/templates';
 
 export async function POST(req: NextRequest) {
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
   // le token à usage unique avant que l'utilisateur clique.
   // Notre page /auth/confirm est un Client Component : les scanners voient du HTML,
   // n'exécutent pas le JS, et ne consomment pas le token.
-  await sendMagicLink(email, buildConfirmUrl(data.properties));
+  await sendMagicLink(email, buildConfirmUrl(data.properties, safeRedirect(body?.redirect)));
 
   return NextResponse.json({ success: true });
 }

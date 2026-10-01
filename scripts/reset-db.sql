@@ -318,6 +318,8 @@ CREATE TABLE event_timing_config (
   feedback_days_after              INTEGER     DEFAULT 1,
   queue_aging_days                 INTEGER     DEFAULT 5,
   soon_threshold_days              INTEGER     DEFAULT 2,
+  -- Plafond anti-démarchage : demandes en cours (pending + accepted) par visiteur et par live
+  max_requests_per_visitor_per_event INTEGER   NOT NULL DEFAULT 3 CHECK (max_requests_per_visitor_per_event >= 1),
   updated_at                       TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT single_row CHECK (id = 1)
 );

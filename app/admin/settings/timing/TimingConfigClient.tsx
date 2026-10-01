@@ -9,7 +9,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminNotice from '@/components/admin/AdminNotice';
 import ErrorMessage from '@/components/admin/ErrorMessage';
 
-type Field = { key: keyof TimingConfig; label: string; tooltip: string };
+type Field = { key: keyof TimingConfig; label: string; tooltip: string; min?: number; max?: number };
 
 // Audit admin 2026-08-07 (9.1) : trois champs ne pilotaient rien —
 // `visitor_auto_decline_days_before` (cron supprimé),
@@ -51,6 +51,19 @@ const DISPLAY_FIELDS: Field[] = [
   },
 ];
 
+// Garde-fou anti-démarchage : un visiteur ne peut pas envoyer plus de N demandes
+// en cours (en attente ou acceptées) pour un même live. Une demande refusée ou
+// restée sans réponse libère sa place.
+const REQUEST_FIELDS: Field[] = [
+  {
+    key: 'max_requests_per_visitor_per_event',
+    label: 'Demandes maximum par visiteur et par live',
+    tooltip: 'Au-delà, le visiteur est invité à attendre la réponse d\'un ambassadeur. Une demande refusée ou restée sans réponse ne compte plus. Minimum 1.',
+    min: 1,
+    max: 20,
+  },
+];
+
 interface Props { config: TimingConfig }
 
 export default function TimingConfigClient({ config }: Props) {
@@ -59,9 +72,9 @@ export default function TimingConfigClient({ config }: Props) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
 
-  function set(key: keyof TimingConfig, v: string) {
+  function set(key: keyof TimingConfig, v: string, min = 0) {
     const n = parseInt(v);
-    if (!isNaN(n) && n >= 0) setValues((prev) => ({ ...prev, [key]: n }));
+    if (!isNaN(n) && n >= min) setValues((prev) => ({ ...prev, [key]: n }));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -78,7 +91,7 @@ export default function TimingConfigClient({ config }: Props) {
     setSaving(false);
   }
 
-  function renderField({ key, label, tooltip }: Field) {
+  function renderField({ key, label, tooltip, min = 0, max = 60 }: Field) {
     return (
       <div key={key} className="grid sm:grid-cols-3 gap-3 items-center">
         <div className="sm:col-span-2">
@@ -88,10 +101,10 @@ export default function TimingConfigClient({ config }: Props) {
         <input
           id={key}
           type="number"
-          min={0}
-          max={60}
+          min={min}
+          max={max}
           value={values[key]}
-          onChange={(e) => set(key, e.target.value)}
+          onChange={(e) => set(key, e.target.value, min)}
           className="border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 text-center focus:outline-none focus:ring-2 focus:ring-indigo-600 transition tabular-nums"
         />
       </div>
@@ -101,8 +114,8 @@ export default function TimingConfigClient({ config }: Props) {
   return (
     <AdminPage width="narrow">
       <AdminPageHeader
-        title="Délais et affichage"
-        subtitle="Quand les e-mails automatiques partent, et à partir de quand la carte annonce un live imminent."
+        title="Délais, affichage et limites"
+        subtitle="Quand les e-mails automatiques partent, quand la carte annonce un live imminent, et combien de demandes un visiteur peut envoyer."
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -126,6 +139,14 @@ export default function TimingConfigClient({ config }: Props) {
             <p className="text-xs text-slate-400 mt-0.5">Actif immédiatement — visible par tous les visiteurs.</p>
           </div>
           {DISPLAY_FIELDS.map(renderField)}
+        </section>
+
+        <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
+          <div>
+            <h2 className="text-sm font-medium text-slate-800">Demandes de visite</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Actif immédiatement — s&apos;applique à chaque nouvelle demande.</p>
+          </div>
+          {REQUEST_FIELDS.map(renderField)}
         </section>
 
         {error && <ErrorMessage>{error}</ErrorMessage>}

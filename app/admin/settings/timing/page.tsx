@@ -19,7 +19,7 @@ export default async function TimingSettingsPage() {
     .eq('id', 1)
     .maybeSingle();
 
-  const config = data ?? DEFAULTS;
+  const config = { ...DEFAULTS, ...(data ?? {}) };
 
   return (
     <AdminLayout>

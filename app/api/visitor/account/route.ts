@@ -4,6 +4,8 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { classifyVisitorEmail } from '@/lib/visitor/classify-email';
 import { compressAmbassadorPhoto } from '@/lib/image/compress-photo';
 import { sendVisitorCompteCree } from '@/lib/email/templates';
+import { buildConfirmUrl } from '@/lib/auth/confirm-url';
+import { safeRedirect } from '@/lib/auth/safe-redirect';
 
 const BUCKET = 'visitor-photos';
 const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 Mo
@@ -117,19 +119,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Impossible de créer le profil' }, { status: 500 });
   }
 
-  // Bootstrap de session immédiat — pas d'attente d'un clic e-mail (cf Cross-
-  // Model Perspective du design doc : ne jamais bloquer sur la confirmation).
-  //
-  // Un seul generateLink, réutilisé pour le bootstrap ET l'e-mail de
-  // confirmation (Phase 3 PR2). Générer un 2e token 'magiclink' pour le même
-  // utilisateur juste après invalide silencieusement le premier côté Supabase
-  // (un seul OTP magiclink actif par utilisateur) — repro'd en /qa : la
-  // génération du token e-mail en arrière-plan gagnait quasi systématiquement
-  // la course contre le round-trip navigateur du lien de bootstrap, qui
-  // atterrissait alors sur "Lien invalide ou expiré". Le visiteur est de
-  // toute façon déjà connecté (cookie posé par le redirect immédiat) au
-  // moment où il ouvrirait l'e-mail — un lien déjà consommé n'y est pas un
-  // problème pratique.
+  // Vérification réelle de l'adresse : la session ne s'ouvre QUE par le clic sur
+  // le lien reçu par e-mail. Le jeton n'est jamais renvoyé au navigateur — sinon
+  // n'importe qui pourrait créer un compte avec l'adresse d'un tiers, puis
+  // recevoir l'adresse d'une maison à cet e-mail une fois sa demande acceptée.
+  // Un seul generateLink reste actif, donc plus de course entre deux jetons.
   const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
     type: 'magiclink',
     email,
@@ -137,19 +131,18 @@ export async function POST(req: NextRequest) {
 
   if (linkError || !linkData) {
     console.error('[visitor/account] generateLink failed', linkError);
-    return NextResponse.json({ error: 'Compte créé mais la connexion a échoué' }, { status: 500 });
+    return NextResponse.json({ error: "Compte créé mais l'envoi du lien a échoué. Réessayez de vous connecter." }, { status: 500 });
   }
 
-  // E-mail de confirmation dédié — best-effort, en parallèle, jamais
-  // bloquant pour la réponse au client (cf Cross-Model Perspective : ne
-  // jamais faire attendre le visiteur sur un envoi d'e-mail).
-  const confirmUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/confirm?token_hash=${linkData.properties.hashed_token}&type=magiclink&redirect=${encodeURIComponent('/mon-espace')}`;
-  sendVisitorCompteCree(email, firstName, confirmUrl).catch((err) => {
+  // Le visiteur n'a que ce lien pour continuer : on attend l'envoi, et on le
+  // signale s'il échoue (il pourra demander un nouveau lien depuis l'écran).
+  const confirmUrl = buildConfirmUrl(linkData.properties, safeRedirect(formData.get('redirect')) ?? '/mon-espace');
+  try {
+    await sendVisitorCompteCree(email, firstName, confirmUrl);
+  } catch (err) {
     console.error('[visitor/account] confirmation email send failed', err);
-  });
+    return NextResponse.json({ error: "Compte créé, mais l'e-mail n'a pas pu partir. Validez à nouveau le formulaire : vous pourrez demander un nouveau lien." }, { status: 502 });
+  }
 
-  return NextResponse.json({
-    token_hash: linkData.properties.hashed_token,
-    photo_error: photoError,
-  }, { status: 201 });
+  return NextResponse.json({ status: 'verify_email', photo_error: photoError }, { status: 201 });
 }
