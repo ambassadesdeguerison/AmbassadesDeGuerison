@@ -13,17 +13,20 @@ interface Props {
 
 export default function ContactDeclined({ visitorFirstName, hostFirstName, appUrl, permanent = false }: Props) {
   return (
-    <EmailLayout preview={`Votre demande auprès de ${hostFirstName} n'a pas pu être confirmée`}>
+    <EmailLayout preview={`Votre demande auprès de ${hostFirstName} — mise à jour`}>
       <Text style={p}>Bonjour {visitorFirstName},</Text>
       {permanent ? (
-        <Text style={p}>{hostFirstName} n&apos;est malheureusement pas en mesure de vous accueillir. Vous ne pourrez pas lui envoyer de nouvelle demande.</Text>
+        <Text style={p}>{hostFirstName} ne peut pas vous accueillir. Vous ne pourrez pas lui envoyer de nouvelle demande.</Text>
       ) : (
-        <Text style={p}>{hostFirstName} n&apos;est malheureusement pas disponible pour ce live. Vous pourrez lui écrire de nouveau pour un prochain live.</Text>
+        <Text style={p}>{hostFirstName} n&apos;est pas disponible pour ce live. Vous pourrez lui écrire de nouveau pour le prochain.</Text>
       )}
-      <Text style={p}>D&apos;autres ambassades sont peut-être disponibles près de chez vous :</Text>
+      <Text style={p}>
+        Il y a peut-être d&apos;autres ambassades près de chez vous : des maisons ou des églises qui ouvrent leur porte
+        pendant le live. Vous pouvez les voir sur la carte :
+      </Text>
       <Btn href={appUrl}>Voir la carte</Btn>
     </EmailLayout>
   );
 }
 
-const p: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
+const p: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };

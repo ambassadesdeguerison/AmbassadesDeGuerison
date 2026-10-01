@@ -23,6 +23,6 @@ export default function NouvelleActivationAdmin({ firstName, city, country, admi
   );
 }
 
-const p: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 8px' };
-const list: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 4px', paddingLeft: '8px' };
+const p: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 8px' };
+const list: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 4px', paddingLeft: '8px' };
 const link: React.CSSProperties = { color: '#4F46E5' };

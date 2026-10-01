@@ -10,9 +10,9 @@ interface Props {
 
 export default function SignalApproved({ firstName, liveLink }: Props) {
   return (
-    <EmailLayout preview="Vous avez été sélectionné pour témoigner en direct !">
+    <EmailLayout preview="David vous invite à témoigner en direct !">
       <Text style={p}>Bonjour {firstName},</Text>
-      <Text style={p}>David a approuvé votre signal. Vous êtes invité à témoigner en direct !</Text>
+      <Text style={p}>Pendant le live, vous avez levé la main pour témoigner, et David a accepté. Il vous invite à prendre la parole en direct !</Text>
       <Text style={p}>Rejoignez le live maintenant :</Text>
       <Btn href={liveLink} color="green">Rejoindre le live</Btn>
       <Text style={muted}>Préparez-vous à partager votre témoignage en quelques mots.</Text>
@@ -20,5 +20,5 @@ export default function SignalApproved({ firstName, liveLink }: Props) {
   );
 }
 
-const p: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
-const muted: React.CSSProperties = { fontSize: '13px', color: '#64748b', marginTop: '24px' };
+const p: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
+const muted: React.CSSProperties = { fontSize: '14px', color: '#64748b', marginTop: '24px' };

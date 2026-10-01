@@ -34,5 +34,5 @@ export default function AmbassadeurModificationAdmin({
   );
 }
 
-const p: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
+const p: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
 const link: React.CSSProperties = { color: '#4F46E5' };

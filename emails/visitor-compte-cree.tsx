@@ -15,17 +15,23 @@ interface Props {
 // Envoyée une seule fois, à la création du compte (cf /api/visitor/account).
 export default function VisitorCompteCree({ firstName, confirmUrl }: Props) {
   return (
-    <EmailLayout preview="Confirmez votre adresse pour continuer — Ambassades de Guérison">
+    <EmailLayout preview="Vérifiez votre adresse e-mail pour continuer">
       <Text style={p}>Bonjour {firstName},</Text>
       <Text style={p}>
-        Merci d&apos;avoir créé votre compte sur Ambassades de Guérison. Un dernier geste : confirmez que cette
-        adresse est bien la vôtre, et vous reprendrez exactement là où vous en étiez.
+        Merci d&apos;avoir créé votre compte. Il vous permet de demander à être accueilli chez un ambassadeur (une maison
+        ou une église qui ouvre sa porte pendant un live de David Théry), sans avoir à tout retaper à chaque fois.
       </Text>
-      <Btn href={confirmUrl}>Confirmer mon adresse</Btn>
-      <Text style={muted}>Ce lien expire dans 1 heure. Si vous n&apos;êtes pas à l&apos;origine de cette création de compte, ignorez simplement ce message.</Text>
+      <Text style={p}>
+        Avant de continuer, nous devons vérifier que cette adresse e-mail est bien la vôtre.
+        <strong> Appuyez sur le bouton ci-dessous : vous reviendrez exactement là où vous en étiez.</strong>
+      </Text>
+      <Btn href={confirmUrl}>Vérifier mon adresse e-mail</Btn>
+      <Text style={muted}>
+        Ce bouton fonctionne pendant 1 heure. Si ce n&apos;est pas vous qui avez créé ce compte, ne faites rien.
+      </Text>
     </EmailLayout>
   );
 }
 
-const p: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
-const muted: React.CSSProperties = { fontSize: '13px', color: '#64748b', marginTop: '24px' };
+const p: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
+const muted: React.CSSProperties = { fontSize: '14px', color: '#64748b', marginTop: '24px' };

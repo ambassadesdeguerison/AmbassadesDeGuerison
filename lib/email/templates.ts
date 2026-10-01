@@ -30,7 +30,7 @@ const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL!;
 export async function sendMagicLink(to: string, magicLinkUrl: string) {
   return getMailer().emails.send({
     from: FROM(), to,
-    subject: 'Votre lien de connexion — Ambassades de Guérison',
+    subject: 'Pour vous connecter — Ambassades de Guérison',
     react: React.createElement(MagicLink, { magicLinkUrl }),
   });
 }
@@ -41,7 +41,7 @@ export async function sendMagicLink(to: string, magicLinkUrl: string) {
 export async function sendVisitorCompteCree(to: string, firstName: string, confirmUrl: string) {
   return getMailer().emails.send({
     from: FROM(), to,
-    subject: 'Confirmez votre adresse — Ambassades de Guérison',
+    subject: 'Vérifiez votre adresse e-mail — Ambassades de Guérison',
     react: React.createElement(VisitorCompteCree, { firstName, confirmUrl }),
   });
 }
@@ -51,7 +51,7 @@ export async function sendVisitorCompteCree(to: string, firstName: string, confi
 export async function sendInscriptionEmailVerification(to: string, verifyUrl: string) {
   return getMailer().emails.send({
     from: FROM(), to,
-    subject: 'Confirmez votre adresse pour devenir ambassadeur — Ambassades de Guérison',
+    subject: 'Vérifiez votre adresse e-mail pour devenir ambassadeur — Ambassades de Guérison',
     react: React.createElement(InscriptionVerification, { verifyUrl }),
   });
 }
@@ -79,7 +79,7 @@ export async function sendRefusCandidature(to: string, firstName: string, reason
 export async function sendRegistrationConfirmation(to: string, firstName: string, continueUrl?: string) {
   return getMailer().emails.send({
     from: FROM(), to,
-    subject: `${firstName}, votre inscription est confirmée !`,
+    subject: `${firstName}, votre demande est bien reçue`,
     react: React.createElement(RegistrationConfirmation, {
       firstName,
       // Lien de connexion direct quand il est fourni ; sinon /dashboard (repli).
@@ -98,7 +98,7 @@ export async function sendCampagneAmbassadeurs(
 ) {
   return getMailer().emails.send({
     from: FROM(), to,
-    subject: 'Le prochain live approche — allez-vous ouvrir votre ambassade ?',
+    subject: 'Le prochain live approche — ouvrez-vous votre porte ?',
     react: React.createElement(CampagneAmbassadeurs, { firstName, eventTitle, eventDate, activateUrl, customMessage }),
   });
 }
@@ -131,7 +131,7 @@ export async function sendNewContactRequestHost(
 ) {
   return getMailer().emails.send({
     from: FROM(), to,
-    subject: `${visitorFirstName} souhaite rejoindre votre ambassade`,
+    subject: `${visitorFirstName} aimerait venir chez vous`,
     react: React.createElement(ContactReceivedHost, {
       hostFirstName, visitorFirstName, visitorEmail, visitorMessage, acceptUrl, declineUrl, dashboardUrl,
     }),
@@ -141,7 +141,7 @@ export async function sendNewContactRequestHost(
 export async function sendContactRequestDeclined(to: string, visitorFirstName: string, hostFirstName: string, permanent = false) {
   return getMailer().emails.send({
     from: FROM(), to,
-    subject: `Votre demande auprès de ${hostFirstName} n'a pas pu être confirmée`,
+    subject: `Votre demande auprès de ${hostFirstName} — mise à jour`,
     react: React.createElement(ContactDeclined, { visitorFirstName, hostFirstName, appUrl: APP_URL(), permanent }),
   });
 }
@@ -184,7 +184,7 @@ export async function sendCampagneVisiteurs(
 ) {
   return getMailer().emails.send({
     from: FROM(), to,
-    subject: 'Un nouveau live de guérison arrive — rejoignez une ambassade près de chez vous',
+    subject: 'Un nouveau live de guérison arrive — trouvez une ambassade près de chez vous',
     react: React.createElement(CampagneVisiteurs, {
       firstName, eventTitle, eventDate, carteUrl: APP_URL(), unsubscribeUrl,
     }),
@@ -194,7 +194,7 @@ export async function sendCampagneVisiteurs(
 export async function sendSignalApproved(to: string, firstName: string, liveLink: string) {
   return getMailer().emails.send({
     from: FROM(), to,
-    subject: 'Vous avez été sélectionné pour témoigner en direct !',
+    subject: 'David vous invite à témoigner en direct !',
     react: React.createElement(SignalApproved, { firstName, liveLink }),
   });
 }
@@ -239,7 +239,7 @@ export async function sendEnrichissementRecu(adminEmail: string, ambassadeurFirs
   return getMailer().emails.send({
     from: FROM(),
     to: adminEmail,
-    subject: `Questionnaire soumis — ${ambassadeurFirstName} attend sa validation finale`,
+    subject: `Dossier complet — ${ambassadeurFirstName} attend votre validation`,
     react: React.createElement(EnrichissementRecu, {
       ambassadeurFirstName,
       adminUrl: `${APP_URL()}/admin/ambassadeurs`,
@@ -270,7 +270,7 @@ export async function sendAdminAlertNoActivations(eventTitle: string, eventDate:
   return getMailer().emails.send({
     from: FROM(),
     to: process.env.RESEND_ADMIN_EMAIL!,
-    subject: `⚠️ Alerte : 0 hôtes actifs pour "${eventTitle}"`,
+    subject: `⚠️ Aucune ambassade ouverte pour "${eventTitle}"`,
     react: React.createElement(AdminAlerteNoActivations, {
       eventTitle, eventDate,
       adminUrl: `${APP_URL()}/admin/stats`,

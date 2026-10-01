@@ -20,11 +20,11 @@ export function Btn({ href, children, color = 'indigo' }: Props) {
       style={{
         backgroundColor: COLORS[color],
         color: '#ffffff',
-        padding: '10px 20px',
+        padding: '14px 26px',
         borderRadius: '6px',
         textDecoration: 'none',
         display: 'inline-block',
-        fontSize: '14px',
+        fontSize: '16px',
         fontWeight: '500',
       }}
     >

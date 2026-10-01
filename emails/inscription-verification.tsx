@@ -14,16 +14,22 @@ export default function InscriptionVerification({ verifyUrl }: Props) {
     <EmailLayout preview="Confirmez votre adresse pour devenir ambassadeur">
       <Text style={p}>Bonjour,</Text>
       <Text style={p}>
-        Vous souhaitez devenir ambassadeur et accueillir des personnes lors des lives de David Théry. Merci !
-        Confirmez d&apos;abord que cette adresse est bien la vôtre : le formulaire s&apos;ouvrira juste après.
+        Vous avez demandé à devenir ambassadeur. Un ambassadeur, c&apos;est une personne qui ouvre sa maison ou son
+        église pour accueillir et prier avec d&apos;autres pendant les lives de guérison de David Théry (un live, c&apos;est
+        une rencontre en direct sur internet).
       </Text>
-      <Btn href={verifyUrl}>Confirmer mon adresse</Btn>
+      <Text style={p}>
+        Avant de continuer, nous devons vérifier que cette adresse e-mail est bien la vôtre.
+        <strong> Appuyez sur le bouton ci-dessous : le formulaire s&apos;ouvrira aussitôt.</strong>
+      </Text>
+      <Btn href={verifyUrl}>Vérifier mon adresse e-mail</Btn>
       <Text style={muted}>
-        Ce lien est valable 24 heures. Si vous n&apos;êtes pas à l&apos;origine de cette demande, ignorez simplement ce message : rien ne sera créé.
+        Ce bouton fonctionne pendant 24 heures. Ce n&apos;est pas vous qui avez fait cette demande ? Ne faites rien :
+        rien ne sera enregistré à votre nom.
       </Text>
     </EmailLayout>
   );
 }
 
-const p: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
-const muted: React.CSSProperties = { fontSize: '13px', color: '#64748b', marginTop: '24px' };
+const p: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
+const muted: React.CSSProperties = { fontSize: '14px', color: '#64748b', marginTop: '24px' };
