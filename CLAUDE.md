@@ -103,6 +103,8 @@ Refonte demandée par David. Points non-évidents :
 
 ## Formulaire d'inscription (`/inscription`)
 
+**Adresse e-mail confirmée avant toute création** (2026-10-01) : `/inscription` s'ouvre sur l'étape 0 « Recevoir le lien de confirmation » (`POST /api/inscriptions/verify-email`). Le lien `/inscription?verify=<jeton>` — jeton HMAC sans état de 24 h, `lib/auth/email-proof.ts`, secret `EMAIL_PROOF_SECRET` (sinon `SUPABASE_SERVICE_ROLE_KEY`) — ouvre le formulaire avec l'adresse verrouillée, et `POST /api/inscriptions` renvoie 403 `email_not_verified` sans preuve valide **pour cette adresse**. Avant, n'importe qui pouvait inscrire l'adresse d'un tiers : profil rattaché à son compte, rôle d'un compte visiteur existant basculé en « host », notification à l'équipe. Ne jamais créer de compte ou de profil avant la preuve. Tests de bout en bout avec le vrai e-mail : `e2e/email-verification.spec.ts` (Mailhog, comptes jetables supprimés en fin de test).
+
 Champs obligatoires étape 1 : prénom, nom, e-mail, téléphone (E.164, `react-phone-number-input`), ville avec géocodage confirmé, pays. Pièges déjà corrigés à ne pas réintroduire :
 
 - `countryCallingCodeEditable={false}` sur `PhoneInput` : sans ce lock, sélectionner tout le champ et retaper le numéro pouvait faire basculer silencieusement l'indicatif pays.
@@ -127,7 +129,8 @@ Piège corrigé : l'état `closed` doit remettre `demoFutureEvent` à J+10 (comm
 
 Compte créé explicitement via `/mon-espace/creer` (pas en best-effort silencieux, voir ARCHITECTURE.md pour le flux complet). Pièges corrigés à ne pas réintroduire :
 
-- **Un seul `generateLink({ type: 'magiclink' })`** est généré et réutilisé à la fois pour le bootstrap de session immédiat et l'e-mail de confirmation — en générer un second invaliderait silencieusement le premier (un seul OTP magiclink actif par utilisateur côté Supabase).
+- **L'adresse e-mail est vérifiée avant toute session** (2026-10-01) : `POST /api/visitor/account` n'ouvre plus de session, il envoie un lien (`sendVisitorCompteCree`) et le jeton n'est **jamais renvoyé au navigateur**. Avant, le compte était créé avec l'e-mail pré-confirmé et connecté aussitôt : n'importe qui pouvait saisir l'adresse d'un tiers, puis recevoir l'adresse d'une maison à cet e-mail. Ne jamais remettre un `token_hash` dans la réponse. Un seul `generateLink` est actif (en générer un second invaliderait le premier, un seul OTP magiclink par utilisateur). `redirect` passe par `lib/auth/safe-redirect.ts`.
+- **Plafond de demandes** : au plus `event_timing_config.max_requests_per_visitor_per_event` (3 par défaut, réglable dans `/admin/settings/timing`, minimum 1) demandes `pending`/`accepted` par visiteur et par live, sinon 429 (`lib/visitor/request-limit.ts`). Une demande refusée ou restée sans réponse libère sa place. Migration : `scripts/migration-max-requests.sql`. Sans elle, la limite retombe sur la valeur par défaut (3) mais n'est pas modifiable.
 - **`photo_signed_url` est toujours signée côté serveur** (`GET /api/visitor/profile`, `createServiceClient()`) — jamais via le SDK anon côté client, dont l'état RLS/session pouvait silencieusement empêcher l'affichage de la photo sans erreur visible (bug corrigé août 2026).
 - `POST /api/visit-requests` exige une session visiteur authentifiée (401 sinon) — l'ancienne création silencieuse de profil permettait d'écraser le profil d'un visiteur existant (faille trouvée par Codex, cf `/plan-eng-review`).
 

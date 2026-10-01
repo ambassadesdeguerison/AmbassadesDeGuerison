@@ -216,8 +216,9 @@ ORDER BY ls.created_at DESC;
 
 | Template | Déclenché quand |
 |----------|----------------|
+| Confirmation d'adresse (inscription) | Première étape de « Devenir ambassadeur » : lien `/inscription?verify=…` qui ouvre le formulaire — aucun compte n'existe encore |
 | Magic link | Hôte ou visiteur se connecte |
-| Compte visiteur créé | Confirmation après `/mon-espace/creer` (`sendVisitorCompteCree`), en parallèle du bootstrap de session immédiat |
+| Compte visiteur créé | Après `/mon-espace/creer` (`sendVisitorCompteCree`) : « Confirmez votre adresse ». Ce lien est le seul moyen d'ouvrir la session visiteur |
 | Bienvenue ambassadeur | Admin valide définitivement → ambassade active |
 | Validation finale | Confirmation de l'activation finale |
 | Candidature refusée | Admin refuse une candidature (`action: 'rejected'`, n'importe quel statut de départ) → message sobre + raison optionnelle (champ `notes` du payload admin) |

@@ -136,8 +136,13 @@ pendant une panne.
 Pipeline self-service jusqu'au questionnaire — l'admin n'intervient qu'à la fin, sur un dossier complet.
 
 ```
-/inscription
-  │  POST /api/inscriptions
+/inscription — étape 0 : confirmer son adresse e-mail AVANT le formulaire
+  │  POST /api/inscriptions/verify-email → lien /inscription?verify=<jeton signé> (HMAC, 24 h,
+  │  sans état : lib/auth/email-proof.ts). Aucun compte ni profil n'existe à ce stade.
+  │  Le lien ouvre le formulaire avec l'adresse verrouillée (GET /api/inscriptions/verify-email
+  │  valide le jeton). Sans cette étape, n'importe qui inscrivait l'adresse d'un tiers (profil
+  │  rattaché à son compte, rôle d'un compte visiteur existant basculé en « host »).
+  │  POST /api/inscriptions (exige `email_proof` valide pour cette adresse, sinon 403 `email_not_verified`)
   │  → status = 'pending_review'
   │  → email sendRegistrationConfirmation
   ▼
@@ -266,11 +271,16 @@ POST /api/visitor/account (rate-limité 3/min, revalide la classification)
   │  → insert visitor_profiles (user_id, first_name, email, phone, photo_url)
   │     photo optionnelle : bucket privé `visitor-photos`, compressée WebP, validée
   │     par magic bytes (sharp), jamais bloquante en cas d'échec de traitement
-  │  → generateLink({ type: 'magiclink' }) — un seul token, réutilisé pour :
-  │     (a) bootstrap immédiat de la session navigateur (redirect direct)
-  │     (b) l'e-mail de confirmation (sendVisitorCompteCree, best-effort)
+  │  → generateLink({ type: 'magiclink' }) puis sendVisitorCompteCree (attendu, 502 si
+  │     l'envoi échoue). Le jeton n'est JAMAIS renvoyé au navigateur : la session ne
+  │     s'ouvre que par le clic sur ce lien (vérification réelle de l'adresse — sinon
+  │     n'importe qui créerait un compte avec l'e-mail d'un tiers).
   ▼
-Redirect /auth/confirm?token_hash=...&type=magiclink&redirect=<page d'origine>
+Écran « Regardez votre boîte mail » (/mon-espace/creer) — bouton « Renvoyer le lien »
+  │  (POST /api/auth/magic-link, qui transmet aussi `redirect`)
+  ▼
+Clic sur /auth/confirm?token_hash=...&type=<type du jeton>&redirect=<page d'origine>
+  │  (construit par buildConfirmUrl ; `redirect` filtré par lib/auth/safe-redirect.ts)
   │  → /auth/confirm route sur user_metadata.role : admin → /admin/stats,
   │     visitor → page d'origine (ou /mon-espace), sinon → /dashboard
   ▼
@@ -278,6 +288,10 @@ Formulaire de demande de visite pré-rempli ("Connecté avec {email}", nb person
 message, consentement notifications) → POST /api/visit-requests
   │  Exige une session visiteur authentifiée (401 sinon) — prénom/email/téléphone
   │  viennent de visitor_profiles, jamais du body de la requête
+  │  Plafond : au plus `max_requests_per_visitor_per_event` demandes en cours (pending +
+  │  accepted, 3 par défaut) par visiteur et par live, sinon 429. Une demande refusée ou
+  │  sans réponse libère sa place. Réglable dans /admin/settings/timing
+  │  (event_timing_config, lib/visitor/request-limit.ts)
   ▼
 /mon-espace — espace minimal (email, téléphone éditable, photo de profil éditable, déconnexion)
   │  PAS un dashboard complet — juste assez pour ne pas retaper ses infos
@@ -361,7 +375,7 @@ carte publique.
 | `/api/host-activations` | Pins carte publique | Non (lecture publique) |
 | `/api/visit-requests` | Visiteur → hôte — route unique de création (l'ancienne `/api/contact-requests` a été supprimée, code mort). Exige une session visiteur authentifiée depuis Phase 3 PR3 (401 sinon) | Session visiteur |
 | `/api/distance` | Distance visiteur ↔ ambassadeurs (Haversine, arrondi au km) | Non (rate-limité 8 req/min/IP) |
-| `/api/visitor/account` | Création de compte visiteur (`/mon-espace/creer`) — bootstrap magic link immédiat | Non (rate-limité 3 req/min/IP) |
+| `/api/visitor/account` | Création de compte visiteur (`/mon-espace/creer`) — la session s'ouvre au clic sur le lien e-mail | Non (rate-limité 3 req/min/IP) |
 | `/api/visitor/check-email` | Classification email au blur (`new`/`visitor_existing`/`collision`) | Non (rate-limité 10 req/min/IP) |
 | `/api/visitor/profile` | Lecture/édition du profil visiteur réutilisable (`visitor_profiles`) — GET retourne aussi `photo_signed_url` (signée côté serveur) | Session visiteur |
 | `/api/upload/visitor-photo` | Upload/suppression de la photo de profil visiteur (bucket `visitor-photos`), depuis `/mon-espace` | Session visiteur |
@@ -369,7 +383,8 @@ carte publique.
 | `/api/temoignages` | Soumission témoignage public | Non |
 | `/api/testimonials` | Lecture/modération témoignages | Admin |
 | `/api/live-signals` | Signaux live depuis dashboard hôte | Session hôte |
-| `/api/inscriptions` | Création profil ambassadeur | Non |
+| `/api/inscriptions` | Création profil ambassadeur — exige une preuve d'e-mail (`email_proof`) | Non (preuve e-mail) |
+| `/api/inscriptions/verify-email` | Envoi du lien de confirmation d'adresse (POST, 3/min/IP) et validation du jeton (GET) — avant tout compte | Non |
 | `/api/onboarding/complete` | Self-service : pending_review → pre_approved (CGU acceptées) | Session candidat |
 | `/api/onboarding/config` | Config vidéo + PDF onboarding | Public (lecture) / Admin (écriture) |
 | `/api/ambassadeur/enrichissement` | Enrichissement profil (questionnaire) | Session hôte |
@@ -714,7 +729,7 @@ Mis à jour manuellement à chaque PR significative.
 | Mémorisation de la position carte (centre + zoom) | ✅ | `components/MapPublique.tsx` → `readSavedMapView()`/`saveMapView()` | `localStorage['map-view-state']` (`{lat, lng, zoom}`), mis à jour sur `moveend`/`zoomend`. Au montage suivant, la carte s'initialise directement sur cette position — pas de `setView([20,10],3)` ni de géolocalisation auto/`flyTo` — pour éviter de réanimer un zoom à chaque refresh alors que le visiteur avait déjà positionné la carte. Le bouton "Me localiser" (manuel) garde son `flyTo` animé. |
 | EventBanner (5 états) | ✅ | `lib/homepage-data.ts` → `app/page.tsx` | |
 | Overlay carte vide contextuel (7 états) | ✅ | `components/MapPublique.tsx` → `EmptyMapContent` | |
-| Inscription ambassadeur | ✅ | `POST /api/inscriptions` | Double validation lat/lng : frontend (`form.lat == null`) + API 400. `host-activations` filtre silencieusement `hp.lat && hp.lng`. |
+| Inscription ambassadeur | ✅ | `POST /api/inscriptions`, `/api/inscriptions/verify-email` | Adresse confirmée par e-mail avant d'ouvrir le formulaire (jeton signé sans état, 24 h, `lib/auth/email-proof.ts`) — rien n'est créé avant. Double validation lat/lng : frontend (`form.lat == null`) + API 400. `host-activations` filtre silencieusement `hp.lat && hp.lng`. |
 | Champ quartier (profil ambassadeur) | ✅ | `host_profiles.quartier`, `PATCH /api/ambassadeur/profile` | Texte libre optionnel (ex : "Paris 15e"). **Plus de saisie manuelle à l'inscription** (retiré 2026-09-27, retour David) — auto-déduit du geocodage de l'adresse (`AddressInput` → `extractQuartier`, `lib`/`api/geocode`), modifiable après coup dans `MesInfosSection`. Sert notamment à désambiguïser visuellement les ambassadeurs d'un même cluster carte (plusieurs hôtes d'une même ville partagent le même `lat`/`lng` de géocodage ville — voir § Distance visiteur ↔ ambassadeur pour le mécanisme complémentaire de tri par distance). Affiché dans les popups carte + fiche publique `/ambassade/[id]` + fiche live `/live/[event_id]/ambassade/[host_id]` sous la ligne ville/pays. |
 | Onboarding self-service | ✅ | `PATCH /api/onboarding/complete` | Gate inline dans `/dashboard` pour `pending_review` : vidéo + PDF + CGU + bouton. Idempotent. Aucune action admin requise. |
 | Validation finale ambassadeur (admin) | ✅ | `PATCH /api/admin/ambassadeurs/[id]/status` | Actions : `validated` (depuis enrichment_pending), `validated_bypass` (escape hatch API — plus de bouton UI), `rejected` (email `sendRefusCandidature` au candidat), `suspended`, `reactiver` (→ `validated` + email uniquement si dossier complet, sinon → `enrichment_pending` sans email). L'action `pre_approved` a été retirée — transition self-service. |
@@ -723,7 +738,7 @@ Mis à jour manuellement à chaque PR significative.
 | Édition profil ambassadeur | ✅ | `PATCH /api/ambassadeur/profile` | Ville (+ re-géocodage), adresse précise (`lat_precise`/`lng_precise` via `AddressInput`/Nominatim), consignes, téléphone. Email admin si ville change. |
 | Photo compressée (upload ambassadeur) | ✅ | `POST /api/upload/ambassador-photo` | `lib/image/compress-photo.ts` (Sharp) : profil → 512×512 WebP cover-fit ; lieu → max 1200px WebP contain-fit sans upscale. Toutes les photos converties en `.webp`. |
 | Demandes de visite (visiteur → hôte) | ✅ | `POST /api/visit-requests` | Insère dans `contact_requests` (table correcte). Téléphone visiteur **obligatoire** (contrainte `NOT NULL` + validation `isValidPhoneNumber`). Exige une session visiteur authentifiée (Phase 3 PR3) — infos lues depuis `visitor_profiles`, jamais du body. |
-| Profil visiteur réutilisable | ✅ | `POST /api/visitor/account`, `GET/PATCH /api/visitor/profile`, `POST/DELETE /api/upload/visitor-photo`, `/mon-espace`, `/mon-espace/creer` | Compte créé explicitement via `/mon-espace/creer` (prénom, email, téléphone, photo optionnelle) au moment du premier "Contacter", pas en best-effort silencieux. Bootstrap magic link immédiat. Photo modifiable après création depuis `/mon-espace`. Voir section dédiée. |
+| Profil visiteur réutilisable | ✅ | `POST /api/visitor/account`, `GET/PATCH /api/visitor/profile`, `POST/DELETE /api/upload/visitor-photo`, `/mon-espace`, `/mon-espace/creer` | Compte créé explicitement via `/mon-espace/creer` (prénom, email, téléphone, photo optionnelle) au moment du premier "Contacter", pas en best-effort silencieux. Adresse vérifiée par le lien e-mail avant toute session. Photo modifiable après création depuis `/mon-espace`. Voir section dédiée. |
 | Distance visiteur ↔ ambassadeur | ✅ | `POST /api/distance` | Géolocalisation navigateur éphémère (jamais persistée) + Haversine arrondi au km. Rate-limité 8 req/min/IP. Ne retourne jamais de coordonnées. |
 | Témoignages — soumission publique | ✅ | `POST /api/temoignages` | |
 | Témoignages — modération admin | ✅ | `/admin/temoignages` | |
@@ -832,7 +847,7 @@ conception le fait.
 | `POST /api/visit-requests` | Visiteur → demande contact hôte (téléphone obligatoire) | Session visiteur | ✅ |
 | ~~`POST /api/contact-requests`~~ | **Supprimée** (juillet 2026) — référençait une colonne inexistante (`visitor_whatsapp`), jamais appelée par le frontend | — | 💀 Supprimée |
 | `POST /api/distance` | Distance visiteur ↔ ambassadeurs (Haversine, km arrondi) | Non (rate-limité) | ✅ |
-| `POST /api/visitor/account` | Création de compte visiteur + bootstrap magic link (`/mon-espace/creer`) | Non (rate-limité 3/min/IP) | ✅ |
+| `POST /api/visitor/account` | Création de compte visiteur + e-mail de vérification (`/mon-espace/creer`) | Non (rate-limité 3/min/IP) | ✅ |
 | `POST /api/visitor/check-email` | Classification email au blur (new/visitor_existing/collision) | Non (rate-limité 10/min/IP) | ✅ |
 | `GET/PATCH /api/visitor/profile` | Profil visiteur réutilisable (email, téléphone, `photo_signed_url` signée côté serveur) | Session visiteur | ✅ |
 | `POST/DELETE /api/upload/visitor-photo` | Upload/suppression photo de profil visiteur (`/mon-espace`, bucket `visitor-photos`) | Session visiteur | ✅ |
@@ -843,7 +858,8 @@ conception le fait.
 | `GET /api/testimonials` | Lecture témoignages (admin) | Admin | ✅ |
 | `POST /api/live-signals` | Signal live depuis dashboard hôte | Session hôte | ✅ |
 | `GET /api/live-signals` | Feed signaux (admin/live) | Admin | ✅ |
-| `POST /api/inscriptions` | Création profil ambassadeur | Non | ✅ |
+| `POST /api/inscriptions` | Création profil ambassadeur (preuve d'e-mail obligatoire, 403 sinon) | Non | ✅ |
+| `POST/GET /api/inscriptions/verify-email` | Lien de confirmation d'adresse avant l'inscription (POST) / validation du jeton (GET) | Non (rate-limité 3/min/IP) | ✅ |
 | `PATCH /api/onboarding/complete` | Self-service : pending_review → pre_approved | Session candidat | ✅ |
 | `GET /api/onboarding/config` | Config vidéo + PDF onboarding (lecture publique) | Public | ✅ |
 | `PATCH /api/ambassadeur/enrichissement` | Enrichissement profil (questionnaire, photos) | Session hôte | ✅ |
