@@ -125,6 +125,9 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
           className={inputCls}
           placeholder={`Un mot pour ${hostName} (optionnel) — présentation, situation particulière…`}
         />
+        <p className="text-xs text-slate-400 mt-2">
+          Dites en une phrase qui vous êtes et pourquoi vous voulez venir. L&apos;ambassadeur lit ce message avant de répondre.
+        </p>
       </fieldset>
 
       {/* Consentement */}

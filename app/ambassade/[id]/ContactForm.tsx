@@ -227,6 +227,9 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Message (optionnel)</label>
             <textarea value={form.visitor_message} onChange={(e) => set('visitor_message', e.target.value)} rows={2} className={inputCls} placeholder="Je serai avec ma famille de 3 personnes…" />
+            <p className="text-xs text-slate-400 mt-2">
+              Dites en une phrase qui vous êtes et pourquoi vous voulez venir. L&apos;ambassadeur lit ce message avant de répondre.
+            </p>
           </div>
 
           <label className="flex items-start gap-2 cursor-pointer">
