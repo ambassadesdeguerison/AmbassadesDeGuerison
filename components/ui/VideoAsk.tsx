@@ -24,6 +24,8 @@ interface Props {
   notesStorageKey?: string;
   /** Sans cadre de carte : pour l'insérer dans une carte existante. */
   embedded?: boolean;
+  /** Appelé quand la caméra, l'enregistrement ou l'envoi échoue : la page peut proposer une alternative écrite. */
+  onProblem?: () => void;
 }
 
 const btnBase =
@@ -41,6 +43,7 @@ export default function VideoAsk({
   alreadyUploaded = false,
   notesStorageKey = 'videoask-notes',
   embedded = false,
+  onProblem,
 }: Props) {
   const [phase, setPhase] = useState<Phase>(alreadyUploaded ? 'done' : 'idle');
   const [elapsed, setElapsed] = useState(0);
@@ -140,6 +143,7 @@ export default function VideoAsk({
       setPhase('ready');
       setNotesOpen(true); // les notes doivent être sous les yeux pendant l'enregistrement
     } catch (err) {
+      onProblem?.();
       const name = err instanceof DOMException ? err.name : '';
       if (name === 'NotAllowedError' || name === 'SecurityError') {
         setError(
@@ -180,6 +184,7 @@ export default function VideoAsk({
       if (e.data.size > 0) chunksRef.current.push(e.data);
     };
     recorder.onerror = () => {
+      onProblem?.();
       clearTimer();
       stopStream();
       setError('L’enregistrement a été interrompu. Réessayez, ou choisissez une vidéo depuis votre appareil.');
@@ -239,6 +244,7 @@ export default function VideoAsk({
       await onSubmit(video.blob, video.mime);
       setPhase('done');
     } catch (err) {
+      onProblem?.();
       setError(err instanceof Error && err.message ? err.message : 'L’envoi a échoué. Réessayez.');
       setPhase('review');
     }

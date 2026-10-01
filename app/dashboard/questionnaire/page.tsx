@@ -4,19 +4,43 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/browser';
-import { ArrowLeft, Camera, CheckCircle2, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Loader2 } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import Dropzone from '@/components/ui/Dropzone';
-import ChipGroup from '@/components/ui/ChipGroup';
 import YesNoField from '@/components/ui/YesNoField';
 import VideoAsk from '@/components/ui/VideoAsk';
+import CheckboxCombobox, { type ComboGroup } from '@/components/ui/CheckboxCombobox';
+import CollapsibleSection from '@/components/ui/CollapsibleSection';
 import { BOOKS, TRAININGS } from '@/lib/questionnaire/catalog';
+import {
+  missingFields,
+  missingBySection,
+  joinLabels,
+  type SectionId,
+} from '@/lib/questionnaire/completeness';
 import { uploadIntroVideo } from '@/lib/video/upload-client';
 
 const CHURCH_ATTENDANCE_OPTIONS = [
   { value: 'regular', label: 'Régulièrement (chaque semaine ou presque)' },
   { value: 'occasional', label: 'Occasionnellement (quelques fois par an)' },
   { value: 'none', label: 'Je ne fréquente pas une église actuellement' },
+];
+
+// Liste « formations et livres » : formations en haut, livres ensuite, puis deux choix annexes.
+// Les identifiants sont préfixés (t: formation, b: livre, c: conférence, o: autres) pour retrouver
+// la colonne à mettre à jour sans collision entre un livre et une formation homonymes.
+const CONFERENCE_ID = 'c:conference';
+const OTHER_ID = 'o:other';
+const LIBRARY_GROUPS: ComboGroup[] = [
+  { label: 'Formations gratuites', options: TRAININGS.map((t) => ({ id: `t:${t.slug}`, label: t.label })) },
+  { label: 'Livres de David', options: BOOKS.map((b) => ({ id: `b:${b.slug}`, label: b.label })) },
+  {
+    label: 'Autres',
+    options: [
+      { id: CONFERENCE_ID, label: 'J’ai assisté à une conférence de David Théry' },
+      { id: OTHER_ID, label: 'D’autres livres ou formations m’ont marqué' },
+    ],
+  },
 ];
 
 type FormState = {
@@ -26,7 +50,7 @@ type FormState = {
   conferences_assistees: boolean;
   church_attendance: string;
   denomination: string;
-  parcours_spirituel: string;
+  parcours_spirituel: string; // secours écrit si la vidéo pose problème
   has_seen_healings: boolean | null;
   has_leadership_role: boolean | null;
   leadership_role: string;
@@ -57,6 +81,18 @@ export default function QuestionnairePage() {
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [hasVideo, setHasVideo] = useState(false);
+  // « Autres livres ou formations » coché : c'est seulement alors que le champ de saisie s'affiche.
+  const [otherChecked, setOtherChecked] = useState(false);
+  // Parcours écrit : affiché en secours quand la vidéo pose problème, ou à la demande du candidat.
+  const [showWritten, setShowWritten] = useState(false);
+
+  // Sections repliables : seule la première est ouverte au départ, l'en-tête de chacune dit ce qui reste à remplir.
+  const [openSections, setOpenSections] = useState<Record<SectionId, boolean>>({
+    formations: true,
+    pratique: false,
+    parcours: false,
+    photos: false,
+  });
 
   // Enregistrement automatique : le candidat peut quitter et reprendre plus tard,
   // même depuis un autre appareil (les réponses sont écrites en base, pas en local).
@@ -110,6 +146,8 @@ export default function QuestionnairePage() {
         has_leadership_role: profile.has_leadership_role ?? null,
         leadership_role: profile.leadership_role ?? '',
       });
+      setOtherChecked(Boolean(profile.livres_lus));
+      setShowWritten(Boolean(profile.parcours_spirituel));
       setHasVideo(Boolean(profile.intro_video_path));
 
       // Charge la photo de profil existante
@@ -146,6 +184,28 @@ export default function QuestionnairePage() {
     dirtyRef.current = true;
     setForm((prev) => ({ ...prev, [field]: value }));
   }
+
+  // La liste déroulante porte quatre sortes de choix : on les redistribue dans les bonnes colonnes.
+  function onLibraryChange(next: string[]) {
+    dirtyRef.current = true;
+    const other = next.includes(OTHER_ID);
+    setOtherChecked(other);
+    setForm((prev) => ({
+      ...prev,
+      trainings_done: next.filter((id) => id.startsWith('t:')).map((id) => id.slice(2)),
+      books_read: next.filter((id) => id.startsWith('b:')).map((id) => id.slice(2)),
+      conferences_assistees: next.includes(CONFERENCE_ID),
+      // Décocher « autres » efface ce qui avait été saisi (sinon l'admin le verrait sans que le candidat s'en souvienne).
+      livres_lus: other ? prev.livres_lus : '',
+    }));
+  }
+
+  const librarySelection = [
+    ...form.trainings_done.map((slug) => `t:${slug}`),
+    ...form.books_read.map((slug) => `b:${slug}`),
+    ...(form.conferences_assistees ? [CONFERENCE_ID] : []),
+    ...(otherChecked ? [OTHER_ID] : []),
+  ];
 
   async function saveDraft(values: FormState, keepalive: boolean) {
     if (!dirtyRef.current) return;
@@ -240,14 +300,26 @@ export default function QuestionnairePage() {
     setRoomUploading(false);
   }
 
+  // Tous les champs sont obligatoires, sauf la vidéo et la liste formations/livres (cf lib/questionnaire/completeness.ts).
+  const missing = missingFields(form, { hasProfilePhoto: Boolean(profilePhotoPath), roomPhotoCount: roomPhotoPaths.length });
+  const missingIn = missingBySection(missing);
+
+  function toggleSection(id: SectionId) {
+    setOpenSections((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!profilePhotoPath) {
-      setError('Une photo de profil est requise avant d\'envoyer votre profil.');
-      return;
-    }
-    if (roomPhotoPaths.length === 0) {
-      setError('Au moins une photo du lieu d\'accueil est requise avant d\'envoyer votre profil.');
+    if (missing.length > 0) {
+      // On ouvre les sections concernées et on amène la première sous les yeux.
+      setOpenSections((prev) => {
+        const next = { ...prev };
+        for (const item of missing) next[item.section] = true;
+        return next;
+      });
+      setError(`Il manque : ${joinLabels(missing.map((m) => m.label))}.`);
+      const first = missing[0].section;
+      setTimeout(() => document.getElementById(`section-${first}`)?.scrollIntoView({ block: 'start' }), 50);
       return;
     }
     setSubmitting(true);
@@ -352,63 +424,55 @@ export default function QuestionnairePage() {
           </Link>
 
           <h1 className="text-xl font-semibold text-slate-800 mb-1">Parlez-nous de vous</h1>
-          <p className="text-sm text-slate-500 mb-6">
+          <p className="text-sm text-slate-500">
             Aidez David à mieux vous connaître avant sa réponse.
             Ces informations restent confidentielles.
           </p>
-          <p className="text-sm text-indigo-700 bg-indigo-50 rounded-xl px-4 py-3 mb-6">
-            Seules les deux photos sont obligatoires, tout le reste est facultatif. Vos réponses s&apos;enregistrent
-            automatiquement : vous pouvez reprendre plus tard.
+          <p className="text-xs text-slate-500 mt-2 mb-5">
+            Tous les champs sont obligatoires, sauf la vidéo et la liste des formations et livres.
+            Vos réponses s&apos;enregistrent automatiquement.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-3" noValidate>
 
-            {/* Formations et livres */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-5">
-              <h2 className="text-base font-semibold text-slate-800">Formations et livres</h2>
-
-              <ChipGroup
-                legend="Formations gratuites en ligne que vous avez suivies"
-                items={TRAININGS}
-                selected={form.trainings_done}
-                onChange={(v) => set('trainings_done', v)}
+            {/* Formations et livres (facultatif) */}
+            <CollapsibleSection
+              title="Formations et livres"
+              sectionId="section-formations"
+              open={openSections.formations}
+              onToggle={() => toggleSection('formations')}
+            >
+              <CheckboxCombobox
+                label="Formations et livres"
+                groups={LIBRARY_GROUPS}
+                selected={librarySelection}
+                onChange={onLibraryChange}
+                placeholder="Choisir dans la liste"
+                searchPlaceholder="Rechercher une formation ou un livre"
               />
-
-              <label className="flex items-center gap-3 cursor-pointer min-h-[44px] rounded-xl border border-slate-200 px-3.5 py-2 hover:bg-slate-50 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={form.conferences_assistees}
-                  onChange={(e) => set('conferences_assistees', e.target.checked)}
-                  className="w-5 h-5 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm text-slate-700">
-                  J&apos;ai déjà assisté à une <strong>conférence de David Théry</strong>
-                </span>
-              </label>
-
-              <ChipGroup
-                legend="Livres de David que vous avez lus"
-                items={BOOKS}
-                selected={form.books_read}
-                onChange={(v) => set('books_read', v)}
-              />
-
-              <Field label="Autres livres ou formations qui vous ont marqué">
-                <textarea
-                  value={form.livres_lus}
-                  onChange={(e) => set('livres_lus', e.target.value)}
-                  rows={2}
-                  className={inputCls}
-                />
-              </Field>
-              <p className="text-xs text-slate-500 -mt-3">
-                Ces réponses aident David à situer votre parcours. Elles ne sont vues que par l&apos;équipe.
+              {otherChecked && (
+                <Field label="Lesquels ?">
+                  <input
+                    type="text"
+                    value={form.livres_lus}
+                    onChange={(e) => set('livres_lus', e.target.value)}
+                    className={inputCls}
+                  />
+                </Field>
+              )}
+              <p className="text-xs text-slate-500">
+                Facultatif. Ces réponses aident David à situer votre parcours. Elles ne sont vues que par l&apos;équipe.
               </p>
-            </div>
+            </CollapsibleSection>
 
             {/* Pratique ecclésiale */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-4">
-              <h2 className="text-base font-semibold text-slate-800">Pratique ecclésiale</h2>
+            <CollapsibleSection
+              title="Pratique ecclésiale"
+              sectionId="section-pratique"
+              open={openSections.pratique}
+              onToggle={() => toggleSection('pratique')}
+              remaining={missingIn.pratique.length}
+            >
               <Field label="Fréquentation d'une église">
                 <select
                   value={form.church_attendance}
@@ -446,20 +510,16 @@ export default function QuestionnairePage() {
                   />
                 </Field>
               )}
-            </div>
+            </CollapsibleSection>
 
-            {/* Parcours personnel + vidéo */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-5">
-              <h2 className="text-base font-semibold text-slate-800">Parcours personnel</h2>
-              <Field label="Votre parcours spirituel (en quelques lignes)">
-                <textarea
-                  value={form.parcours_spirituel}
-                  onChange={(e) => set('parcours_spirituel', e.target.value)}
-                  rows={4}
-                  placeholder="Comment en êtes-vous arrivé à vouloir ouvrir votre foyer ? Qu'est-ce qui vous a conduit à la prière pour la guérison ?"
-                  className={inputCls}
-                />
-              </Field>
+            {/* Parcours personnel : guérisons vues + vidéo (le parcours écrit n'est qu'un secours) */}
+            <CollapsibleSection
+              title="Parcours personnel"
+              sectionId="section-parcours"
+              open={openSections.parcours}
+              onToggle={() => toggleSection('parcours')}
+              remaining={missingIn.parcours.length}
+            >
               <YesNoField
                 label="Avez-vous déjà vu des personnes guéries lors d'une prière ?"
                 value={form.has_seen_healings}
@@ -470,16 +530,42 @@ export default function QuestionnairePage() {
                 vues que par l&apos;équipe.
               </p>
 
-              <VideoAsk embedded onSubmit={uploadIntroVideo} alreadyUploaded={hasVideo} />
-            </div>
+              <VideoAsk
+                embedded
+                onSubmit={uploadIntroVideo}
+                alreadyUploaded={hasVideo}
+                onProblem={() => setShowWritten(true)}
+              />
+
+              {showWritten ? (
+                <Field label="Votre parcours spirituel (en quelques lignes)">
+                  <textarea
+                    value={form.parcours_spirituel}
+                    onChange={(e) => set('parcours_spirituel', e.target.value)}
+                    rows={4}
+                    placeholder="Comment en êtes-vous arrivé à vouloir ouvrir votre foyer ? Qu'est-ce qui vous a conduit à la prière pour la guérison ?"
+                    className={inputCls}
+                  />
+                </Field>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowWritten(true)}
+                  className="min-h-[44px] text-sm text-indigo-600 hover:text-indigo-700 hover:underline text-left"
+                >
+                  Un souci avec la vidéo ? Écrire mon parcours à la place
+                </button>
+              )}
+            </CollapsibleSection>
 
             {/* Photos de l'ambassade */}
-            <div className="bg-white rounded-2xl border border-slate-100 p-5 space-y-5">
-              <div className="flex items-center gap-2">
-                <Camera className="w-4 h-4 text-indigo-500" />
-                <h2 className="text-base font-semibold text-slate-800">Photos de votre ambassade</h2>
-              </div>
-
+            <CollapsibleSection
+              title="Photos de votre ambassade"
+              sectionId="section-photos"
+              open={openSections.photos}
+              onToggle={() => toggleSection('photos')}
+              remaining={missingIn.photos.length}
+            >
               {photoError && (
                 <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{photoError}</p>
               )}
@@ -492,15 +578,13 @@ export default function QuestionnairePage() {
                   <li>
                     Lieu : téléphone à l&apos;horizontale, reculez pour montrer la pièce où vous regarderez le live.
                   </li>
-                  <li>Évitez de photographier d&apos;autres personnes, surtout des enfants.</li>
+                  <li>Essuyez l&apos;objectif de votre téléphone et vérifiez que la photo est nette avant de l&apos;envoyer.</li>
                 </ul>
               </div>
 
-              {/* Photo de profil (obligatoire) */}
+              {/* Photo de profil */}
               <div className="space-y-1.5">
-                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">
-                  Photo de profil <RequiredBadge />
-                </p>
+                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">Photo de profil</p>
                 <p className="text-xs text-slate-500">
                   Vue par David pour valider votre ambassade, puis affichée en petit sur la carte publique quand votre
                   ambassade est active.
@@ -519,10 +603,10 @@ export default function QuestionnairePage() {
                 )}
               </div>
 
-              {/* Photos du lieu (requises, max 5) */}
+              {/* Photos du lieu (au moins une, max 5) */}
               <div className="space-y-2">
                 <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">
-                  Photos du lieu d&apos;accueil <RequiredBadge />
+                  Photos du lieu d&apos;accueil
                   <span className="font-normal text-slate-500 normal-case ml-1">
                     (max 5, {roomPhotoPaths.length}/5)
                   </span>
@@ -563,23 +647,10 @@ export default function QuestionnairePage() {
                   )
                 )}
               </div>
-            </div>
+            </CollapsibleSection>
 
             {error && (
-              <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>
-            )}
-
-            {(!profilePhotoPath || roomPhotoPaths.length === 0) && (
-              <p className="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg" role="status">
-                Pour envoyer, il manque :{' '}
-                {[
-                  !profilePhotoPath && 'la photo de profil',
-                  roomPhotoPaths.length === 0 && 'une photo du lieu d\u2019accueil',
-                ]
-                  .filter(Boolean)
-                  .join(' et ')}
-                .
-              </p>
+              <p role="alert" className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>
             )}
 
             <p className="text-xs text-slate-500 text-center" role="status" aria-live="polite">
@@ -588,12 +659,12 @@ export default function QuestionnairePage() {
                 savedAt &&
                 `Brouillon enregistré à ${savedAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`}
               {saveState === 'error' &&
-                'Enregistrement automatique impossible pour le moment. Vos réponses restent à l\u2019écran.'}
+                'Enregistrement automatique impossible pour le moment. Vos réponses restent à l’écran.'}
             </p>
 
             <button
               type="submit"
-              disabled={submitting || !profilePhotoPath || roomPhotoPaths.length === 0}
+              disabled={submitting}
               className="w-full bg-indigo-600 text-white py-3 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -603,15 +674,6 @@ export default function QuestionnairePage() {
         </div>
       </main>
     </>
-  );
-}
-
-// Pastille « Obligatoire » : le rouge est réservé aux actions destructives (DESIGN.md).
-function RequiredBadge() {
-  return (
-    <span className="ml-1.5 normal-case tracking-normal bg-amber-50 text-amber-700 text-[11px] font-medium px-1.5 py-0.5 rounded-full">
-      Obligatoire
-    </span>
   );
 }
 
