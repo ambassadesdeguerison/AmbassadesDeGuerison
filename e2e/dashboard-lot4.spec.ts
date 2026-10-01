@@ -51,7 +51,7 @@ test.describe('Dashboard Lot 4 — structure (authentifié)', () => {
     await expect(page.locator('iframe')).not.toBeVisible();
   });
 
-  test('section Mes lives — CTA "Je participe" ou badge "Vous participez" visibles', async ({ page }) => {
+  test('section Mes lives — CTA "J\'ouvre ma maison/mon église" ou badge "est ouverte" visibles', async ({ page }) => {
     await page.goto('/dashboard');
 
     // La section n'est visible que si des lives existent
@@ -59,8 +59,8 @@ test.describe('Dashboard Lot 4 — structure (authentifié)', () => {
     if (!await section.isVisible({ timeout: 8_000 }).catch(() => false)) return; // pas de lives dans le seed → skip implicite
 
     // L'un ou l'autre doit être présent (selon l'état is_active courant)
-    const ctaParticipe = page.getByRole('button', { name: /Je participe à ce live/ });
-    const badgeParticipe = page.getByText(/Vous participez à ce live/);
+    const ctaParticipe = page.getByRole('button', { name: /J'ouvre (ma maison|mon église) pour ce live/ });
+    const badgeParticipe = page.getByText(/Votre (maison|église) est ouverte pour ce live/);
     const hasParticipe = await ctaParticipe.isVisible().catch(() => false);
     const hasConfirmed = await badgeParticipe.isVisible().catch(() => false);
     expect(hasParticipe || hasConfirmed).toBe(true);

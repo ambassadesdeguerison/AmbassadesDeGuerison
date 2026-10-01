@@ -12,6 +12,7 @@ import Dropzone from '@/components/ui/Dropzone';
 import Avatar from '@/components/ui/Avatar';
 import StatusTimeline from '@/components/dashboard/StatusTimeline';
 import MissionDuMoment from '@/components/dashboard/MissionDuMoment';
+import { participationLabels } from '@/lib/dashboard/participation-labels';
 import DashboardTabs, { type DashboardTab } from '@/components/dashboard/DashboardTabs';
 import MesInfosSection from '@/app/dashboard/MesInfosSection';
 import { useBrowserTimezone } from '@/lib/hooks/use-browser-timezone';
@@ -34,6 +35,7 @@ interface HostProfile {
   address_private: string | null;
   consignes: string | null;
   phone: string | null;
+  host_type?: string | null;
 }
 
 interface Activation {
@@ -686,6 +688,7 @@ export default function DashboardPage() {
               <>
                 {/* Mission du moment — carte contextuelle (priorité décroissante) */}
                 <MissionDuMoment
+                  hostType={profile.host_type}
                   currentEvent={currentEvent}
                   approvedLiveLink={approvedLiveLink}
                   signalSent={signalSent}
@@ -788,13 +791,13 @@ export default function DashboardPage() {
                               <div className="flex items-center justify-between gap-3">
                                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg">
                                   <CheckCircle2 className="w-3.5 h-3.5" />
-                                  Vous participez à ce live
+                                  {participationLabels(profile.host_type).joined}
                                 </span>
                                 <button
                                   onClick={() => toggleActivation(a.id, a.is_active)}
                                   className="text-xs text-slate-400 hover:text-red-500 transition-colors underline-offset-2 hover:underline"
                                 >
-                                  Annuler ma participation
+                                  {participationLabels(profile.host_type).leave}
                                 </button>
                               </div>
                             ) : (
@@ -802,7 +805,7 @@ export default function DashboardPage() {
                                 onClick={() => toggleActivation(a.id, a.is_active)}
                                 className="w-full bg-indigo-600 text-white text-sm font-medium py-2.5 rounded-xl hover:bg-indigo-700 transition-colors"
                               >
-                                Je participe à ce live
+                                {participationLabels(profile.host_type).join}
                               </button>
                             )}
                           </div>

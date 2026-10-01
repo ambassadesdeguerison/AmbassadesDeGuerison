@@ -1,6 +1,7 @@
 'use client';
 
 import { Radio, Send, ExternalLink, MessageSquare, Calendar } from 'lucide-react';
+import { participationLabels } from '@/lib/dashboard/participation-labels';
 
 interface Activation {
   id: string;
@@ -13,6 +14,7 @@ interface ContactRequest {
 }
 
 interface Props {
+  hostType?: string | null;
   currentEvent: { id: string; live_link: string | null } | null;
   approvedLiveLink: string | null;
   signalSent: boolean;
@@ -30,6 +32,7 @@ function isWithin3Days(dateStr: string): boolean {
 }
 
 export default function MissionDuMoment({
+  hostType,
   currentEvent,
   approvedLiveLink,
   signalSent,
@@ -152,10 +155,10 @@ export default function MissionDuMoment({
         </div>
         <div>
           <p className="font-semibold text-blue-900 text-sm capitalize">
-            Live {dateLabel ?? 'bientôt'} — confirmez votre participation
+            Live {dateLabel ?? 'bientôt'} — ouvrez-vous votre porte ?
           </p>
           <p className="text-blue-700 text-xs mt-0.5">
-            Cliquez sur « Je participe à ce live » dans l&apos;onglet Accueil.
+            Cliquez sur « {participationLabels(hostType).reminder} » dans l&apos;onglet Accueil.
           </p>
         </div>
       </div>
