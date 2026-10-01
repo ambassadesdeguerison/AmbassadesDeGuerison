@@ -152,6 +152,8 @@ Deux mécanismes orthogonaux : **suspendre une ambassade** (`host_profiles.statu
 
 Voir [app/api/visit-requests/route.ts](app/api/visit-requests/route.ts) et [app/api/visitor-help-request/route.ts](app/api/visitor-help-request/route.ts).
 
+**Deux jetons par demande, jamais confondus** (2026-10-01) : `contact_requests.action_token` appartient à l'**hôte** (liens `/accueillir`, `/refuser`, dashboard) ; `visitor_token` appartient au **visiteur** (`/visitor/[token]`, `/feedback/[token]`, `/contact-equipe?token=`). `POST /api/visit-requests/[token]/accept` n'a pas d'authentification : qui détient `action_token` peut accepter la demande et déclencher l'envoi de l'adresse privée. Avant, le visiteur recevait `action_token` (réponse 201, e-mail de feedback) et pouvait donc accepter sa propre demande. **Ne jamais renvoyer `action_token` dans une réponse ni un e-mail destiné au visiteur** — `tests/unit/visitor-token-separation.test.ts` le vérifie. Migration : `scripts/migration-visitor-token.sql` (idempotente) ; sans elle, créer une demande échoue (colonne absente). La route `/api/contact-requests/[token]/acknowledge` (code mort qui renvoyait l'adresse à tout porteur du jeton, même demande `pending`) a été supprimée.
+
 ## Transparence des données visiteur (RGPD)
 
 Page `/confidentialite` + légendes inline, ajoutées le 2026-08-07 (TODO-23). Détail complet : ARCHITECTURE.md § Transparence des données. Deux règles à ne pas défaire :

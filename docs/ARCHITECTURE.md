@@ -218,6 +218,8 @@ Carte publique — le pin apparaît
 Pendant le live — visiteur contacte un hôte
   │  POST /api/contact-requests (ou /api/visit-requests)
   │  → email contact-received-host (hôte notifié : prénom, e-mail, message + lien /accueillir/[token] + lien /refuser/[token] — sans téléphone)
+  │  (deux jetons par demande : `action_token` = hôte seul, `visitor_token` = visiteur — `/accept` n'a pas
+  │   d'authentification, donc `action_token` ne quitte jamais l'hôte ; cf CLAUDE.md § Modération anti-abus)
   │  → hôte accepte via /accueillir/[token] → email acceptation-visite (adresse + email + WhatsApp de l'hôte)
   │     ou hôte refuse via /refuser/[token] → email refus-visite (visiteur redirigé vers la carte)
      (deux refus possibles, composant `DeclineChoice` : « Pas disponible cette fois » → la personne peut redemander

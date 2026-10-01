@@ -23,7 +23,7 @@ export default async function VisitorConfirmationPage({ params }: Props) {
         host_profiles!inner(first_name, city)
       )
     `)
-    .eq('action_token', token)
+    .eq('visitor_token', token)
     .maybeSingle();
 
   if (!contact) notFound();

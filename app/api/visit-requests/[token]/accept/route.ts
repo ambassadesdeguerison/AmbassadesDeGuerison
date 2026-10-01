@@ -16,7 +16,7 @@ export async function POST(_req: NextRequest, { params }: Props) {
   const { data: contact } = await supabase
     .from('contact_requests')
     .select(`
-      id, status, visitor_first_name, visitor_email,
+      id, status, visitor_first_name, visitor_email, visitor_token,
       host_activations!inner(
         event_id,
         host_profiles!inner(
@@ -54,7 +54,8 @@ export async function POST(_req: NextRequest, { params }: Props) {
     const event = Array.isArray(ha?.events) ? ha.events[0] : ha?.events;
 
     if (host && event) {
-      const contactEquipeUrl = `${process.env.NEXT_PUBLIC_APP_URL}/contact-equipe?token=${token}`;
+      // Cet e-mail part chez le visiteur : jamais `action_token` (jeton d'acceptation de l'hôte).
+      const contactEquipeUrl = `${process.env.NEXT_PUBLIC_APP_URL}/contact-equipe?token=${contact.visitor_token}`;
       const eventDate = formatEventDateDual(event.event_date);
 
       Promise.allSettled([

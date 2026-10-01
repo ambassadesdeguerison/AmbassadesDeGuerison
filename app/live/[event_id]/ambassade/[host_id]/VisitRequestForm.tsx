@@ -66,7 +66,7 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
       setError(data.error ?? 'Une erreur est survenue.');
       setLoading(false);
     } else {
-      router.push(`/visitor/${data.action_token}`);
+      router.push(`/visitor/${data.visitor_token}`);
     }
   }
 

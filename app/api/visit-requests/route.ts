@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
       nb_personnes: Math.max(1, parseInt(String(nb_personnes)) || 1),
       visitor_message: message?.trim() || null,
     })
-    .select('id, action_token')
+    .select('id, action_token, visitor_token')
     .single();
 
   if (error) {
@@ -192,5 +192,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ id: data.id, action_token: data.action_token }, { status: 201 });
+  // `action_token` reste côté hôte : il autorise l'acceptation (/accept sans auth).
+  return NextResponse.json({ id: data.id, visitor_token: data.visitor_token }, { status: 201 });
 }

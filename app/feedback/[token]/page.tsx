@@ -13,7 +13,8 @@ export default async function FeedbackPage({ params }: Props) {
   const { token } = await params;
   const supabase = createServiceClient();
 
-  // Le token identifie un contact_request (visiteur → hôte) ou un host_activation (hôte → visiteur)
+  // Le token est le `visitor_token` d'un contact_request (jamais `action_token`, réservé à l'hôte).
+  // Le feedback hôte → visiteur a sa propre page : /feedback/host/[token].
   const { data: contact } = await supabase
     .from('contact_requests')
     .select(`
@@ -25,7 +26,7 @@ export default async function FeedbackPage({ params }: Props) {
         host_profiles!inner(first_name)
       )
     `)
-    .eq('action_token', token)
+    .eq('visitor_token', token)
     .maybeSingle();
 
   if (!contact || contact.status !== 'accepted') notFound();

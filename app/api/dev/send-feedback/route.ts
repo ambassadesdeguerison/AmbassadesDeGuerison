@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
   const { data: allContacts } = await supabase
     .from('contact_requests')
-    .select('id, visitor_email, visitor_first_name, action_token, host_activation_id')
+    .select('id, visitor_email, visitor_first_name, visitor_token, host_activation_id')
     .eq('status', 'accepted')
     .in('host_activation_id', activationIds);
 
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
           overrideEmail || c.visitor_email,
           c.visitor_first_name,
           demoLiveEvent.title,
-          `${appUrl}/feedback/${c.action_token}`
+          `${appUrl}/feedback/${c.visitor_token}`
         )
       )
     );

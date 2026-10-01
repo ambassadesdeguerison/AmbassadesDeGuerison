@@ -73,7 +73,7 @@ export default function ContactForm({ hostProfileId, hostName, eventId, isWomenO
     if (!res.ok) {
       setError(data.error ?? 'Une erreur est survenue.');
     } else {
-      setActionToken(data.action_token);
+      setActionToken(data.visitor_token);
     }
     setLoading(false);
   }

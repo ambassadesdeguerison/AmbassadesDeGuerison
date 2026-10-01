@@ -182,7 +182,13 @@ CREATE TABLE contact_requests (
   -- plus aucune demande chez cette ambassade, pour aucun live. Un refus simple
   -- (« pas disponible cette fois ») laisse FALSE.
   declined_permanently        BOOLEAN     NOT NULL DEFAULT FALSE,
+  -- Jeton de l'HÔTE uniquement (liens /accueillir et /refuser, dashboard). Ne jamais
+  -- le renvoyer au visiteur ni le mettre dans un e-mail visiteur : /accept n'a pas
+  -- d'authentification, qui le détient peut accepter la demande.
   action_token                UUID        NOT NULL DEFAULT gen_random_uuid(),
+  -- Jeton du VISITEUR (suivi /visitor, feedback, aide). Ne donne aucun pouvoir
+  -- d'acceptation ni de refus.
+  visitor_token               UUID        NOT NULL DEFAULT gen_random_uuid(),
   visitor_notifications_optin BOOLEAN     DEFAULT TRUE,
   UNIQUE (host_activation_id, visitor_email),
   created_at                  TIMESTAMPTZ DEFAULT NOW()
@@ -598,6 +604,7 @@ CREATE INDEX idx_host_activations_event        ON host_activations(event_id);
 CREATE INDEX idx_host_activations_active       ON host_activations(event_id, is_active) WHERE is_active = TRUE;
 CREATE INDEX idx_live_signals_event            ON live_signals(event_id, status);
 CREATE INDEX idx_contact_requests_token        ON contact_requests(action_token);
+CREATE UNIQUE INDEX idx_contact_requests_visitor_token ON contact_requests(visitor_token);
 CREATE INDEX idx_contact_requests_visitor_profile ON contact_requests(visitor_profile_id) WHERE visitor_profile_id IS NOT NULL;
 CREATE INDEX idx_live_feedbacks_reported       ON live_feedbacks(reported, created_at DESC) WHERE reported = TRUE;
 CREATE INDEX idx_scheduled_campaigns_dispatch  ON scheduled_campaigns(scheduled_at, status) WHERE status = 'pending';
