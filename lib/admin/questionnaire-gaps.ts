@@ -20,6 +20,8 @@ export type QuestionnaireGapsInput = {
   profile_photo_signed_url: string | null;
   room_photo_signed_urls: string[];
   parcours_spirituel: string | null;
+  /** Chemin de la vidéo de présentation, ou null. */
+  intro_video_path: string | null;
 };
 
 export function questionnaireGaps(a: QuestionnaireGapsInput): QuestionnaireGaps {
@@ -28,7 +30,9 @@ export function questionnaireGaps(a: QuestionnaireGapsInput): QuestionnaireGaps 
   if (a.room_photo_signed_urls.length === 0) blocking.push('photo du lieu manquante');
 
   const informational: string[] = [];
-  if (!a.parcours_spirituel) informational.push('parcours spirituel non renseigné');
+  // Depuis le questionnaire v2, la vidéo remplace le parcours écrit (qui reste un secours si la
+  // vidéo pose problème) : seul « ni l'un ni l'autre » est un manque, et il reste informatif.
+  if (!a.intro_video_path && !a.parcours_spirituel) informational.push('ni vidéo de présentation ni parcours écrit');
 
   return { blocking, informational };
 }

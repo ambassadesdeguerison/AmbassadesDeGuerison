@@ -26,8 +26,8 @@ export const BOOKS: readonly CatalogItem[] = [
 // Formations gratuites en ligne. `defi_guerison` reste aussi reflété dans la colonne
 // historique `healing_challenge_done` (lue par le dashboard et l'admin).
 export const TRAININGS: readonly CatalogItem[] = [
-  { slug: 'defi_guerison', label: 'Défi Guérison (21 jours)' },
-  { slug: 'vraiment_libre', label: 'Vraiment Libre (14 jours)' },
+  { slug: 'defi_guerison', label: 'Défi Guérison' },
+  { slug: 'vraiment_libre', label: 'Vraiment Libre' },
 ];
 
 export const BOOK_SLUGS: ReadonlySet<string> = new Set(BOOKS.map((b) => b.slug));

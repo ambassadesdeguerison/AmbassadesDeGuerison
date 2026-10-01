@@ -248,7 +248,7 @@ function GapsBadge({ gaps }: { gaps: QuestionnaireGaps }) {
         className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 text-[10px] font-medium px-1.5 py-0.5 rounded-full"
       >
         <Info className="w-2.5 h-2.5" />
-        Parcours non renseigné
+        Sans vidéo ni parcours
       </span>
     );
   }
