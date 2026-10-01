@@ -28,8 +28,12 @@ export default function ContactReceivedHost({
       {visitorMessage && (
         <Text style={p}>Message : <em>&quot;{visitorMessage}&quot;</em></Text>
       )}
-      {dashboardUrl && (
+      {/* `dashboardUrl` n'est fourni que si le visiteur a une photo (cf /api/visit-requests) :
+          son absence signifie « sans photo » — l'hôte le sait avant d'accepter. */}
+      {dashboardUrl ? (
         <Text style={p}>{visitorFirstName} a ajouté une photo de profil — <Link href={dashboardUrl} style={link}>voir dans mon tableau de bord</Link></Text>
+      ) : (
+        <Text style={p}>{visitorFirstName} n&apos;a pas ajouté de photo de profil.</Text>
       )}
       <Btn href={acceptUrl} color="green">J&apos;accueille {visitorFirstName}</Btn>
       <Text style={muted}>Si vous n&apos;êtes pas en mesure de l&apos;accueillir :</Text>

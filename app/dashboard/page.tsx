@@ -97,6 +97,9 @@ export default function DashboardPage() {
   // Photos visiteur (Phase 3 PR3) — signed URLs récupérées via une route
   // dédiée (ownership vérifié serveur), et signalements en cours (optimiste).
   const [visitorPhotoUrls, setVisitorPhotoUrls] = useState<Record<string, string>>({});
+  // « Sans photo » n'est affiché qu'une fois la réponse reçue : jamais pendant le
+  // chargement ni après un échec réseau, pour ne pas affirmer à tort qu'il n'y en a pas.
+  const [visitorPhotosLoaded, setVisitorPhotosLoaded] = useState(false);
   const [reportedPhotoIds, setReportedPhotoIds] = useState<Set<string>>(new Set());
 
   // Photos upload
@@ -161,8 +164,11 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contact_request_ids: idsWithPhoto }),
       })
-        .then((r) => (r.ok ? r.json() : {}))
-        .then((urls) => setVisitorPhotoUrls(urls))
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((urls) => {
+          setVisitorPhotoUrls(urls);
+          setVisitorPhotosLoaded(true);
+        })
         .catch(() => {});
     }
 
@@ -860,6 +866,9 @@ export default function DashboardPage() {
                                 <p className="font-medium text-slate-900 text-sm">{r.visitor_first_name}</p>
                                 {liveTitle && (
                                   <p className="text-indigo-600 text-xs mt-0.5">Pour le live : {liveTitle}</p>
+                                {visitorPhotosLoaded && !visitorPhotoUrls[r.id] && (
+                                  <p className="text-slate-400 text-xs mt-0.5">Sans photo</p>
+                                )}
                                 )}
                                 {/* Bouton "Signaler cette photo" masqué — TODO-25 : le signalement
                                     (visitor_profiles.photo_reported) n'a aujourd'hui aucune conséquence
