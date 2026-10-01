@@ -113,6 +113,19 @@ const SECTIONS: Section[] = [
             <strong className="text-slate-700">Photos de votre lieu</strong> — stockées
             de façon privée, visibles par vous et par l’équipe.
           </li>
+          <li>
+            <strong className="text-slate-700">Réponses de présentation</strong> —
+            fréquentation d’une église, dénomination, fonction de responsabilité,
+            formations et livres, guérisons vues. Elles touchent à vos convictions
+            religieuses : vous les donnez volontairement, elles ne sont vues que par
+            l’équipe et ne sont jamais publiées.
+          </li>
+          <li>
+            <strong className="text-slate-700">Vidéo de présentation</strong> —
+            enregistrée dans un espace privé, visible uniquement par les
+            administrateurs, jamais publiée. Vous pouvez en demander la suppression
+            à tout moment.
+          </li>
         </ul>
       </>
     ),

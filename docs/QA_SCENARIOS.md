@@ -429,14 +429,15 @@ node scripts/magic-link.js david.thery@demo.fr
 - [ ] Cliquer le chevron d'un ambassadeur `validated` → panneau s'ouvre
 - [ ] Section "Photos" en haut du panneau : photo de profil (encadrée indigo) + photos du lieu (vue 1, vue 2…) si présentes
 - [ ] Cliquer une vignette → ouvre la **lightbox** intégrée (pas un nouvel onglet) : image plein écran, navigation clavier (`←`/`→` entre photos, `Échap` pour fermer), flèches cliquables si plusieurs photos, légende "Vue N du lieu d'accueil — i/N", clic hors-image ferme
-- [ ] Bloc "Engagement spirituel" (fond indigo clair) en tête du panneau : Défi Guérison (Oui/Non), Conférence DT (Oui/Non), fréquentation église si renseignée, parcours spirituel, livres/formations — c'est le signal que Camille regarde en premier
-- [ ] Sous le bloc pastoral : téléphone + dénomination (si renseignés) dans une grille séparée
-- [ ] Si questionnaire non rempli → message "Questionnaire non encore rempli"
+- [ ] Bloc "Engagement spirituel" (fond indigo clair) en tête du panneau : fréquentation d'église, dénomination, fonction de responsabilité, guérisons vues (« Non renseigné » distinct de « Non »), « Formations, livres et conférence » (« Aucune indiquée » si rien), « Vidéo de présentation » (lecteur + lien de téléchargement, ou « Non fournie »), parcours écrit étiqueté « en secours de la vidéo »
+- [ ] Sous le bloc pastoral : téléphone
+- [ ] Groupe réservé aux femmes → mention rose « Groupe réservé aux femmes » en haut du dossier + badge « Femmes uniquement » à côté du nom
+- [ ] Si questionnaire non rempli → message "Présentation pas encore remplie"
 
 ### Signal de dossier incomplet (badge "N manquant(s)")
 
-- [ ] Un ambassadeur `enrichment_pending` avec un dossier incomplet (photo profil manquante, photo du lieu manquante, ou parcours spirituel vide) affiche un badge ambre "N manquant(s)" à côté du badge de statut, **visible sans déplier la ligne**
-- [ ] Survoler le badge (title) → liste les éléments manquants ("photo de profil manquante", "photo du lieu manquante", "parcours spirituel vide")
+- [ ] Un ambassadeur `enrichment_pending` avec un dossier incomplet (photo profil manquante ou photo du lieu manquante) affiche un badge rouge "N photo(s) manquante(s)" ; ni vidéo ni parcours écrit : badge gris informatif « Sans vidéo ni parcours » à côté du badge de statut, **visible sans déplier la ligne**
+- [ ] Survoler le badge (title) → liste les éléments manquants ("photo de profil manquante", "photo du lieu manquante" ; en gris : "ni vidéo de présentation ni parcours écrit")
 - [ ] Un ambassadeur `enrichment_pending` avec dossier complet → pas de badge
 
 ### Vue mobile (<640px)
@@ -666,11 +667,16 @@ npm run test:e2e
 - [ ] Un profil `pending_review` accédant à `/dashboard/questionnaire` → message "Ce questionnaire n'est accessible que pour les candidats pré-approuvés" + lien retour
 - [ ] Un profil `validated` accédant → même message de blocage
 - [ ] Un profil `pre_approved` → le formulaire s'affiche complet
-- [ ] Champs présents : case "J'ai suivi le Défi Guérison", case "J'ai déjà assisté à une conférence de David Théry", select fréquentation église (3 options), champ dénomination (optionnel), textarea parcours spirituel, textarea livres (max 300 chars)
+- [ ] Quatre sections repliables (seule « Formations et livres » est ouverte au départ) ; l'en-tête de chacune indique « N à remplir » ou « Complété »
+- [ ] **Formations et livres** : liste déroulante avec recherche (formations d'abord, puis livres), cases « J'ai assisté à une conférence de David Théry » et « D'autres livres ou formations m'ont marqué » sous la liste ; cocher « autres » affiche « Quels autres livres ou formations vous ont marqué ? », le décocher efface la saisie
+- [ ] **Pratique ecclésiale** : fréquentation d'église (3 options), dénomination (non exigée si « Je ne fréquente pas une église »), fonction de responsabilité oui/non (« Laquelle ? » si oui)
+- [ ] **Parcours personnel** : « guérisons vues » oui/non, vidéo de présentation (VideoAsk) ; le champ « parcours spirituel » n'apparaît qu'en secours (problème caméra/enregistrement/envoi, ou lien « Un souci avec la vidéo ? »)
+- [ ] Les réponses s'enregistrent automatiquement (« Brouillon enregistré à HH:MM ») : recharger la page les retrouve, même depuis un autre appareil
 - [ ] **Section photos** : 2 blocs distincts
-  - Bloc "Photo de profil — requise" : dropzone unique, preview après upload, bouton supprimer (croix)
-  - Bloc "Photos du lieu d'accueil — requises (max 5, N/5)" : compteur dynamique, grid 3 colonnes après le 1er upload, croix de suppression sur chaque vignette, dropzone disparaît à 5/5
-- [ ] Bouton "Envoyer mon profil pour validation" reste désactivé tant que la photo de profil OU aucune photo du lieu ne sont uploadées + hint ambre correspondant
+  - Bloc "Photo de profil" : dropzone unique, preview après upload, bouton supprimer (croix) ; légende « affichée en petit sur la carte publique »
+  - Bloc "Photos du lieu d'accueil (max 5, N/5)" : compteur dynamique, grid 3 colonnes après le 1er upload, croix de suppression sur chaque vignette, dropzone disparaît à 5/5
+- [ ] Bouton « Envoyer ma présentation à David » toujours cliquable : s'il manque une réponse obligatoire ou une photo, il ouvre les sections concernées et affiche « Il manque : … » ; la vidéo, la liste formations/livres et le parcours écrit ne bloquent pas
+- [ ] Même contrôle côté serveur : `PATCH /api/ambassadeur/enrichissement` (hors brouillon) renvoie 400 « Il manque : … » si une réponse obligatoire manque
 - [ ] Upload room → `POST /api/upload/ambassador-photo` `type=room` → vignette apparaît + compteur passe à 1/5
 - [ ] Suppression room → `DELETE /api/upload/ambassador-photo` → vignette disparaît + DB `room_photo_urls` synchronisée (vérifier via SELECT)
 - [ ] Tentative d'upload d'une 6e photo room → 400 "Maximum 5 photos de salle atteint"

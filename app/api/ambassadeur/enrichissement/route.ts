@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { FEATURES } from '@/config/features';
 import { sendEnrichissementRecu } from '@/lib/email/templates';
 import { sanitizeQuestionnaire } from '@/lib/questionnaire/sanitize';
+import { missingFields, joinLabels, type QuestionnaireAnswers } from '@/lib/questionnaire/completeness';
 
 export async function PATCH(req: NextRequest) {
   const anonClient = createServerClient(
@@ -19,7 +20,9 @@ export async function PATCH(req: NextRequest) {
 
   const { data: profile } = await supabase
     .from('host_profiles')
-    .select('id, status, first_name, profile_photo_url, room_photo_urls')
+    .select(
+      'id, status, first_name, profile_photo_url, room_photo_urls, church_attendance, denomination, has_leadership_role, leadership_role, has_seen_healings'
+    )
     .eq('user_id', user.id)
     .maybeSingle();
 
@@ -51,6 +54,26 @@ export async function PATCH(req: NextRequest) {
     if (!profile.room_photo_urls || profile.room_photo_urls.length === 0) {
       return NextResponse.json(
         { error: 'Au moins une photo du lieu d\'accueil est requise pour soumettre votre profil.' },
+        { status: 400 }
+      );
+    }
+
+    // Les champs obligatoires sont aussi vérifiés ici : la validation du formulaire ne protège pas d'un
+    // appel direct à la route, ni d'un ancien onglet resté ouvert. On évalue les réponses déjà
+    // enregistrées (brouillons) complétées par ce que cet envoi apporte.
+    const answers = {
+      church_attendance: profile.church_attendance ?? '',
+      denomination: profile.denomination ?? '',
+      has_leadership_role: profile.has_leadership_role ?? null,
+      leadership_role: profile.leadership_role ?? '',
+      has_seen_healings: profile.has_seen_healings ?? null,
+      ...updates,
+    } as QuestionnaireAnswers;
+    const missing = missingFields(answers, { hasProfilePhoto: true, roomPhotoCount: profile.room_photo_urls.length })
+      .filter((m) => m.section !== 'photos'); // les photos ont leurs messages dédiés, juste au-dessus
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { error: `Il manque : ${joinLabels(missing.map((m) => m.label))}.` },
         { status: 400 }
       );
     }

@@ -62,3 +62,18 @@ describe('joinLabels', () => {
     expect(joinLabels(['a', 'b', 'c'])).toBe('a, b et c');
   });
 });
+
+describe('missingFields — valeurs nulles', () => {
+  it('ne plante pas sur des champs texte null (colonnes SQL vides) et les signale', () => {
+    const nulls: QuestionnaireAnswers = {
+      church_attendance: null,
+      denomination: null,
+      has_leadership_role: true,
+      leadership_role: null,
+      has_seen_healings: null,
+    };
+    const labels = missingFields(nulls, PHOTOS_OK).map((m) => m.label);
+    expect(labels).toContain('la fréquentation d\u2019une église');
+    expect(labels).toContain('la fonction que vous exercez');
+  });
+});

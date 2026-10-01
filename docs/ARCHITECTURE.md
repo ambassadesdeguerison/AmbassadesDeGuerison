@@ -153,9 +153,13 @@ Pipeline self-service jusqu'au questionnaire — l'admin n'intervient qu'à la f
   │   - Photos du lieu : requise (au moins 1), max 5 (paths dans room_photo_urls[])
   │  Suppression d'une photo : DELETE /api/upload/ambassador-photo
   │   (ownership check par préfixe profile.id/)
-  │  PATCH /api/ambassadeur/enrichissement
+  │  Réponses enregistrées en brouillon (PATCH …/enrichissement avec draft:true), sans changer le statut
+  │  Vidéo facultative : POST/PATCH /api/ambassadeur/video (bucket privé ambassador-videos, envoi direct par URL signée)
+  │  PATCH /api/ambassadeur/enrichissement (envoi final)
   │  → status = 'enrichment_pending'
-  │  → garde : refuse si profile_photo_url null
+  │  → garde : refuse si photo de profil / photo du lieu manquante, ou si une réponse obligatoire manque
+  │    (fréquentation, dénomination sauf « sans église », fonction de responsabilité, guérisons vues)
+  │    — la vidéo, la liste formations/livres et le parcours écrit ne bloquent pas
   │  → email sendEnrichissementRecu (notification admin)
   ▼
 /admin/ambassadeurs (revue du dossier complet)
@@ -702,7 +706,7 @@ Mis à jour manuellement à chaque PR significative.
 | Clôture live | ✅ | `POST /api/admin/live/close` + `LiveCloseButton` | Bouton dans `/admin/live`. Confirmation utilisateur avant clôture. Désactive `host_activations.is_active` (carte publique) **et** renseigne `events.closed_at` (corrigé août 2026 — l'ancienne version ne touchait que `host_activations`, donc `getCurrentEvent()` continuait de désigner le même live comme "en cours" par fenêtre horaire après refresh, et le bouton se réaffichait comme si de rien n'était). `getCurrentEvent()` exclut désormais tout event avec `closed_at` non nul de la sélection "en cours" — bascule immédiate sur le fallback "dernier live passé". `router.refresh()` après clôture pour refléter le changement sans reload manuel. |
 | Vue générale admin (Briefing factuel) | ✅ | `/admin/stats` | Refonte 2026-05-07 (v0.1.7.0) : 4 sections sobres (action queue Camille / témoignages récents / max 5 ambassades à vérifier / snapshot footer). Helpers : `lib/admin/event-window.ts`, `lib/admin/stats-helpers.ts`, `lib/admin/context-label.ts`. Tracking : `lib/admin/page-view-log.ts` (stdout JSON, Vercel logs). Pivot post-CEO/Codex : pas de narrative pastoral templaté en V1 — mesurer l'usage avant d'enrichir (cf TODO-22). |
 | Multi-admin (gestion équipe) | ✅ | `POST/DELETE /api/admin/team` | Requiert `super_admin`. UI dans `/admin/team` |
-| Onboarding questionnaire | ✅ | `/dashboard/questionnaire` + `POST /api/ambassadeur/enrichissement` | |
+| Onboarding questionnaire | ✅ | `/dashboard/questionnaire` + `PATCH /api/ambassadeur/enrichissement`, `/api/ambassadeur/video` | v2 (2026-10-01) : sections repliables, brouillon automatique, liste formations/livres, vidéo VideoAsk (stockage Supabase provisoire, pCloud prévu). Champs obligatoires validés côté formulaire **et** côté serveur (`lib/questionnaire/completeness.ts`). Voir CLAUDE.md § Questionnaire enrichi v2. |
 | Formulaire feedback visiteur | ✅ | `/feedback/[token]` | Route existante, jamais déclenchée automatiquement (cron non actif). QA UX 2026-08-07 : la page vérifie désormais `live_feedbacks` **avant** d'afficher le formulaire — un visiteur qui reclique son lien voit « Vous avez déjà donné votre avis » au lieu de tout ressaisir pour finir sur un « Feedback déjà soumis » rouge (la contrainte `live_feedbacks_unique` rejetait l'insert, la saisie était perdue). Étoiles : pattern `radiogroup` complet (un seul arrêt de tabulation par critère, navigation aux flèches, 44px) — il en fallait 20 pour traverser le formulaire. |
 | Désabonnement email | ✅ | `GET /api/unsubscribe/[token]` | Écrit deux traces (`campaign_recipients.status='unsubscribed'` + `contact_requests.visitor_notifications_optin=false`), **toutes deux relues** par `getUnsubscribedEmails()` avant chaque envoi. Jusqu'au 2026-08-07 aucune n'était consultée : le lien de désabonnement était décoratif, le visiteur recevait la campagne suivante. |
 | Upload photo ambassadeur | ✅ | `POST /api/upload/ambassador-photo` (`type=profile\|room`) | Bucket `ambassador-photos` **privé** — stocke un chemin, signed URL via `lib/storage/photo-url.ts`. Profile = 1 photo (requise). Room = max 5, append, au moins 1 requise (garde côté API `PATCH /api/ambassadeur/enrichissement`, 2026-08-07). Le questionnaire de validation expose les deux. |

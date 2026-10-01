@@ -11,10 +11,11 @@ export type SectionId = 'formations' | 'pratique' | 'parcours' | 'photos';
 export type MissingItem = { section: SectionId; label: string };
 
 export type QuestionnaireAnswers = {
-  church_attendance: string;
-  denomination: string;
+  // Les valeurs vides arrivent aussi en `null` (colonnes SQL, champs vidés côté serveur).
+  church_attendance: string | null;
+  denomination: string | null;
   has_leadership_role: boolean | null;
-  leadership_role: string;
+  leadership_role: string | null;
   has_seen_healings: boolean | null;
 };
 
@@ -26,12 +27,12 @@ export function missingFields(answers: QuestionnaireAnswers, photos: PhotoStatus
   if (!answers.church_attendance) {
     missing.push({ section: 'pratique', label: 'la fréquentation d’une église' });
   }
-  if (answers.church_attendance !== 'none' && !answers.denomination.trim()) {
+  if (answers.church_attendance !== 'none' && !(answers.denomination ?? '').trim()) {
     missing.push({ section: 'pratique', label: 'la dénomination' });
   }
   if (answers.has_leadership_role === null) {
     missing.push({ section: 'pratique', label: 'votre fonction de responsabilité (oui ou non)' });
-  } else if (answers.has_leadership_role && !answers.leadership_role.trim()) {
+  } else if (answers.has_leadership_role && !(answers.leadership_role ?? '').trim()) {
     missing.push({ section: 'pratique', label: 'la fonction que vous exercez' });
   }
 

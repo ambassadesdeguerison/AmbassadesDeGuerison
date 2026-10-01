@@ -73,6 +73,9 @@ export default function QuestionnairePage() {
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [hasVideo, setHasVideo] = useState(false);
+  // Les notes du VideoAsk restent sur l'appareil : clé propre à chaque profil, pour qu'un autre candidat
+  // qui utilise le même navigateur ne retrouve pas les notes de la personne précédente.
+  const [profileId, setProfileId] = useState('');
   // « Autres livres ou formations » coché : c'est seulement alors que le champ de saisie s'affiche.
   const [otherChecked, setOtherChecked] = useState(false);
   // Parcours écrit : affiché en secours quand la vidéo pose problème, ou à la demande du candidat.
@@ -113,7 +116,7 @@ export default function QuestionnairePage() {
       const { data: profile } = await supabase
         .from('host_profiles')
         .select(
-          'status, profile_photo_url, room_photo_urls, healing_challenge_done, conferences_assistees, church_attendance, denomination, parcours_spirituel, livres_lus, books_read, trainings_done, has_seen_healings, has_leadership_role, leadership_role, intro_video_path'
+          'id, status, profile_photo_url, room_photo_urls, healing_challenge_done, conferences_assistees, church_attendance, denomination, parcours_spirituel, livres_lus, books_read, trainings_done, has_seen_healings, has_leadership_role, leadership_role, intro_video_path'
         )
         .eq('user_id', user.id)
         .maybeSingle();
@@ -141,6 +144,7 @@ export default function QuestionnairePage() {
       setOtherChecked(Boolean(profile.livres_lus));
       setShowWritten(Boolean(profile.parcours_spirituel));
       setHasVideo(Boolean(profile.intro_video_path));
+      setProfileId(profile.id);
 
       // Charge la photo de profil existante
       if (profile.profile_photo_url) {
@@ -529,6 +533,7 @@ export default function QuestionnairePage() {
                 embedded
                 onSubmit={uploadIntroVideo}
                 alreadyUploaded={hasVideo}
+                notesStorageKey={`videoask-notes:${profileId}`}
                 onProblem={() => setShowWritten(true)}
               />
 
