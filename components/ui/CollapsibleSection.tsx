@@ -9,8 +9,6 @@ interface Props {
   onToggle: () => void;
   /** Nombre de champs obligatoires restants ; 0 = section complète. `undefined` = aucun état à montrer. */
   remaining?: number;
-  /** Mention discrète dans l'en-tête quand `remaining` est absent (ex : « Facultatif »). */
-  hint?: string;
   /** Ancre pour faire défiler jusqu'à la section. */
   sectionId?: string;
   children: React.ReactNode;
@@ -19,7 +17,7 @@ interface Props {
 // Carte repliable : l'en-tête reste visible (titre + état de complétude), le contenu se replie.
 // Le contenu reste monté (attribut `hidden`) : une photo en cours d'envoi, une vidéo enregistrée ou
 // une saisie ne sont jamais perdues en refermant la section.
-export default function CollapsibleSection({ title, open, onToggle, remaining, hint, sectionId, children }: Props) {
+export default function CollapsibleSection({ title, open, onToggle, remaining, sectionId, children }: Props) {
   const panelId = useId();
 
   return (
@@ -33,7 +31,6 @@ export default function CollapsibleSection({ title, open, onToggle, remaining, h
           className="w-full min-h-[56px] flex items-center gap-3 px-5 py-4 text-left rounded-2xl hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 transition-colors"
         >
           <span className="flex-1 text-base font-semibold text-slate-800">{title}</span>
-          {remaining === undefined && hint && <span className="text-xs text-slate-500">{hint}</span>}
           {remaining === 0 && (
             <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700">
               <CheckCircle2 className="w-4 h-4" aria-hidden="true" /> Complété

@@ -422,19 +422,17 @@ export default function QuestionnairePage() {
             Seule l&apos;équipe voit vos réponses.
           </p>
           <p className="text-xs text-slate-500 mt-2 mb-5">
-            Tous les champs sont obligatoires, sauf la vidéo et la liste des formations et livres.
-            Vos réponses s&apos;enregistrent automatiquement.
+            Merci de remplir tous les champs. Vos réponses s&apos;enregistrent automatiquement.
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-3" noValidate>
 
-            {/* Formations et livres (facultatif) */}
+            {/* Formations et livres : non bloquant à l'envoi (cf completeness.ts), mais jamais présenté comme facultatif à l'écran */}
             <CollapsibleSection
               title="Formations et livres"
               sectionId="section-formations"
               open={openSections.formations}
               onToggle={() => toggleSection('formations')}
-              hint="Facultatif"
             >
               <CheckboxCombobox
                 label="Formations et livres"
