@@ -74,8 +74,9 @@ const SECTIONS: Section[] = [
             votre espace et vous transmettre la réponse de l’ambassadeur.
           </li>
           <li>
-            <strong className="text-slate-700">Téléphone</strong> — pour que
-            l’ambassadeur puisse vous joindre s’il accepte votre demande. Jamais affiché
+            <strong className="text-slate-700">Téléphone</strong> — l’ambassadeur ne le
+            voit que s’il accepte votre demande, pour pouvoir vous appeler le jour du live.
+            Nous l’utilisons aussi pour écarter les personnes bloquées. Jamais affiché
             publiquement.
           </li>
           <li>
@@ -162,11 +163,13 @@ const SECTIONS: Section[] = [
           <strong className="text-slate-700">L’exécution de votre demande</strong> —
           prénom, e-mail et téléphone sont nécessaires pour qu’une rencontre puisse
           s’organiser. Sans eux, l’ambassadeur ne peut ni vous répondre ni vous
-          accueillir.
+          accueillir. Le téléphone n’est transmis à l’ambassadeur qu’après son accord.
         </li>
         <li>
           <strong className="text-slate-700">Notre intérêt légitime</strong> — pour la
-          sécurité des personnes qui ouvrent leur maison (prévention des abus).
+          sécurité des personnes qui ouvrent leur maison (prévention des abus). Par
+          exemple, votre numéro permet de refuser une demande venant d’une personne
+          déjà bloquée.
         </li>
       </ul>
     ),

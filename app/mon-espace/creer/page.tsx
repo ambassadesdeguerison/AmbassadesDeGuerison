@@ -236,7 +236,7 @@ function CreerCompteContent() {
                   placeholder="+33 6 12 34 56 78"
                 />
                 <p className="text-xs text-slate-400 mt-2">
-                  Permet à l&apos;ambassadeur de vous joindre s&apos;il accepte votre demande — jamais affiché publiquement.
+                  L&apos;ambassadeur ne voit votre numéro que s&apos;il accepte votre demande. Il peut alors vous appeler si besoin le jour du live. Nous l&apos;utilisons aussi pour écarter les personnes bloquées. Il n&apos;est jamais affiché publiquement.
                 </p>
               </div>
 

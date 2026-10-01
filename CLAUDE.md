@@ -159,6 +159,8 @@ Page `/confidentialite` + légendes inline, ajoutées le 2026-08-07 (TODO-23). D
 Les durées de conservation annoncées sur la page **ne sont appliquées par aucune purge automatique** — écart à combler avant un lancement public.
 
 ## Règles importantes
+- **Le téléphone du visiteur n'est visible par l'hôte qu'après acceptation** (2026-10-01) : absent de l'e-mail `contact-received-host`, affiché dans `/dashboard` seulement si `status === 'accepted'`. Il reste obligatoire pour deux usages réels, dits dans la légende et sur `/confidentialite` : joindre le visiteur le jour du live, et faire respecter la blacklist (e-mail *ou* téléphone). Ne pas le remettre dans l'e-mail de notification. Limite connue : masquage côté affichage uniquement, la clé anon du dashboard le reçoit encore (voir ARCHITECTURE.md § Transparence des données).
+
 
 - `lib/supabase/server.ts` (service_role) : JAMAIS importé depuis un Client Component
 - `lib/supabase/browser.ts` (anon key) : uniquement dans les Client Components

@@ -212,7 +212,7 @@ Carte publique — le pin apparaît
   ▼
 Pendant le live — visiteur contacte un hôte
   │  POST /api/contact-requests (ou /api/visit-requests)
-  │  → email contact-received-host (hôte notifié + lien /accueillir/[token] + lien /refuser/[token])
+  │  → email contact-received-host (hôte notifié : prénom, e-mail, message + lien /accueillir/[token] + lien /refuser/[token] — sans téléphone)
   │  → hôte accepte via /accueillir/[token] → email acceptation-visite (adresse + email + WhatsApp de l'hôte)
   │     ou hôte refuse via /refuser/[token] → email refus-visite (visiteur redirigé vers la carte)
   │
@@ -449,6 +449,31 @@ réintroduire l'idée que la home n'a pas de footer sans revérifier le fichier.
   déclaration CNIL. Document interne, hors code.
 
 ---
+### Règle : le téléphone du visiteur n'est montré à l'hôte qu'après acceptation
+
+Corrigé 2026-10-01. Avant, le numéro partait à l'hôte dès l'envoi de la demande
+(e-mail `contact-received-host` + dashboard, même pour une demande refusée), alors
+que la légende de `/mon-espace/creer` disait « s'il accepte votre demande » — un
+écart entre finalité annoncée et traitement réel.
+
+Désormais : l'e-mail de notification ne contient plus le numéro, et
+`app/dashboard/page.tsx` n'affiche « Tél : » que si `status === 'accepted'`.
+`/feedback/host/[token]` lit `visitor_phone` mais filtre déjà sur `status = 'accepted'`
+(le numéro sert à bloquer un visiteur, voir ci-dessous).
+
+**Pourquoi le numéro reste obligatoire.** Il ne sert pas à discuter avant
+l'acceptation, mais à deux choses : joindre le visiteur le jour du live (l'hôte
+a l'e-mail/WhatsApp du visiteur dans l'autre sens seulement après acceptation), et
+**faire respecter la blacklist** (`POST /api/visit-requests` compare e-mail *ou*
+téléphone — une adresse e-mail se recrée en secondes, un numéro beaucoup moins
+facilement). Sans lui, un visiteur bloqué reviendrait avec une autre adresse.
+Légendes et `/confidentialite` disent ces deux usages en français simple.
+
+⚠️ **Masquage côté affichage seulement.** Le dashboard lit `contact_requests` avec la
+clé anon (RLS) : `visitor_phone` reste dans la réponse réseau pour les demandes en
+attente. Un vrai blocage demanderait une route serveur qui ne renvoie le numéro
+qu'aux demandes acceptées.
+
 
 ## Sécurité — points critiques
 

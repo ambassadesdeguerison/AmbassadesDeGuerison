@@ -46,7 +46,7 @@ export default function AccueillirClient({
         <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-4" />
         <p className="text-slate-800 font-semibold text-lg mb-2">Demande acceptée !</p>
         <p className="text-slate-500 text-sm leading-relaxed mb-6">
-          {visitorName} recevra vos coordonnées par e-mail.
+          {visitorName} recevra vos coordonnées par e-mail. Son numéro de téléphone est maintenant visible dans votre espace ambassadeur.
         </p>
         <Link href="/dashboard" className="inline-block text-indigo-600 text-sm hover:underline">
           Mon espace ambassadeur

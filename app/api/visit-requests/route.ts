@@ -157,7 +157,6 @@ export async function POST(req: NextRequest) {
           host.first_name,
           firstNameTrimmed,
           emailLower,
-          phoneTrimmed,
           message?.trim() || null,
           acceptUrl,
           declineUrl,

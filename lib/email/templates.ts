@@ -113,7 +113,6 @@ export async function sendNewContactRequestHost(
   hostFirstName: string,
   visitorFirstName: string,
   visitorEmail: string,
-  visitorWhatsapp: string | null,
   visitorMessage: string | null,
   acceptUrl: string,
   declineUrl: string,
@@ -123,7 +122,7 @@ export async function sendNewContactRequestHost(
     from: FROM(), to,
     subject: `${visitorFirstName} souhaite rejoindre votre ambassade`,
     react: React.createElement(ContactReceivedHost, {
-      hostFirstName, visitorFirstName, visitorEmail, visitorWhatsapp, visitorMessage, acceptUrl, declineUrl, dashboardUrl,
+      hostFirstName, visitorFirstName, visitorEmail, visitorMessage, acceptUrl, declineUrl, dashboardUrl,
     }),
   });
 }

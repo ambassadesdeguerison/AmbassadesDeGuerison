@@ -864,7 +864,8 @@ export default function DashboardPage() {
 
                           <div className="space-y-0.5 mb-2">
                             <p className="text-slate-500 text-xs">{r.visitor_email}</p>
-                            {r.visitor_phone && (
+                            {/* Le téléphone n'est montré qu'après acceptation (cf. légende de /mon-espace/creer). */}
+                            {r.status === 'accepted' && r.visitor_phone && (
                               <p className="text-slate-500 text-xs">Tél : {r.visitor_phone}</p>
                             )}
                             {r.nb_personnes && (

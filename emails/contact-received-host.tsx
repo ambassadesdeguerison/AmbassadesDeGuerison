@@ -7,7 +7,8 @@ interface Props {
   hostFirstName: string;
   visitorFirstName: string;
   visitorEmail: string;
-  visitorWhatsapp?: string | null;
+  // Le téléphone du visiteur n'est volontairement pas transmis ici : il n'est
+  // visible par l'hôte qu'après acceptation (dashboard).
   visitorMessage?: string | null;
   acceptUrl: string;
   declineUrl: string;
@@ -17,16 +18,13 @@ interface Props {
 }
 
 export default function ContactReceivedHost({
-  hostFirstName, visitorFirstName, visitorEmail, visitorWhatsapp, visitorMessage, acceptUrl, declineUrl, dashboardUrl,
+  hostFirstName, visitorFirstName, visitorEmail, visitorMessage, acceptUrl, declineUrl, dashboardUrl,
 }: Props) {
   return (
     <EmailLayout preview={`${visitorFirstName} souhaite rejoindre votre ambassade`}>
       <Text style={p}>Bonjour {hostFirstName},</Text>
       <Text style={p}><strong>{visitorFirstName}</strong> souhaite rejoindre votre ambassade.</Text>
       <Text style={p}>E-mail : <Link href={`mailto:${visitorEmail}`} style={link}>{visitorEmail}</Link></Text>
-      {visitorWhatsapp && (
-        <Text style={p}>Numéro : <Link href={`https://wa.me/${visitorWhatsapp.replace(/\D/g, '')}`} style={link}>{visitorWhatsapp}</Link></Text>
-      )}
       {visitorMessage && (
         <Text style={p}>Message : <em>&quot;{visitorMessage}&quot;</em></Text>
       )}
