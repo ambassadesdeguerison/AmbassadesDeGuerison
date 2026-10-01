@@ -439,7 +439,7 @@ export default function QuestionnairePage() {
                 groups={LIBRARY_GROUPS}
                 selected={librarySelection}
                 onChange={onLibraryChange}
-                placeholder="Formations et livres de David"
+                placeholder="Choisissez dans la liste"
                 searchPlaceholder="Rechercher une formation ou un livre"
               />
               <div className="space-y-2">
