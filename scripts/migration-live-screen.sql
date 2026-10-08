@@ -1,6 +1,10 @@
--- Migration : champ « Sur quoi allez-vous regarder le live ? » du questionnaire (2026-10-08)
+-- Migration : champs du questionnaire ajoutés après la v2 (2026-10-08)
+--   - live_screen          : « Sur quoi allez-vous regarder le live ? »
+--   - presentation_message : message d'accueil public (popup de la carte), 240 car. max
 -- Usage : supabase db query --linked --file scripts/migration-live-screen.sql
 -- Idempotent. Forward-looking : en phase de conception, reset-db.sql suffit (il porte déjà
--- cette colonne). Sans la migration sur une base existante, le questionnaire ne charge pas.
+-- ces colonnes). Sans la migration sur une base existante, le questionnaire ne charge pas.
 
 ALTER TABLE host_profiles ADD COLUMN IF NOT EXISTS live_screen TEXT;
+ALTER TABLE host_profiles ADD COLUMN IF NOT EXISTS presentation_message TEXT DEFAULT NULL
+  CHECK (char_length(presentation_message) <= 240);
