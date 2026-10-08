@@ -165,7 +165,8 @@ Pipeline self-service jusqu'au questionnaire — l'admin n'intervient qu'à la f
   │  PATCH /api/ambassadeur/enrichissement (envoi final)
   │  → status = 'enrichment_pending'
   │  → garde : refuse si photo de profil / photo du lieu manquante, ou si une réponse obligatoire manque
-  │    (fréquentation, dénomination sauf « sans église », fonction de responsabilité, guérisons vues)
+  │    (fréquentation, dénomination ou famille d'église sauf « sans église », fonction de responsabilité, guérisons vues,
+  │    message d'accueil, `live_screen` = « sur quoi regarderez-vous le live »)
   │    — la vidéo, la liste formations/livres et le parcours écrit ne bloquent pas
   │  → email sendEnrichissementRecu (notification admin)
   ▼

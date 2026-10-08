@@ -48,7 +48,7 @@ Un candidat suit ce chemin, **seul, sans que tu aies besoin d'intervenir avant l
         │
 2. Il regarde la vidéo de présentation et accepte les conditions
         │
-3. Il remplit le questionnaire (pratique ecclésiale, fonction de responsabilité, guérisons vues,
+3. Il remplit le questionnaire (pratique ecclésiale, fonction de responsabilité, guérisons vues, sur quoi il regardera le live,
    formations et livres) et ajoute :
    - une photo de lui (obligatoire)
    - au moins une photo du lieu d'accueil (obligatoire)

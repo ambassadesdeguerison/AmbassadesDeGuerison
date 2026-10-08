@@ -314,7 +314,9 @@ node scripts/magic-link.js david.thery@demo.fr
 
 ### Soumission
 
-- [ ] Succès → profil créé avec statut `pending_review` → écran inline "Inscription confirmée !" + e-mail affiché + CTA "Accéder à mon espace ambassadeur" → `/auth`
+- [ ] Succès → profil créé avec statut `pending_review` → écran inline « Votre demande est bien reçue ! » + e-mail affiché. La réponse de `POST /api/inscriptions` porte `login: { token_hash, type }` et le navigateur ouvre la session (`verifyOtp`) : CTA « Continuer mon inscription » → `/dashboard`, sans repasser par `/auth`
+- [ ] Si le jeton est absent ou refusé (simuler en échouant `generateLink`) : l'inscription réussit quand même, CTA « Me connecter pour continuer » → `/auth`
+- [ ] E-mail de confirmation : bouton « Continuer mon inscription » → `/dashboard` (plus de lien de connexion dans l'e-mail : le jeton unique est consommé par le navigateur). Ouvert sur un autre appareil → arrive sur `/auth`
 - [ ] Email déjà existant → message d'erreur "Un compte ambassadeur existe déjà avec cet e-mail. Connecte-toi depuis la page de connexion." (humanisé depuis l'erreur Postgres `duplicate key`)
 - [ ] Honeypot rempli → 200 silencieux
 
@@ -669,12 +671,13 @@ npm run test:e2e
 - [ ] Un profil `pre_approved` → le formulaire s'affiche complet
 - [ ] Quatre sections repliables (seule « Formations suivies et livres lus » est ouverte au départ) ; l'en-tête de chacune indique « N à remplir » ou « Complété »
 - [ ] **Formations et livres** : liste déroulante avec recherche (formations d'abord, puis livres), cases « J'ai assisté à une conférence de David Théry » et « D'autres livres ou formations m'ont marqué » sous la liste ; cocher « autres » affiche « Quels autres livres ou formations vous ont marqué ? », le décocher efface la saisie
-- [ ] **Pratique ecclésiale** : fréquentation d'église (3 options), dénomination (non exigée si « Je ne fréquente pas une église »), fonction de responsabilité oui/non (« Laquelle ? » si oui)
-- [ ] **Parcours personnel** : « guérisons vues » oui/non, vidéo de présentation (VideoAsk) ; le champ « parcours spirituel » n'apparaît qu'en secours (problème caméra/enregistrement/envoi, ou lien « Un souci avec la vidéo ? »)
+- [ ] **Pratique ecclésiale** : fréquentation d'église (3 options), « Dénomination ou famille d’église » (non exigée si « Je ne fréquente pas une église »), fonction de responsabilité oui/non (« Laquelle ? » si oui ; exemples : groupe de maison, diacre, pasteur, prêtre)
+- [ ] **Parcours personnel** : « Avez-vous déjà vu des personnes guéries suite à votre prière ? » oui/non (sans légende), vidéo de présentation (VideoAsk) ; le champ « parcours spirituel » n'apparaît qu'en secours (problème caméra/enregistrement/envoi, ou lien « Un souci avec la vidéo ? »)
 - [ ] Les réponses s'enregistrent automatiquement (« Brouillon enregistré à HH:MM ») : recharger la page les retrouve, même depuis un autre appareil
 - [ ] **Section photos** : 2 blocs distincts
   - Bloc "Photo de profil" : dropzone unique, preview après upload, bouton supprimer (croix) ; légende « affichée en petit sur la carte publique »
   - Bloc "Photos du lieu d'accueil (max 5, N/5)" : compteur dynamique, grid 3 colonnes après le 1er upload, croix de suppression sur chaque vignette, dropzone disparaît à 5/5
+- [ ] **Sur quoi regarder le live** : champ texte « Sur quoi allez-vous regarder le live ? » en fin de section photos, **sans légende**, obligatoire (plafond 200 caractères) ; vide → listé dans « Il manque : … » ; la valeur apparaît dans le panneau admin sous « Téléphone » (« Regardera le live sur »), et reste vide/absente pour les profils antérieurs sans les bloquer
 - [ ] Bouton « Envoyer ma présentation à David » toujours cliquable : s'il manque une réponse obligatoire ou une photo, il ouvre les sections concernées et affiche « Il manque : … » ; la vidéo, la liste formations/livres et le parcours écrit ne bloquent pas
 - [ ] Même contrôle côté serveur : `PATCH /api/ambassadeur/enrichissement` (hors brouillon) renvoie 400 « Il manque : … » si une réponse obligatoire manque
 - [ ] Upload room → `POST /api/upload/ambassador-photo` `type=room` → vignette apparaît + compteur passe à 1/5
