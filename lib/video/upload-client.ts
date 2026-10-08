@@ -1,15 +1,16 @@
 import { createClient } from '@/lib/supabase/browser';
+import { MAX_VIDEO_BYTES } from '@/lib/video/recorder-support';
 
 // Envoi de la vidéo de présentation depuis le navigateur (Client Components).
 // Séparé du composant VideoAsk. Le serveur choisit le stockage (pCloud, ou Supabase en
 // repli) et répond à POST /api/ambassadeur/video par les instructions d'envoi.
 
 const BUCKET = 'ambassador-videos';
-export const MAX_VIDEO_BYTES = 200 * 1024 * 1024; // ~90 s de vidéo pèsent 15 Mo : large marge pour un fichier choisi
+export { MAX_VIDEO_BYTES };
 
 export async function uploadIntroVideo(blob: Blob, mimeType: string): Promise<void> {
   if (blob.size > MAX_VIDEO_BYTES) {
-    throw new Error('Cette vidéo est trop volumineuse (200 Mo maximum). Enregistrez-en une plus courte.');
+    throw new Error('Cette vidéo est trop volumineuse (100 Mo maximum). Enregistrez-en une plus courte avec « Ouvrir la caméra ».');
   }
   const mime = mimeType.split(';')[0].trim().toLowerCase();
 

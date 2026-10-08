@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { CheckCircle2, Loader2, RotateCcw, Square, Video } from 'lucide-react';
-import { canRecordInBrowser, formatDuration, pickMimeType } from '@/lib/video/recorder-support';
+import {
+  canRecordInBrowser,
+  describePickedVideoProblem,
+  formatDuration,
+  pickMimeType,
+  readVideoDuration,
+} from '@/lib/video/recorder-support';
 
 // Pistes provisoires : le texte définitif est à faire valider par David.
 const DEFAULT_PROMPTS = [
@@ -17,8 +23,10 @@ interface Props {
   /** Envoie la vidéo. Doit rejeter avec un message lisible en cas d'échec. */
   onSubmit: (video: Blob, mimeType: string) => Promise<void>;
   prompts?: string[];
-  /** Durée maximale d'enregistrement (l'arrêt est automatique). */
+  /** Durée maximale d'enregistrement (l'arrêt est automatique) ; un fichier choisi plus long est refusé avec un message. */
   maxSeconds?: number;
+  /** Poids maximal d'un fichier choisi : au-delà, message qui renvoie à l'enregistrement dans la page. */
+  maxBytes?: number;
   /** Une vidéo est déjà enregistrée côté serveur : affiche directement l'état « envoyée ». */
   alreadyUploaded?: boolean;
   notesStorageKey?: string;
@@ -40,6 +48,7 @@ export default function VideoAsk({
   onSubmit,
   prompts = DEFAULT_PROMPTS,
   maxSeconds = 90,
+  maxBytes,
   alreadyUploaded = false,
   notesStorageKey = 'videoask-notes',
   embedded = false,
@@ -216,7 +225,7 @@ export default function VideoAsk({
     if (recorder && recorder.state !== 'inactive') recorder.stop();
   }
 
-  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
@@ -226,6 +235,21 @@ export default function VideoAsk({
     }
     setError('');
     stopStream();
+
+    // Contrôle avant l'aperçu : mieux vaut expliquer tout de suite que faire attendre un envoi
+    // pour le refuser. Durée illisible (null) → on laisse passer, le poids reste vérifié.
+    const durationSeconds = await readVideoDuration(file);
+    const problem = describePickedVideoProblem({
+      durationSeconds,
+      bytes: file.size,
+      maxSeconds,
+      maxBytes: maxBytes ?? Number.POSITIVE_INFINITY,
+      canRecord,
+    });
+    if (problem) {
+      setError(problem);
+      return;
+    }
     showReview(file, file.type);
   }
 

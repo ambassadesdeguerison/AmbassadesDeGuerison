@@ -19,7 +19,7 @@ import {
   joinLabels,
   type SectionId,
 } from '@/lib/questionnaire/completeness';
-import { uploadIntroVideo } from '@/lib/video/upload-client';
+import { MAX_VIDEO_BYTES, uploadIntroVideo } from '@/lib/video/upload-client';
 
 const CHURCH_ATTENDANCE_OPTIONS = [
   { value: 'regular', label: 'Régulièrement (chaque semaine ou presque)' },
@@ -539,6 +539,7 @@ export default function QuestionnairePage() {
               <VideoAsk
                 embedded
                 onSubmit={uploadIntroVideo}
+                maxBytes={MAX_VIDEO_BYTES}
                 alreadyUploaded={hasVideo}
                 notesStorageKey={`videoask-notes:${profileId}`}
                 onProblem={() => setShowWritten(true)}

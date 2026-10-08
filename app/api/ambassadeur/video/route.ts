@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createServiceClient } from '@/lib/supabase/server';
-import { extensionForMime } from '@/lib/video/recorder-support';
+import { extensionForMime, MAX_VIDEO_BYTES } from '@/lib/video/recorder-support';
 import { pcloudFileName } from '@/lib/video/filename';
 import {
   createUpload,
@@ -30,7 +30,6 @@ const BUCKET = 'ambassador-videos';
 const ALLOWED_MIMES = new Set(['video/mp4', 'video/webm', 'video/quicktime']);
 const CHUNK_BYTES = 3 * 1024 * 1024;
 const MAX_CHUNK_BYTES = 4 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 
 function baseMime(mime: unknown): string {
   return typeof mime === 'string' ? mime.split(';')[0].trim().toLowerCase() : '';
