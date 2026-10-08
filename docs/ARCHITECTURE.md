@@ -144,7 +144,9 @@ Pipeline self-service jusqu'au questionnaire — l'admin n'intervient qu'à la f
   │  rattaché à son compte, rôle d'un compte visiteur existant basculé en « host »).
   │  POST /api/inscriptions (exige `email_proof` valide pour cette adresse, sinon 403 `email_not_verified`)
   │  → status = 'pending_review'
-  │  → email sendRegistrationConfirmation
+  │  → réponse `login: { token_hash, type }` (adresse déjà prouvée) que le navigateur échange contre une
+  │    session (`verifyOtp`) : exception documentée à « jamais de token_hash dans une réponse », cf CLAUDE.md
+  │  → email sendRegistrationConfirmation (bouton → /dashboard ; le jeton unique est consommé par le navigateur)
   ▼
 /dashboard (encart pending_review : vidéo + PDF + checkbox CGU + bouton)
   │  candidat regarde la vidéo, télécharge le guide, accepte les conditions

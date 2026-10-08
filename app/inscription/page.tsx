@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, ArrowRight, CheckCircle2, UserPlus, ChevronRight, HelpCircle, Loader2, Mail } from 'lucide-react';
 import Link from 'next/link';
+import type { EmailOtpType } from '@supabase/supabase-js';
 import AppHeader from '@/components/AppHeader';
 import InscriptionSuccess from '@/components/InscriptionSuccess';
 import { createClient } from '@/lib/supabase/browser';
@@ -130,7 +131,12 @@ function InscriptionContent() {
     }
 
     try {
-      const { data: { user } } = await createClient().auth.getUser();
+      const supabase = createClient();
+      // L'adresse est déjà prouvée : l'API remet un jeton à usage unique, échangé ici contre une session.
+      if (data.login?.token_hash) {
+        await supabase.auth.verifyOtp({ token_hash: data.login.token_hash, type: data.login.type as EmailOtpType });
+      }
+      const { data: { user } } = await supabase.auth.getUser();
       setConnected(user?.email?.toLowerCase() === form.email.trim().toLowerCase());
     } catch {
       // Pas de session lisible : on garde l'écran « connectez-vous »

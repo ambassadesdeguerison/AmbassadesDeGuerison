@@ -25,7 +25,7 @@ export default function RegistrationConfirmation({ firstName, dashboardUrl }: Pr
       </Text>
       <Btn href={dashboardUrl}>Continuer mon inscription</Btn>
       <Text style={note}>
-        Ce bouton vous connecte directement et fonctionne pendant 1 heure. Après, demandez-en un nouveau depuis la page « Se connecter ».
+        Si la page vous demande de vous connecter, saisissez cette adresse e-mail : nous vous enverrons un nouveau bouton de connexion.
       </Text>
     </EmailLayout>
   );

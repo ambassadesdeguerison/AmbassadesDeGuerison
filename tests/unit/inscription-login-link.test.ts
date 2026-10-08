@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Demande de David (2026-10-01) : après le formulaire « devenir ambassadeur », l'e-mail
-// « Continuer mon inscription » doit contenir un vrai lien de connexion (/auth/confirm), pas un
-// simple /dashboard qui renvoie le candidat vers l'écran de connexion.
+// Après le formulaire « devenir ambassadeur » (adresse déjà prouvée à l'étape 0), la réponse porte un
+// jeton à usage unique que le navigateur échange contre une session (exception documentée à
+// « jamais de token_hash dans une réponse », CLAUDE.md § Formulaire d'inscription). Ce jeton
+// étant consommé là, l'e-mail n'a plus de lien de connexion propre (repli /dashboard).
 
 const { mockSendConfirmation, mockSendAdmin, mockGenerateLink } = vi.hoisted(() => ({
   mockSendConfirmation: vi.fn().mockResolvedValue(undefined),
@@ -69,27 +70,28 @@ describe('POST /api/inscriptions — lien de l’e-mail de confirmation', () => 
     process.env.NEXT_PUBLIC_APP_URL = 'https://app.example';
   });
 
-  it('envoie un lien de connexion qui redirige vers /dashboard', async () => {
+  it('remet au navigateur un jeton de connexion, un seul, et ne le met pas dans l’e-mail', async () => {
     mockGenerateLink.mockResolvedValue({
-      data: { properties: { hashed_token: 'tok', verification_type: 'magiclink' } },
+      data: { properties: { hashed_token: 'tok', verification_type: 'signup' } },
       error: null,
     });
     const res = await submit();
+    const body = await res.json();
 
     expect(res.status).toBe(201);
+    expect(mockGenerateLink).toHaveBeenCalledTimes(1);
     expect(mockGenerateLink).toHaveBeenCalledWith({ type: 'magiclink', email: 'nouveau@example.com' });
-    const url = mockSendConfirmation.mock.calls[0][2] as string;
-    expect(url).toContain('/auth/confirm?');
-    expect(new URL(url).searchParams.get('token_hash')).toBe('tok');
-    expect(new URL(url).searchParams.get('redirect')).toBe('/dashboard');
+    expect(body.login).toEqual({ token_hash: 'tok', type: 'signup' });
+    expect(mockSendConfirmation.mock.calls[0][2]).toBeUndefined();
   });
 
-  it('si le lien ne peut pas être généré : l’inscription réussit quand même (repli /dashboard)', async () => {
+  it('si le jeton ne peut pas être généré : l’inscription réussit quand même, sans login', async () => {
     mockGenerateLink.mockResolvedValue({ data: null, error: { message: 'boom' } });
     const res = await submit();
+    const body = await res.json();
 
     expect(res.status).toBe(201);
+    expect(body.login).toBeUndefined();
     expect(mockSendConfirmation).toHaveBeenCalledTimes(1);
-    expect(mockSendConfirmation.mock.calls[0][2]).toBeUndefined();
   });
 });

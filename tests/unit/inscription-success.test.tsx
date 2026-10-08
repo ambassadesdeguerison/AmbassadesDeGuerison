@@ -19,7 +19,7 @@ describe('InscriptionSuccess', () => {
   it('non connecté : renvoie vers /auth et invite à se connecter', () => {
     render(<InscriptionSuccess email="jean@example.com" connected={false} />);
 
-    expect(screen.getByText(/appuyez sur le bouton dans ce message pour vous connecter/i)).toBeTruthy();
+    expect(screen.getByText(/connectez-vous avec cette adresse pour continuer/i)).toBeTruthy();
     expect(screen.getByRole('link', { name: /me connecter pour continuer/i }).getAttribute('href')).toBe('/auth');
   });
 

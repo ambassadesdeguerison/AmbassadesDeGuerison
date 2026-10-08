@@ -8,8 +8,9 @@ interface Props {
 }
 
 // Écran affiché après l'envoi du formulaire « Devenir ambassadeur ».
-// Déjà connecté (même adresse) : on enchaîne directement sur l'espace ambassadeur.
-// Sinon : l'e-mail reçu contient le lien de connexion, ou on renvoie vers /auth.
+// Connecté (même adresse) : on enchaîne directement sur l'espace ambassadeur. Le formulaire ouvre
+// cette session lui-même juste après l'envoi (jeton remis par POST /api/inscriptions, cf CLAUDE.md).
+// Sinon (jeton absent ou refusé) : on renvoie vers /auth.
 export default function InscriptionSuccess({ email, connected }: Props) {
   return (
     <div className="max-w-lg mx-auto text-center py-16">
@@ -29,7 +30,7 @@ export default function InscriptionSuccess({ email, connected }: Props) {
             Nous venons d&apos;écrire à <span className="font-medium text-slate-700">{email}</span>.
           </p>
           <p className="text-slate-500 text-sm max-w-sm mx-auto">
-            Appuyez sur le bouton dans ce message pour vous connecter et continuer : courte vidéo de formation,
+            Connectez-vous avec cette adresse pour continuer : courte vidéo de formation,
             engagement, puis votre présentation.
           </p>
         </>
