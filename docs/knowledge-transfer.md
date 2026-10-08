@@ -257,6 +257,58 @@ Différence avec `/dev/emails` : `/dev/emails` affiche les templates avec des do
 
 ---
 
+## Vidéos de présentation — pCloud
+
+Les vidéos des candidats sont stockées dans un compte pCloud dédié (dossiers `/Presentations/année/mois`, fichiers `prenom-nom-date-heure-idcourt.ext`). Seule l'équipe les voit, depuis `/admin/ambassadeurs` ou directement dans pCloud. Tant que le jeton n'est pas configuré, l'app retombe sur le bucket Supabase `ambassador-videos` (50 Mo max) — rien ne casse.
+
+### Les 4 valeurs nécessaires
+
+| Variable | D'où elle vient | Rôle |
+|----------|-----------------|------|
+| `PCLOUD_CLIENT_ID` | « App key » de l'application pCloud | Identifie l'application (sert uniquement à obtenir le jeton) |
+| `PCLOUD_CLIENT_SECRET` | « App secret » de l'application pCloud | Idem — secret |
+| `PCLOUD_ACCESS_TOKEN` | Généré par `node scripts/pcloud-token.js` | Autorise le serveur à écrire dans le compte. **Secret, serveur uniquement**, n'expire pas |
+| `PCLOUD_API_HOST` | Généré par le même script | `eapi.pcloud.com` (compte Europe) ou `api.pcloud.com` (États-Unis). Le jeton n'est valable que sur le serveur de son compte |
+
+C'est la présence de `PCLOUD_ACCESS_TOKEN` + `PCLOUD_API_HOST` qui active pCloud.
+
+### Les obtenir (à faire une seule fois)
+
+1. **Créer le compte pCloud dédié** (pas le compte personnel de quelqu'un).
+2. **Déclarer une application** sur https://docs.pcloud.com/my_apps/ (« Request new application »). Valeurs : type « Other » ; accès aux dossiers **Private** (l'app n'accède qu'à son propre dossier) ; écriture **Yes** ; site `https://ambassades-guerison.vercel.app` ; utilisateurs attendus `1` ; raison : stockage privé de vidéos de présentation pour une petite équipe d'admins. pCloud valide à la main, sans délai annoncé. Une fois acceptée, l'**App key** et l'**App secret** apparaissent dans « My applications ».
+3. **Mettre l'App key et l'App secret** dans `.env.local` (`PCLOUD_CLIENT_ID`, `PCLOUD_CLIENT_SECRET`). Jamais dans le dépôt : `.env*` est ignoré par git.
+4. **Obtenir le jeton** :
+   ```bash
+   node scripts/pcloud-token.js              # affiche une adresse à ouvrir (connecté au compte dédié)
+   node scripts/pcloud-token.js "<code>"     # échange le code affiché contre le jeton
+   ```
+   Le code est à usage unique et expire vite. Le script détecte le serveur (Europe/États-Unis) et écrit `PCLOUD_ACCESS_TOKEN` et `PCLOUD_API_HOST` dans `.env.local`.
+5. **Copier ces deux valeurs dans Vercel** (sans quoi la production reste sur Supabase) :
+   ```bash
+   vercel env add PCLOUD_ACCESS_TOKEN production
+   vercel env add PCLOUD_API_HOST production
+   ```
+   puis redéployer (les variables ne sont lues qu'au déploiement).
+
+`PCLOUD_CLIENT_ID` / `PCLOUD_CLIENT_SECRET` ne servent qu'à l'étape 4 ; Vercel n'en a pas besoin en fonctionnement.
+
+### Comment l'envoi fonctionne (et pourquoi)
+
+Le navigateur envoie la vidéo **par morceaux de 3 Mo à nos routes** (`PUT /api/ambassadeur/video`), qui les transmettent à pCloud (`upload_create` → `upload_write` → `upload_save`, `lib/video/pcloud.ts`). Deux raisons, vérifiées : pCloud refuse les « liens d'envoi » (`createuploadlink`) avec un jeton OAuth (« Log in required »), et exposer le jeton au navigateur donnerait à tout candidat l'accès à toutes les vidéos. Le jeton ne doit donc **jamais** atteindre le client. En base, `intro_video_path` vaut `pcloud:<fileid>`.
+
+### Révoquer / remplacer le jeton
+
+Révoquer l'application dans https://docs.pcloud.com/my_apps/ (ou changer le mot de passe du compte) invalide le jeton. Pour en générer un nouveau : relancer l'étape 4, mettre à jour Vercel, redéployer. Les vidéos déjà stockées restent lisibles (elles sont référencées par leur `fileid`).
+
+### Si l'envoi échoue
+
+Chercher dans les logs serveur (terminal `npm run dev`, ou Vercel Logs) la ligne `[video] pCloud …` : elle donne le code d'erreur pCloud.
+- `result 1000` / « Log in required » : jeton absent, révoqué ou mauvais serveur (`PCLOUD_API_HOST`).
+- `result 2000` : jeton invalide. Relancer `pcloud-token.js`.
+- « La vidéo est arrivée incomplète » : un morceau s'est perdu, le candidat doit réessayer.
+
+---
+
 ## GitHub Actions (automatisations)
 
 ### supabase-keepalive.yml

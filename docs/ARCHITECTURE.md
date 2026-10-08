@@ -710,6 +710,9 @@ Utilisé dans :
 | `EMAIL_PREVIEW` | Server uniquement | Active `/dev/emails` (doit valoir exactement `"true"`) |
 | `USE_MAILHOG` | Server uniquement | `"true"` route tous les envois (`lib/email/send.ts`) vers Mailhog (SMTP local) au lieu de Resend — test des vrais flux applicatifs sans dépendre d'adresses e-mail réelles |
 | `MAILHOG_SMTP_HOST` / `MAILHOG_SMTP_PORT` | Server uniquement | Hôte/port du conteneur Mailhog (défaut : `localhost:1025`) |
+| `PCLOUD_CLIENT_ID` / `PCLOUD_CLIENT_SECRET` | Local uniquement | App key / App secret pCloud — servent seulement à obtenir le jeton (`scripts/pcloud-token.js`) |
+| `PCLOUD_ACCESS_TOKEN` | Server uniquement | Jeton pCloud (secret, n'expire pas) — active le stockage des vidéos sur pCloud ; absent = repli sur le bucket Supabase |
+| `PCLOUD_API_HOST` | Server uniquement | `eapi.pcloud.com` (Europe) ou `api.pcloud.com` (États-Unis) — celui du compte |
 | `NODE_ENV` | Server + Build | `development` active le DevOverlay et `/api/dev/*` |
 
 ---
