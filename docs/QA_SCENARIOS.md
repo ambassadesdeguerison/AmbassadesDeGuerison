@@ -667,7 +667,7 @@ npm run test:e2e
 - [ ] Un profil `pending_review` accédant à `/dashboard/questionnaire` → message "Ce questionnaire n'est accessible que pour les candidats pré-approuvés" + lien retour
 - [ ] Un profil `validated` accédant → même message de blocage
 - [ ] Un profil `pre_approved` → le formulaire s'affiche complet
-- [ ] Quatre sections repliables (seule « Formations et livres » est ouverte au départ) ; l'en-tête de chacune indique « N à remplir » ou « Complété »
+- [ ] Quatre sections repliables (seule « Formations suivies et livres lus » est ouverte au départ) ; l'en-tête de chacune indique « N à remplir » ou « Complété »
 - [ ] **Formations et livres** : liste déroulante avec recherche (formations d'abord, puis livres), cases « J'ai assisté à une conférence de David Théry » et « D'autres livres ou formations m'ont marqué » sous la liste ; cocher « autres » affiche « Quels autres livres ou formations vous ont marqué ? », le décocher efface la saisie
 - [ ] **Pratique ecclésiale** : fréquentation d'église (3 options), dénomination (non exigée si « Je ne fréquente pas une église »), fonction de responsabilité oui/non (« Laquelle ? » si oui)
 - [ ] **Parcours personnel** : « guérisons vues » oui/non, vidéo de présentation (VideoAsk) ; le champ « parcours spirituel » n'apparaît qu'en secours (problème caméra/enregistrement/envoi, ou lien « Un souci avec la vidéo ? »)

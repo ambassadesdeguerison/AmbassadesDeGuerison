@@ -45,6 +45,15 @@ describe('sanitizeQuestionnaire', () => {
     expect(sanitizeQuestionnaire({ leadership_role: '   ' })).toEqual({ leadership_role: null });
   });
 
+  it('message d’accueil : nettoyé, plafonné à 240 caractères, vide → null', () => {
+    expect(sanitizeQuestionnaire({ presentation_message: '  Bienvenue  ' })).toEqual({ presentation_message: 'Bienvenue' });
+    expect(sanitizeQuestionnaire({ presentation_message: 'a'.repeat(300) }).presentation_message).toHaveLength(240);
+    expect(sanitizeQuestionnaire({ presentation_message: '   ' })).toEqual({ presentation_message: null });
+    expect(sanitizeQuestionnaire({ live_screen: '  Télévision ' })).toEqual({ live_screen: 'Télévision' });
+    expect(sanitizeQuestionnaire({ live_screen: 'a'.repeat(300) }).live_screen).toHaveLength(200);
+    expect(sanitizeQuestionnaire({ live_screen: '  ' })).toEqual({ live_screen: null });
+  });
+
   it('corps invalide → aucune mise à jour', () => {
     expect(sanitizeQuestionnaire(null)).toEqual({});
     expect(sanitizeQuestionnaire('x')).toEqual({});

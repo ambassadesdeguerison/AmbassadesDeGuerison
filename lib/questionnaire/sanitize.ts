@@ -5,6 +5,9 @@
 
 import { BOOK_SLUGS, TRAINING_SLUGS } from './catalog';
 
+export const PRESENTATION_MESSAGE_MAX = 240;
+export const LIVE_SCREEN_MAX = 200;
+
 function cleanSlugs(value: unknown, allowed: ReadonlySet<string>): string[] {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.filter((v): v is string => typeof v === 'string' && allowed.has(v)))];
@@ -31,6 +34,13 @@ export function sanitizeQuestionnaire(body: unknown): Record<string, unknown> {
   for (const field of ['church_attendance', 'denomination', 'parcours_spirituel', 'livres_lus'] as const) {
     if (typeof b[field] === 'string') updates[field] = b[field];
   }
+
+  // Texte public (popup de la carte) : même plafond que `PATCH /api/ambassadeur/profile`.
+  if (typeof b.presentation_message === 'string') {
+    updates.presentation_message = b.presentation_message.trim().slice(0, PRESENTATION_MESSAGE_MAX) || null;
+  }
+
+  if (typeof b.live_screen === 'string') updates.live_screen = b.live_screen.trim().slice(0, LIVE_SCREEN_MAX) || null;
 
   if (typeof b.leadership_role === 'string') updates.leadership_role = b.leadership_role.trim() || null;
   // Répondre « non » efface la fonction saisie plus tôt (sinon elle resterait affichée à l'admin).

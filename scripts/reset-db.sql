@@ -75,6 +75,7 @@ CREATE TABLE host_profiles (
   lng_precise            DOUBLE PRECISION,
   quartier               TEXT        DEFAULT NULL,
   presentation_message   TEXT        DEFAULT NULL CHECK (char_length(presentation_message) <= 240),
+  live_screen            TEXT,
   is_women_only          BOOLEAN     NOT NULL DEFAULT FALSE,
   geocoding_failed       BOOLEAN     DEFAULT FALSE,
   address_private        TEXT,

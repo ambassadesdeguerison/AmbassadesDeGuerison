@@ -7,6 +7,8 @@ const COMPLETE: QuestionnaireAnswers = {
   has_leadership_role: false,
   leadership_role: '',
   has_seen_healings: true,
+  presentation_message: 'Bienvenue chez nous !',
+  live_screen: 'Télévision',
 };
 const PHOTOS_OK = { hasProfilePhoto: true, roomPhotoCount: 1 };
 
@@ -22,13 +24,15 @@ describe('missingFields', () => {
       has_leadership_role: null,
       leadership_role: '',
       has_seen_healings: null,
+      presentation_message: '',
+      live_screen: '',
     };
     const missing = missingFields(empty, { hasProfilePhoto: false, roomPhotoCount: 0 });
     const bySection = missingBySection(missing);
 
     expect(bySection.pratique).toHaveLength(3);
     expect(bySection.parcours).toHaveLength(1);
-    expect(bySection.photos).toHaveLength(2);
+    expect(bySection.photos).toHaveLength(4); // photo de profil, message d’accueil, photo du lieu, écran du live
     expect(bySection.formations).toHaveLength(0); // la liste formations et livres est facultative
   });
 
@@ -54,6 +58,24 @@ describe('missingFields', () => {
   });
 });
 
+describe('message d’accueil', () => {
+  it('obligatoire : vide, espaces ou null le signalent, dans la section photos', () => {
+    for (const v of ['', '   ', null]) {
+      const missing = missingFields({ ...COMPLETE, presentation_message: v }, PHOTOS_OK);
+      expect(missing).toEqual([{ section: 'photos', label: 'votre message d’accueil' }]);
+    }
+  });
+});
+
+describe('écran du live', () => {
+  it('obligatoire : vide, espaces ou null le signalent, dans la section photos', () => {
+    for (const v of ['', '   ', null]) {
+      const missing = missingFields({ ...COMPLETE, live_screen: v }, PHOTOS_OK);
+      expect(missing).toEqual([{ section: 'photos', label: 'ce sur quoi vous regarderez le live' }]);
+    }
+  });
+});
+
 describe('joinLabels', () => {
   it('formate « a, b et c »', () => {
     expect(joinLabels([])).toBe('');
@@ -71,6 +93,8 @@ describe('missingFields — valeurs nulles', () => {
       has_leadership_role: true,
       leadership_role: null,
       has_seen_healings: null,
+      presentation_message: null,
+      live_screen: null,
     };
     const labels = missingFields(nulls, PHOTOS_OK).map((m) => m.label);
     expect(labels).toContain('la fréquentation d\u2019une église');

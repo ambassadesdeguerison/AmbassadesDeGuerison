@@ -21,7 +21,7 @@ export async function PATCH(req: NextRequest) {
   const { data: profile } = await supabase
     .from('host_profiles')
     .select(
-      'id, status, first_name, profile_photo_url, room_photo_urls, church_attendance, denomination, has_leadership_role, leadership_role, has_seen_healings'
+      'id, status, first_name, profile_photo_url, room_photo_urls, church_attendance, denomination, has_leadership_role, leadership_role, has_seen_healings, presentation_message, live_screen'
     )
     .eq('user_id', user.id)
     .maybeSingle();
@@ -67,6 +67,8 @@ export async function PATCH(req: NextRequest) {
       has_leadership_role: profile.has_leadership_role ?? null,
       leadership_role: profile.leadership_role ?? '',
       has_seen_healings: profile.has_seen_healings ?? null,
+      presentation_message: profile.presentation_message ?? '',
+      live_screen: profile.live_screen ?? '',
       ...updates,
     } as QuestionnaireAnswers;
     const missing = missingFields(answers, { hasProfilePhoto: true, roomPhotoCount: profile.room_photo_urls.length })

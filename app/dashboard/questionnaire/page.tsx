@@ -12,6 +12,7 @@ import VideoAsk from '@/components/ui/VideoAsk';
 import CheckboxCombobox, { type ComboGroup } from '@/components/ui/CheckboxCombobox';
 import CollapsibleSection from '@/components/ui/CollapsibleSection';
 import { BOOKS, TRAININGS } from '@/lib/questionnaire/catalog';
+import { PRESENTATION_MESSAGE_MAX } from '@/lib/questionnaire/sanitize';
 import {
   missingFields,
   missingBySection,
@@ -46,6 +47,8 @@ type FormState = {
   has_seen_healings: boolean | null;
   has_leadership_role: boolean | null;
   leadership_role: string;
+  presentation_message: string; // public : popup de la carte, à côté de la photo de profil
+  live_screen: string; // appareil sur lequel le live sera regardé (aide David à juger si la demande est réaliste)
 };
 
 const EMPTY_FORM: FormState = {
@@ -59,6 +62,8 @@ const EMPTY_FORM: FormState = {
   has_seen_healings: null,
   has_leadership_role: null,
   leadership_role: '',
+  presentation_message: '',
+  live_screen: '',
 };
 
 export default function QuestionnairePage() {
@@ -116,7 +121,7 @@ export default function QuestionnairePage() {
       const { data: profile } = await supabase
         .from('host_profiles')
         .select(
-          'id, status, profile_photo_url, room_photo_urls, healing_challenge_done, conferences_assistees, church_attendance, denomination, parcours_spirituel, livres_lus, books_read, trainings_done, has_seen_healings, has_leadership_role, leadership_role, intro_video_path'
+          'id, status, profile_photo_url, room_photo_urls, healing_challenge_done, conferences_assistees, church_attendance, denomination, parcours_spirituel, livres_lus, books_read, trainings_done, has_seen_healings, has_leadership_role, leadership_role, presentation_message, live_screen, intro_video_path'
         )
         .eq('user_id', user.id)
         .maybeSingle();
@@ -140,6 +145,8 @@ export default function QuestionnairePage() {
         has_seen_healings: profile.has_seen_healings ?? null,
         has_leadership_role: profile.has_leadership_role ?? null,
         leadership_role: profile.leadership_role ?? '',
+        presentation_message: profile.presentation_message ?? '',
+        live_screen: profile.live_screen ?? '',
       });
       setOtherChecked(Boolean(profile.livres_lus));
       setShowWritten(Boolean(profile.parcours_spirituel));
@@ -433,13 +440,13 @@ export default function QuestionnairePage() {
 
             {/* Formations et livres : non bloquant à l'envoi (cf completeness.ts), mais jamais présenté comme facultatif à l'écran */}
             <CollapsibleSection
-              title="Formations et livres"
+              title="Formations suivies et livres lus"
               sectionId="section-formations"
               open={openSections.formations}
               onToggle={() => toggleSection('formations')}
             >
               <CheckboxCombobox
-                label="Formations et livres"
+                label="Formations suivies et livres lus"
                 groups={LIBRARY_GROUPS}
                 selected={librarySelection}
                 onChange={onLibraryChange}
@@ -489,7 +496,7 @@ export default function QuestionnairePage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Dénomination ou courant">
+              <Field label="Dénomination ou famille d’église">
                 <input
                   type="text"
                   value={form.denomination}
@@ -509,7 +516,7 @@ export default function QuestionnairePage() {
                     type="text"
                     value={form.leadership_role}
                     onChange={(e) => set('leadership_role', e.target.value)}
-                    placeholder="Ex : responsable d'un groupe de maison, diacre, pasteur…"
+                    placeholder="Ex : responsable d'un groupe de maison, diacre, pasteur, prêtre…"
                     className={inputCls}
                   />
                 </Field>
@@ -525,7 +532,7 @@ export default function QuestionnairePage() {
               remaining={missingIn.parcours.length}
             >
               <YesNoField
-                label="Avez-vous déjà vu des personnes guéries lors d'une prière ?"
+                label="Avez-vous déjà vu des personnes guéries suite à votre prière ?"
                 value={form.has_seen_healings}
                 onChange={(v) => set('has_seen_healings', v)}
               />
@@ -560,7 +567,7 @@ export default function QuestionnairePage() {
 
             {/* Photos de l'ambassade */}
             <CollapsibleSection
-              title="Photos de votre ambassade"
+              title="Photos et message d’accueil"
               sectionId="section-photos"
               open={openSections.photos}
               onToggle={() => toggleSection('photos')}
@@ -601,6 +608,29 @@ export default function QuestionnairePage() {
                     label="Ajouter ma photo de profil"
                   />
                 )}
+              </div>
+
+              {/* Message d'accueil : public, affiché sur la carte à côté de la photo de profil */}
+              <div className="space-y-1.5">
+                <label htmlFor="presentation-message" className="text-xs font-medium text-slate-600 uppercase tracking-wide">
+                  Votre message d&apos;accueil
+                </label>
+                <p className="text-xs text-slate-500">
+                  Une ou deux phrases, affichées sur la carte à côté de votre photo. Dites qui vous êtes et
+                  ce que les visiteurs vivront chez vous.
+                </p>
+                <textarea
+                  id="presentation-message"
+                  value={form.presentation_message}
+                  onChange={(e) => set('presentation_message', e.target.value.slice(0, PRESENTATION_MESSAGE_MAX))}
+                  rows={3}
+                  maxLength={PRESENTATION_MESSAGE_MAX}
+                  placeholder="Ex. : Je m'appelle Marie, maman de trois enfants. Chez nous, c'est simple et chaleureux : on prie ensemble avant le live autour d'un café."
+                  className={inputCls}
+                />
+                <p className="text-xs text-slate-500">
+                  {form.presentation_message.length}/{PRESENTATION_MESSAGE_MAX}
+                </p>
               </div>
 
               {/* Photos du lieu (au moins une, max 5) */}
@@ -647,6 +677,16 @@ export default function QuestionnairePage() {
                   )
                 )}
               </div>
+
+              <Field label="Sur quoi allez-vous regarder le live ?">
+                <input
+                  type="text"
+                  value={form.live_screen}
+                  onChange={(e) => set('live_screen', e.target.value)}
+                  placeholder="Ex : télévision, ordinateur, vidéoprojecteur…"
+                  className={inputCls}
+                />
+              </Field>
             </CollapsibleSection>
 
             {error && (

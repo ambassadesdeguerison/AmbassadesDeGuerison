@@ -17,6 +17,10 @@ export type QuestionnaireAnswers = {
   has_leadership_role: boolean | null;
   leadership_role: string | null;
   has_seen_healings: boolean | null;
+  /** Texte public affiché sur la carte, à côté de la photo de profil. */
+  presentation_message: string | null;
+  /** Appareil sur lequel le live sera regardé : aide David à juger si la demande est réaliste. */
+  live_screen: string | null;
 };
 
 export type PhotoStatus = { hasProfilePhoto: boolean; roomPhotoCount: number };
@@ -28,7 +32,7 @@ export function missingFields(answers: QuestionnaireAnswers, photos: PhotoStatus
     missing.push({ section: 'pratique', label: 'la fréquentation d’une église' });
   }
   if (answers.church_attendance !== 'none' && !(answers.denomination ?? '').trim()) {
-    missing.push({ section: 'pratique', label: 'la dénomination' });
+    missing.push({ section: 'pratique', label: 'la dénomination ou famille d’église' });
   }
   if (answers.has_leadership_role === null) {
     missing.push({ section: 'pratique', label: 'votre fonction de responsabilité (oui ou non)' });
@@ -41,7 +45,13 @@ export function missingFields(answers: QuestionnaireAnswers, photos: PhotoStatus
   }
 
   if (!photos.hasProfilePhoto) missing.push({ section: 'photos', label: 'la photo de profil' });
+  if (!(answers.presentation_message ?? '').trim()) {
+    missing.push({ section: 'photos', label: 'votre message d’accueil' });
+  }
   if (photos.roomPhotoCount === 0) missing.push({ section: 'photos', label: 'une photo du lieu d’accueil' });
+  if (!(answers.live_screen ?? '').trim()) {
+    missing.push({ section: 'photos', label: 'ce sur quoi vous regarderez le live' });
+  }
 
   return missing;
 }

@@ -18,7 +18,7 @@ async function getAmbassadeurs(page: number, q: string, status: string) {
   let query = supabase
     .from('host_profiles')
     .select(
-      'id, first_name, last_name, email, city, country, host_type, status, capacity, created_at, phone, healing_challenge_done, conferences_assistees, church_attendance, denomination, parcours_spirituel, livres_lus, books_read, trainings_done, has_seen_healings, has_leadership_role, leadership_role, intro_video_path, intro_video_mime, profile_photo_url, room_photo_urls, is_women_only',
+      'id, first_name, last_name, email, city, country, host_type, status, capacity, created_at, phone, healing_challenge_done, conferences_assistees, church_attendance, denomination, parcours_spirituel, livres_lus, books_read, trainings_done, has_seen_healings, has_leadership_role, leadership_role, live_screen, intro_video_path, intro_video_mime, profile_photo_url, room_photo_urls, is_women_only',
       { count: 'exact' }
     );
 

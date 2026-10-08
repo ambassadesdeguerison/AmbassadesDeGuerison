@@ -32,6 +32,7 @@ interface Ambassadeur {
   has_seen_healings: boolean | null;
   has_leadership_role: boolean | null;
   leadership_role: string | null;
+  live_screen?: string | null;
   intro_video_path: string | null;
   intro_video_mime: string | null;
   intro_video_play_url: string | null;
@@ -236,6 +237,12 @@ export function QuestionnairPanel({ a }: { a: Ambassadeur }) {
         <div className="text-xs">
           <p className="text-slate-500 mb-0.5">Téléphone</p>
           <p className="text-slate-700">{a.phone}</p>
+        </div>
+      )}
+      {a.live_screen && (
+        <div className="text-xs">
+          <p className="text-slate-500 mb-0.5">Regardera le live sur</p>
+          <p className="text-slate-700">{a.live_screen}</p>
         </div>
       )}
     </div>

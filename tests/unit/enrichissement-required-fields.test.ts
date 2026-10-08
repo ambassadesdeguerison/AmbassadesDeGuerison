@@ -22,6 +22,7 @@ const STORED_COMPLETE = {
   has_leadership_role: false,
   leadership_role: null,
   has_seen_healings: true,
+  live_screen: 'Télévision',
 };
 
 async function call(stored: Record<string, unknown>, body: Record<string, unknown>) {
