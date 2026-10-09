@@ -24,6 +24,9 @@ interface Props<T extends string> {
   // Position sticky de la barre en desktop, sous l'en-tête de la page. Classe Tailwind littérale
   // (ex : `sm:top-[52px]`) pour que Tailwind la voie dans le code source.
   desktopTopClassName?: string;
+  // Largeur et centrage des onglets en desktop, pour les aligner sur la colonne de contenu de la page
+  // (ex : `sm:w-[min(100%_-_2rem,32rem)] sm:mx-auto`). Par défaut, collés à gauche.
+  desktopAlignClassName?: string;
 }
 
 export const tabButtonId = (prefix: string, id: string) => `${prefix}-tab-${id}`;
@@ -39,6 +42,7 @@ export default function TabNav<T extends string>({
   ariaLabel,
   idPrefix,
   desktopTopClassName = 'sm:top-[52px]',
+  desktopAlignClassName = '',
 }: Props<T>) {
   const buttonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -64,7 +68,7 @@ export default function TabNav<T extends string>({
       className={`fixed bottom-0 left-0 right-0 z-30 flex bg-white border-t border-slate-100 sm:bottom-auto sm:left-auto sm:right-auto sm:sticky ${desktopTopClassName} sm:z-20 sm:border-t-0 sm:border-b sm:gap-1 sm:px-1`}
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div role="tablist" className="flex flex-1 sm:flex-none sm:gap-1">
+      <div role="tablist" className={`flex flex-1 sm:flex-none sm:gap-1 ${desktopAlignClassName}`}>
         {tabs.map(({ id, label, icon: Icon, badge, badgeLabel }, index) => {
           const isActive = activeTab === id;
           const count = badge ?? 0;

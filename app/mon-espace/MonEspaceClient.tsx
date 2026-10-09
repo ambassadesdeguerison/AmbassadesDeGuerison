@@ -115,7 +115,8 @@ export default function MonEspaceClient({ testimonial }: { testimonial: Featured
         onTabChange={changeTab}
         ariaLabel="Navigation de mon espace"
         idPrefix={TABS_ID}
-        desktopTopClassName="sm:top-[58px]"
+        desktopTopClassName="sm:top-[65px]"
+        desktopAlignClassName="sm:w-[min(100%_-_2rem,32rem)] sm:mx-auto"
       />
       <main className="flex-1 bg-slate-50 px-4 py-8 pb-24 sm:pb-8">
         <div className="max-w-lg mx-auto">
