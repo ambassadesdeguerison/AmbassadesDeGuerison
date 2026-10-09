@@ -32,7 +32,7 @@ const NAV: { href: string; label: string; Icon: typeof Users; badgeKey?: 'ambass
   { href: '/admin/temoignages',   label: 'Témoignages',       Icon: MessageSquare,   badgeKey: 'temoignages' },
   // La sidebar disait « Signalements », la page « Retours post-live » — deux
   // noms pour le même écran, dont le contenu réel est mixte (audit 6.1).
-  { href: '/admin/feedback',      label: 'Retours post-live', Icon: AlertTriangle,   badgeKey: 'feedback' },
+  { href: '/admin/feedback',      label: 'Retours après le live', Icon: AlertTriangle,   badgeKey: 'feedback' },
   { href: '/admin/blacklist',     label: 'Blocages',          Icon: Ban             },
   { href: '/admin/team',          label: 'Équipe',            Icon: Shield          },
   { href: '/admin/settings',      label: 'Paramètres',        Icon: Settings        },

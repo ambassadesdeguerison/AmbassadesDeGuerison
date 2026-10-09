@@ -13,6 +13,7 @@ const COMPLET = {
   profile_photo_signed_url: 'https://signed/profil.webp',
   room_photo_signed_urls: ['https://signed/lieu1.webp'],
   parcours_spirituel: 'Un long parcours...',
+  intro_video_path: 'abc/intro.mp4',
 };
 
 describe('questionnaireGaps()', () => {
@@ -34,10 +35,19 @@ describe('questionnaireGaps()', () => {
   // Le cœur de la correction : le parcours spirituel n'empêche pas de valider.
   // Le compter comme un manque au même titre que les photos affichait
   // « 1 manquant » sur un dossier que l'API accepte sans broncher.
-  it('classe le parcours spirituel vide comme informatif, jamais bloquant', () => {
-    const gaps = questionnaireGaps({ ...COMPLET, parcours_spirituel: '' });
+  it('ni vidéo ni parcours écrit : informatif, jamais bloquant', () => {
+    const gaps = questionnaireGaps({ ...COMPLET, parcours_spirituel: '', intro_video_path: null });
     expect(gaps.blocking).toEqual([]);
-    expect(gaps.informational).toContain('parcours spirituel non renseigné');
+    expect(gaps.informational).toContain('ni vidéo de présentation ni parcours écrit');
+  });
+
+  // Questionnaire v2 : la vidéo remplace le parcours écrit, qui n'est plus qu'un secours.
+  it("la vidéo seule (sans parcours écrit) ne signale rien", () => {
+    expect(questionnaireGaps({ ...COMPLET, parcours_spirituel: null }).informational).toEqual([]);
+  });
+
+  it("le parcours écrit seul (vidéo en échec) ne signale rien non plus", () => {
+    expect(questionnaireGaps({ ...COMPLET, intro_video_path: null }).informational).toEqual([]);
   });
 
   it('accumule les deux photos manquantes (données créées hors flux API)', () => {
@@ -45,6 +55,7 @@ describe('questionnaireGaps()', () => {
       profile_photo_signed_url: null,
       room_photo_signed_urls: [],
       parcours_spirituel: null,
+      intro_video_path: null,
     });
     expect(gaps.blocking).toHaveLength(2);
     expect(gaps.informational).toHaveLength(1);
@@ -61,6 +72,7 @@ describe('questionnaireGaps()', () => {
           profile_photo_signed_url: photo,
           room_photo_signed_urls: room,
           parcours_spirituel: null,
+          intro_video_path: null,
         });
         expect(gaps.blocking.length === 0).toBe(isDossierComplet(photo, room));
       }

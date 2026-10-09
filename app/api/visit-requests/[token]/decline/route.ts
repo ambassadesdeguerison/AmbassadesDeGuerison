@@ -7,8 +7,10 @@ interface Props {
   params: Promise<{ token: string }>;
 }
 
-export async function POST(_req: NextRequest, { params }: Props) {
+export async function POST(req: NextRequest, { params }: Props) {
   const { token } = await params;
+  // « Ne plus accueillir cette personne » (true) ou « pas disponible cette fois » (absent/false).
+  const permanent = (await req.json().catch(() => null))?.permanent === true;
   const supabase = createServiceClient();
 
   const { data: contact } = await supabase
@@ -31,24 +33,30 @@ export async function POST(_req: NextRequest, { params }: Props) {
 
   const { error } = await supabase
     .from('contact_requests')
-    .update({ status: 'declined' })
+    .update({ status: 'declined', declined_permanently: permanent })
     .eq('id', contact.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // true = parti, false = devait partir et n'est pas parti, null = e-mails désactivés.
+  let emailSent: boolean | null = null;
   if (FEATURES.EMAIL_NOTIFICATIONS) {
+    emailSent = false;
     const ha = Array.isArray(contact.host_activations)
       ? contact.host_activations[0]
       : contact.host_activations;
     const host = Array.isArray(ha?.host_profiles) ? ha.host_profiles[0] : ha?.host_profiles;
     if (host) {
-      Promise.allSettled([
-        sendRefusVisite(contact.visitor_email, contact.visitor_first_name, host.first_name),
+      const [envoi] = await Promise.allSettled([
+        sendRefusVisite(contact.visitor_email, contact.visitor_first_name, host.first_name, permanent),
       ]);
+      emailSent = envoi.status === 'fulfilled';
+    } else {
+      console.error('[visit-requests/decline] e-mail visiteur non envoyé : hôte manquant', { contactId: contact.id });
     }
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, emailSent });
 }

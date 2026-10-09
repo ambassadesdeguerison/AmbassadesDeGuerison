@@ -12,7 +12,7 @@ export default function OfflinePage() {
         </div>
         <h1 className="text-xl font-semibold text-slate-800 mb-2">Pas de connexion</h1>
         <p className="text-slate-500 text-sm mb-2">
-          La carte des ambassades n'est pas disponible pour le moment.
+          La carte des ambassades n&apos;est pas disponible pour le moment.
         </p>
         <p className="text-xs text-slate-400 mb-6">
           Si vous avez déjà visité la carte, elle peut être disponible en cache.
@@ -25,7 +25,7 @@ export default function OfflinePage() {
             Réessayer
           </button>
           <Link href="/" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </Link>
         </div>
       </div>

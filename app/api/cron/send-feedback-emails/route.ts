@@ -58,10 +58,10 @@ export async function POST(req: NextRequest) {
 
     const activationIds = activations.map((a) => a.id);
 
-    const contacts = await fetchAllRows<{ id: string; visitor_email: string; visitor_first_name: string; action_token: string; host_activation_id: string }>(() =>
+    const contacts = await fetchAllRows<{ id: string; visitor_email: string; visitor_first_name: string; visitor_token: string; host_activation_id: string }>(() =>
       supabase
         .from('contact_requests')
-        .select('id, visitor_email, visitor_first_name, action_token, host_activation_id')
+        .select('id, visitor_email, visitor_first_name, visitor_token, host_activation_id')
         .eq('status', 'accepted')
         .in('host_activation_id', activationIds)
         .order('id', { ascending: true })
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
             c.visitor_email,
             c.visitor_first_name,
             event.title,
-            `${appUrl}/feedback/${c.action_token}`
+            `${appUrl}/feedback/${c.visitor_token}`
           )
         )
       );

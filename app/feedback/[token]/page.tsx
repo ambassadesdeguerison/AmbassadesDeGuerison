@@ -3,17 +3,21 @@ import { CheckCircle2 } from 'lucide-react';
 import { createServiceClient } from '@/lib/supabase/server';
 import { de } from '@/lib/elision';
 import AppHeader from '@/components/AppHeader';
+import BackToRequests, { cameFromMonEspace } from '@/components/visitor/BackToRequests';
 import FeedbackForm from './FeedbackForm';
 
 interface Props {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ from?: string | string[] }>;
 }
 
-export default async function FeedbackPage({ params }: Props) {
+export default async function FeedbackPage({ params, searchParams }: Props) {
   const { token } = await params;
+  const { from } = await searchParams;
   const supabase = createServiceClient();
 
-  // Le token identifie un contact_request (visiteur → hôte) ou un host_activation (hôte → visiteur)
+  // Le token est le `visitor_token` d'un contact_request (jamais `action_token`, réservé à l'hôte).
+  // Le feedback hôte → visiteur a sa propre page : /feedback/host/[token].
   const { data: contact } = await supabase
     .from('contact_requests')
     .select(`
@@ -25,7 +29,7 @@ export default async function FeedbackPage({ params }: Props) {
         host_profiles!inner(first_name)
       )
     `)
-    .eq('action_token', token)
+    .eq('visitor_token', token)
     .maybeSingle();
 
   if (!contact || contact.status !== 'accepted') notFound();
@@ -59,6 +63,8 @@ export default async function FeedbackPage({ params }: Props) {
       <AppHeader />
       <main className="bg-slate-50 px-4 py-5 flex-1">
         <div className="max-w-lg mx-auto space-y-4">
+          {cameFromMonEspace(from) && <BackToRequests />}
+
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Votre avis</p>
             <h1 className="text-lg font-semibold text-slate-800 mb-0.5">

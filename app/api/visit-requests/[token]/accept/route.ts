@@ -16,7 +16,7 @@ export async function POST(_req: NextRequest, { params }: Props) {
   const { data: contact } = await supabase
     .from('contact_requests')
     .select(`
-      id, status, visitor_first_name, visitor_email,
+      id, status, visitor_first_name, visitor_email, visitor_token,
       host_activations!inner(
         event_id,
         host_profiles!inner(
@@ -45,8 +45,12 @@ export async function POST(_req: NextRequest, { params }: Props) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Email au visiteur avec l'adresse
+  // Email au visiteur avec l'adresse. `emailSent` est remonté à l'écran de l'hôte
+  // pour qu'il sache si le visiteur a réellement reçu l'adresse :
+  // true = parti, false = devait partir et n'est pas parti, null = e-mails désactivés.
+  let emailSent: boolean | null = null;
   if (FEATURES.EMAIL_NOTIFICATIONS) {
+    emailSent = false;
     const ha = Array.isArray(contact.host_activations)
       ? contact.host_activations[0]
       : contact.host_activations;
@@ -54,10 +58,11 @@ export async function POST(_req: NextRequest, { params }: Props) {
     const event = Array.isArray(ha?.events) ? ha.events[0] : ha?.events;
 
     if (host && event) {
-      const contactEquipeUrl = `${process.env.NEXT_PUBLIC_APP_URL}/contact-equipe?token=${token}`;
+      // Cet e-mail part chez le visiteur : jamais `action_token` (jeton d'acceptation de l'hôte).
+      const contactEquipeUrl = `${process.env.NEXT_PUBLIC_APP_URL}/contact-equipe?token=${contact.visitor_token}`;
       const eventDate = formatEventDateDual(event.event_date);
 
-      Promise.allSettled([
+      const [envoi] = await Promise.allSettled([
         sendAcceptationVisite(
           contact.visitor_email,
           contact.visitor_first_name,
@@ -71,8 +76,11 @@ export async function POST(_req: NextRequest, { params }: Props) {
           host.whatsapp_group_url ?? null,
         ),
       ]);
+      emailSent = envoi.status === 'fulfilled';
+    } else {
+      console.error('[visit-requests/accept] e-mail visiteur non envoyé : données hôte ou live manquantes', { contactId: contact.id });
     }
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, emailSent });
 }

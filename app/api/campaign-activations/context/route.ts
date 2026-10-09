@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
+import { firstRow } from '@/lib/supabase/relation';
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token');
@@ -16,12 +17,8 @@ export async function GET(req: NextRequest) {
 
   if (!recipient) return NextResponse.json({ error: 'Introuvable' }, { status: 404 });
 
-  const campaign = Array.isArray(recipient.scheduled_campaigns)
-    ? recipient.scheduled_campaigns[0]
-    : recipient.scheduled_campaigns;
-  const event = campaign
-    ? (Array.isArray((campaign as any).events) ? (campaign as any).events[0] : (campaign as any).events)
-    : null;
+  const campaign = firstRow(recipient.scheduled_campaigns);
+  const event = firstRow(campaign?.events);
 
   if (!event) return NextResponse.json({ error: 'Événement introuvable' }, { status: 404 });
 

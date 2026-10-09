@@ -15,12 +15,17 @@ export async function PATCH(req: NextRequest) {
     'feedback_days_after',
     'queue_aging_days',
     'soon_threshold_days',
+    'max_requests_per_visitor_per_event',
   ] as const;
+  // Un plafond à 0 bloquerait toute demande de visite : minimum 1.
+  const MIN_VALUE: Partial<Record<(typeof fields)[number], number>> = {
+    max_requests_per_visitor_per_event: 1,
+  };
 
   const updates: Record<string, number> = {};
   for (const field of fields) {
     const v = parseInt(String(body[field]));
-    if (!isNaN(v) && v >= 0) updates[field] = v;
+    if (!isNaN(v) && v >= (MIN_VALUE[field] ?? 0)) updates[field] = v;
   }
 
   if (Object.keys(updates).length === 0) {

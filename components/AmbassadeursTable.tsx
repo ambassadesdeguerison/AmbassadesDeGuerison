@@ -2,9 +2,13 @@
 
 import React, { useState, useTransition, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronDown, ChevronUp, User, Flower2, X, ChevronLeft, ChevronRight, AlertCircle, Info } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronsUpDown, User, Flower2, X, ChevronLeft, ChevronRight, AlertCircle, Info } from 'lucide-react';
 import { apiCall } from '@/lib/admin/api-call';
+import { ambassadorActionFeedback, type CandidateEmail } from '@/lib/admin/ambassador-action-feedback';
+import { useToast } from '@/components/ui/Toast';
+import { PARCOURS_OPTIONS, nextSort, type SortKey, type SortDir, type ParcoursValue } from '@/lib/admin/ambassadeurs-query';
 import { questionnaireGaps, type QuestionnaireGaps } from '@/lib/admin/questionnaire-gaps';
+import { BOOKS, TRAININGS, labelsFor } from '@/lib/questionnaire/catalog';
 import ErrorMessage from '@/components/admin/ErrorMessage';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/admin/ConfirmDialog';
 
@@ -26,6 +30,16 @@ interface Ambassadeur {
   denomination: string | null;
   parcours_spirituel: string | null;
   livres_lus: string | null;
+  books_read: string[] | null;
+  trainings_done: string[] | null;
+  has_seen_healings: boolean | null;
+  has_leadership_role: boolean | null;
+  leadership_role: string | null;
+  live_screen?: string | null;
+  intro_video_path: string | null;
+  intro_video_mime: string | null;
+  intro_video_play_url: string | null;
+  intro_video_download_url: string | null;
   profile_photo_signed_url: string | null;
   room_photo_signed_urls: string[];
   is_women_only: boolean | null;
@@ -38,6 +52,9 @@ interface Props {
   pageSize: number;
   searchQ: string;
   filterStatus: string;
+  sort: SortKey;
+  dir: SortDir;
+  parcours: ParcoursValue[];
 }
 
 // Audit admin 2026-08-07 (2.6) : « Inscrit » et « Questionnaire » ne disaient
@@ -47,7 +64,7 @@ interface Props {
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   validated:          { label: 'Validé',                 className: 'bg-emerald-50 text-emerald-700' },
   pending_review:     { label: 'En attente du candidat', className: 'bg-amber-50 text-amber-700'    },
-  pre_approved:       { label: 'Questionnaire en cours', className: 'bg-blue-50 text-blue-700'      },
+  pre_approved:       { label: 'Présentation en cours', className: 'bg-blue-50 text-blue-700'      },
   enrichment_pending: { label: 'À valider',              className: 'bg-purple-50 text-purple-700'  },
   suspended:          { label: 'Suspendu',               className: 'bg-red-50 text-red-700'        },
   rejected:           { label: 'Refusé',                 className: 'bg-slate-100 text-slate-500'   },
@@ -59,11 +76,11 @@ const STATUS_LABELS: Record<string, { label: string; className: string }> = {
 // enrichment_pending est volontairement absent d'ici : Valider/Refuser vivent uniquement dans le
 // panneau déplié (sticky en bas), pour éviter de trancher sur un dossier photos/questionnaire non lu.
 const STATUS_ACTIONS: Record<string, { action: string; label: string; className: string }[]> = {
-  pending_review:     [{ action: 'rejected', label: 'Refuser', className: 'bg-slate-50 text-slate-600 hover:bg-slate-100' }],
-  pre_approved:       [{ action: 'rejected', label: 'Refuser', className: 'bg-slate-50 text-slate-600 hover:bg-slate-100' }],
+  pending_review:     [{ action: 'rejected', label: 'Refuser', className: 'bg-red-50 text-red-700 hover:bg-red-100' }],
+  pre_approved:       [{ action: 'rejected', label: 'Refuser', className: 'bg-red-50 text-red-700 hover:bg-red-100' }],
   validated:          [{ action: 'suspended',       label: 'Suspendre',          className: 'bg-red-50 text-red-700 hover:bg-red-100' }],
   suspended:          [{ action: 'reactiver',       label: 'Réactiver',          className: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' }],
-  rejected:           [{ action: 'reactiver',       label: 'Réintégrer',         className: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100' }],
+  rejected:           [{ action: 'reactiver',       label: 'Réintégrer',         className: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100' }],
 };
 
 const HOST_TYPE_LABELS: Record<string, string> = {
@@ -78,84 +95,160 @@ const CHURCH_ATTENDANCE_LABELS: Record<string, string> = {
 };
 
 const FILTERS = [
-  { value: 'all',                label: 'Tous'                  },
+  { value: 'all',                label: 'Tous les statuts'      },
   { value: 'enrichment_pending', label: 'À valider'             },
   { value: 'pending_review',     label: 'En attente du candidat' },
-  { value: 'pre_approved',       label: 'Questionnaire en cours' },
+  { value: 'pre_approved',       label: 'Présentation en cours' },
   { value: 'validated',          label: 'Validés'               },
   { value: 'suspended',          label: 'Suspendus'             },
   { value: 'rejected',           label: 'Refusés'               },
 ];
 
 // Signal pastoral : ce que Camille regarde en premier pour juger l'engagement spirituel du candidat.
-function PastoralSignals({ a }: { a: Ambassadeur }) {
+// Une absence est une information : « rien indiqué » et « non » s'affichent toujours, jamais un blanc
+// (l'écran du candidat ne présente pas la vidéo ni la liste comme facultatives, mais l'envoi les laisse passer).
+export function PastoralSignals({ a }: { a: Ambassadeur }) {
+  // Le Défi Guérison cochait autrefois une case dédiée (healing_challenge_done) : on le fusionne dans la liste.
+  const trainingSlugs = [...(a.trainings_done ?? [])];
+  if (a.healing_challenge_done && !trainingSlugs.includes('defi_guerison')) trainingSlugs.push('defi_guerison');
+  const trainingLabels = labelsFor(TRAININGS, trainingSlugs);
+  const bookLabels = labelsFor(BOOKS, a.books_read);
+  const nothingListed = trainingLabels.length === 0 && bookLabels.length === 0 && !a.conferences_assistees && !a.livres_lus;
+
   return (
     <div className="bg-indigo-50/60 border border-indigo-100 rounded-xl p-4">
       <p className="text-xs font-medium text-indigo-700 uppercase tracking-wide mb-3">Engagement spirituel</p>
-      <div className="flex gap-6 mb-3">
+
+      <div className="flex flex-wrap gap-x-6 gap-y-3 mb-3">
         <div>
-          <p className="text-slate-400 text-xs mb-0.5">Défi Guérison</p>
-          <p className={`text-sm font-medium ${a.healing_challenge_done ? 'text-emerald-700' : 'text-slate-500'}`}>
-            {a.healing_challenge_done ? 'Oui' : 'Non'}
+          <p className="text-slate-500 text-xs mb-0.5">Fréquentation église</p>
+          <p className="text-sm font-medium text-slate-700">
+            {a.church_attendance ? (CHURCH_ATTENDANCE_LABELS[a.church_attendance] ?? a.church_attendance) : 'Non renseigné'}
           </p>
         </div>
         <div>
-          <p className="text-slate-400 text-xs mb-0.5">Conférence DT</p>
-          <p className={`text-sm font-medium ${a.conferences_assistees ? 'text-emerald-700' : 'text-slate-500'}`}>
-            {a.conferences_assistees ? 'Oui' : 'Non'}
+          <p className="text-slate-500 text-xs mb-0.5">Dénomination</p>
+          <p className="text-sm font-medium text-slate-700">{a.denomination || 'Non renseigné'}</p>
+        </div>
+        <div>
+          <p className="text-slate-500 text-xs mb-0.5">Fonction de responsabilité</p>
+          <p className={`text-sm font-medium ${a.has_leadership_role ? 'text-emerald-700' : 'text-slate-600'}`}>
+            {a.has_leadership_role == null
+              ? 'Non renseigné'
+              : a.has_leadership_role
+                ? `Oui${a.leadership_role ? ` — ${a.leadership_role}` : ''}`
+                : 'Non'}
           </p>
         </div>
-        {a.church_attendance && (
-          <div>
-            <p className="text-slate-400 text-xs mb-0.5">Fréquentation église</p>
-            <p className="text-sm font-medium text-slate-700">
-              {CHURCH_ATTENDANCE_LABELS[a.church_attendance] ?? a.church_attendance}
-            </p>
-          </div>
+        <div>
+          <p className="text-slate-500 text-xs mb-0.5">A déjà vu des guérisons</p>
+          <p className={`text-sm font-medium ${a.has_seen_healings ? 'text-emerald-700' : 'text-slate-600'}`}>
+            {a.has_seen_healings == null ? 'Non renseigné' : a.has_seen_healings ? 'Oui' : 'Non'}
+          </p>
+        </div>
+      </div>
+
+      <div className="mb-3 space-y-2">
+        <p className="text-slate-500 text-xs">Formations, livres et conférence</p>
+        {nothingListed ? (
+          <p className="text-sm text-slate-600">Aucune indiquée</p>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-1.5">
+              {trainingLabels.map((l) => (
+                <span key={`t-${l}`} className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full">
+                  {l} (formation)
+                </span>
+              ))}
+              {a.conferences_assistees && (
+                <span className="bg-emerald-50 text-emerald-700 text-xs px-2 py-0.5 rounded-full">
+                  Conférence de David Théry
+                </span>
+              )}
+              {bookLabels.map((l) => (
+                <span key={`b-${l}`} className="bg-white border border-indigo-100 text-slate-700 text-xs px-2 py-0.5 rounded-full">
+                  {l}
+                </span>
+              ))}
+            </div>
+            {a.livres_lus && (
+              <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                <span className="text-slate-500 text-xs">Autres : </span>
+                {a.livres_lus}
+              </p>
+            )}
+          </>
         )}
       </div>
+
+      <div className="mb-3">
+        <p className="text-slate-500 text-xs mb-1">Vidéo de présentation</p>
+        {!a.intro_video_path ? (
+          <p className="text-sm text-slate-600">Non fournie</p>
+        ) : a.intro_video_play_url ? (
+          <>
+            <video controls preload="metadata" playsInline className="w-full max-w-md rounded-lg bg-slate-900">
+              <source src={a.intro_video_play_url} type={a.intro_video_mime ?? undefined} />
+            </video>
+            <p className="text-xs text-slate-500 mt-1.5">
+              La vidéo ne s&apos;affiche pas ?{' '}
+              <a href={a.intro_video_download_url ?? a.intro_video_play_url} download className="text-indigo-600 hover:underline">
+                Télécharger le fichier
+              </a>
+            </p>
+          </>
+        ) : (
+          <p className="text-xs text-red-600">Vidéo introuvable dans le stockage.</p>
+        )}
+      </div>
+
       {a.parcours_spirituel && (
-        <div className="mb-3">
-          <p className="text-slate-400 text-xs mb-0.5">Parcours spirituel</p>
-          <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.parcours_spirituel}</p>
-        </div>
-      )}
-      {a.livres_lus && (
         <div>
-          <p className="text-slate-400 text-xs mb-0.5">Livres / formations</p>
-          <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.livres_lus}</p>
+          <p className="text-slate-500 text-xs mb-0.5">Parcours écrit (en secours de la vidéo)</p>
+          <p className="text-sm text-slate-700 whitespace-pre-wrap">{a.parcours_spirituel}</p>
         </div>
       )}
     </div>
   );
 }
 
-function QuestionnairPanel({ a }: { a: Ambassadeur }) {
-  const hasQuestionnaire = a.parcours_spirituel || a.church_attendance || a.denomination || a.livres_lus || a.healing_challenge_done || a.conferences_assistees || a.phone;
+// Groupe réservé aux femmes : rose, comme sur la carte publique (pin et fiche). Affiché dans le dossier,
+// là où l'admin décide, et non seulement en petit badge à côté du nom.
+function WomenOnlyNotice() {
+  return (
+    <p className="inline-flex items-center gap-1.5 bg-pink-50 text-pink-700 text-xs font-medium px-2.5 py-1 rounded-lg border border-pink-100">
+      <Flower2 className="w-3.5 h-3.5" aria-hidden="true" />
+      Groupe réservé aux femmes
+    </p>
+  );
+}
+
+export function QuestionnairPanel({ a }: { a: Ambassadeur }) {
+  const hasQuestionnaire = a.parcours_spirituel || a.church_attendance || a.denomination || a.livres_lus || a.books_read?.length || a.trainings_done?.length || a.has_seen_healings != null || a.has_leadership_role != null || a.intro_video_path || a.healing_challenge_done || a.conferences_assistees || a.phone;
 
   if (!hasQuestionnaire) {
     return (
-      <p className="text-xs text-slate-400 italic">Questionnaire non encore rempli.</p>
+      <div className="space-y-3">
+        {a.is_women_only && <WomenOnlyNotice />}
+        <p className="text-xs text-slate-400 italic">Présentation pas encore remplie.</p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {a.is_women_only && <WomenOnlyNotice />}
       <PastoralSignals a={a} />
-      {(a.phone || a.denomination) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          {a.phone && (
-            <div>
-              <p className="text-slate-400 mb-0.5">Téléphone</p>
-              <p className="text-slate-700">{a.phone}</p>
-            </div>
-          )}
-          {a.denomination && (
-            <div>
-              <p className="text-slate-400 mb-0.5">Dénomination</p>
-              <p className="text-slate-700">{a.denomination}</p>
-            </div>
-          )}
+      {a.phone && (
+        <div className="text-xs">
+          <p className="text-slate-500 mb-0.5">Téléphone</p>
+          <p className="text-slate-700">{a.phone}</p>
+        </div>
+      )}
+      {a.live_screen && (
+        <div className="text-xs">
+          <p className="text-slate-500 mb-0.5">Regardera le live sur</p>
+          <p className="text-slate-700">{a.live_screen}</p>
         </div>
       )}
     </div>
@@ -184,7 +277,7 @@ function GapsBadge({ gaps }: { gaps: QuestionnaireGaps }) {
         className="inline-flex items-center gap-1 bg-slate-100 text-slate-500 text-[10px] font-medium px-1.5 py-0.5 rounded-full"
       >
         <Info className="w-2.5 h-2.5" />
-        Parcours non renseigné
+        Sans vidéo ni parcours
       </span>
     );
   }
@@ -282,7 +375,6 @@ function AmbassadeurCard({
   onAction,
   onOpenLightbox,
   error,
-  notice,
 }: {
   a: Ambassadeur;
   displayStatus: string;
@@ -292,7 +384,6 @@ function AmbassadeurCard({
   onAction: (action: string) => void;
   onOpenLightbox: (photos: { url: string; label: string }[], index: number) => void;
   error?: string;
-  notice?: string;
 }) {
   const s = STATUS_LABELS[displayStatus] ?? { label: displayStatus, className: 'bg-slate-50 text-slate-600' };
   const gaps = questionnaireGaps(a);
@@ -330,7 +421,7 @@ function AmbassadeurCard({
                 className="inline-flex items-center gap-1 bg-pink-50 text-pink-600 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-pink-100 shrink-0"
               >
                 <Flower2 className="w-2.5 h-2.5" />
-                Femmes
+                Femmes uniquement
               </span>
             )}
           </div>
@@ -392,7 +483,7 @@ function AmbassadeurCard({
           )}
 
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Questionnaire ambassadeur</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Présentation de l&apos;ambassadeur</p>
             <QuestionnairPanel a={a} />
           </div>
 
@@ -409,12 +500,12 @@ function AmbassadeurCard({
                   disabled={isLoading || gaps.blocking.length > 0}
                   className="px-4 py-2.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-colors font-medium"
                 >
-                  {isLoading ? '…' : 'Valider le questionnaire'}
+                  {isLoading ? '…' : 'Valider le dossier'}
                 </button>
                 <button
                   onClick={() => onAction('rejected')}
                   disabled={isLoading}
-                  className="px-4 py-2.5 bg-slate-100 text-slate-600 text-xs rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors font-medium"
+                  className="px-4 py-2.5 bg-red-50 text-red-700 text-xs rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors font-medium"
                 >
                   {isLoading ? '…' : 'Refuser'}
                 </button>
@@ -441,12 +532,42 @@ function AmbassadeurCard({
           )}
 
           {error && <ErrorMessage>{error}</ErrorMessage>}
-          {notice && (
-            <p className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-3 py-2 rounded-lg">{notice}</p>
-          )}
         </div>
       )}
     </div>
+  );
+}
+
+const SELECT_CLASS =
+  'border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent';
+
+// En-tête cliquable : un clic trie (puis inverse) via l'URL, la page serveur refait la requête.
+function SortHeader({
+  label, sortKey, sort, dir, onSort, className = '',
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortKey;
+  dir: SortDir;
+  onSort: (key: SortKey) => void;
+  className?: string;
+}) {
+  const active = sort === sortKey;
+  const Icon = !active ? ChevronsUpDown : dir === 'asc' ? ChevronUp : ChevronDown;
+  return (
+    <th
+      className={`text-left px-4 py-3 font-medium ${className}`}
+      aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wide hover:text-slate-700 transition-colors ${active ? 'text-slate-700' : ''}`}
+      >
+        {label}
+        <Icon className={`w-3 h-3 ${active ? '' : 'opacity-50'}`} />
+      </button>
+    </th>
   );
 }
 
@@ -457,8 +578,12 @@ export default function AmbassadeursTable({
   pageSize,
   searchQ,
   filterStatus,
+  sort,
+  dir,
+  parcours,
 }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
@@ -467,7 +592,6 @@ export default function AmbassadeursTable({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ photos: { url: string; label: string }[]; index: number } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [notices, setNotices] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
@@ -484,6 +608,11 @@ export default function AmbassadeursTable({
     });
   }
 
+  function handleSort(key: SortKey) {
+    const next = nextSort({ sort, dir }, key);
+    navigate({ sort: next.sort, dir: next.dir, page: '1' });
+  }
+
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
     navigate({ q: search, page: '1' });
@@ -492,11 +621,11 @@ export default function AmbassadeursTable({
   async function runAction(a: Ambassadeur, action: string) {
     setActionLoading(a.id);
     setErrors((e) => ({ ...e, [a.id]: '' }));
-    setNotices((n) => ({ ...n, [a.id]: '' }));
 
-    const res = await apiCall<{ status: string }>(`/api/admin/ambassadeurs/${a.id}/status`, {
-      body: { action },
-    });
+    const res = await apiCall<{ status: string; candidateEmail?: CandidateEmail }>(
+      `/api/admin/ambassadeurs/${a.id}/status`,
+      { body: { action } }
+    );
 
     if (res.ok) {
       setStatusOverrides((prev) => ({ ...prev, [a.id]: res.data.status }));
@@ -505,22 +634,29 @@ export default function AmbassadeursTable({
       // `router.refresh()` conserve l'URL — donc le filtre et la page.
       startTransition(() => router.refresh());
 
-      // Audit 2.4 : « Réactiver » a deux comportements silencieusement
-      // différents selon la complétude du dossier. L'admin s'attendait à
-      // remettre l'ambassadeur sur la carte et obtenait un statut « À valider »
-      // sans explication.
-      if (action === 'reactiver') {
-        setNotices((n) => ({
-          ...n,
-          [a.id]: res.data.status === 'validated'
-            ? `${a.first_name} est de nouveau visible sur la carte. Un e-mail de confirmation lui a été envoyé.`
-            : `Dossier incomplet : ${a.first_name} doit d'abord compléter son questionnaire (photos). Aucun e-mail envoyé.`,
-        }));
-      }
+      // La confirmation passe par une notification et non par un message collé à
+      // la ligne : après le rafraîchissement, une ligne validée quitte le filtre
+      // « À valider » et son message disparaissait avec elle. Elle dit aussi si
+      // l'e-mail est réellement parti, ce que la ligne ne montre pas.
+      //
+      // Audit 2.4 : « Réactiver » a deux comportements selon la complétude du
+      // dossier — l'admin s'attendait à remettre l'ambassadeur sur la carte et
+      // obtenait un statut « À valider » sans explication.
+      const { tone, title, description } = ambassadorActionFeedback({
+        action,
+        resultingStatus: res.data.status,
+        candidateEmail: res.data.candidateEmail ?? 'none',
+        firstName: a.first_name,
+        email: a.email,
+      });
+      toast[tone](title, { description });
     } else {
       // Audit 2.1 : l'échec était avalé. L'API refuse pourtant `validated` hors
       // `enrichment_pending` avec un message explicite qui n'était jamais montré.
+      // L'erreur reste près du bouton (elle ne disparaît pas d'elle-même) et une
+      // notification la signale aussi quand le panneau est replié.
       setErrors((e) => ({ ...e, [a.id]: res.error }));
+      toast.error("L'action n'a pas abouti", { description: res.error });
     }
     setActionLoading(null);
   }
@@ -535,7 +671,7 @@ export default function AmbassadeursTable({
     if (action === 'rejected') {
       setConfirm({
         title: `Refuser la candidature de ${name} ?`,
-        body: 'Le dossier passera au statut « Refusé ». Vous pourrez le réintégrer plus tard depuis le filtre « Refusés ».',
+        body: 'Le dossier passera au statut « Refusé ». Vous pourrez le réintégrer plus tard en filtrant le statut « Refusé ».',
         emailNotice: `Un e-mail de refus sera envoyé à ${a.email}. Cet envoi est immédiat et irréversible.`,
         confirmLabel: 'Refuser la candidature',
         onConfirm: async () => {
@@ -569,7 +705,7 @@ export default function AmbassadeursTable({
         title: `Réintégrer ${name} ?`,
         body: complete
           ? 'Le dossier est complet : l\'ambassade redeviendra visible sur la carte au prochain live.'
-          : 'Le dossier est incomplet (photos manquantes). Le candidat sera renvoyé vers son questionnaire, pas vers la carte.',
+          : 'Le dossier est incomplet (photos manquantes). Le candidat sera renvoyé vers sa présentation, pas vers la carte.',
         emailNotice: complete ? `Un e-mail de bienvenue sera envoyé à ${a.email}.` : undefined,
         tone: 'primary',
         confirmLabel: 'Réintégrer',
@@ -604,35 +740,52 @@ export default function AmbassadeursTable({
         </button>
       </form>
 
-      <div className="flex gap-2 flex-wrap">
-        {FILTERS.map((f) => (
+      <div className="flex gap-2 flex-wrap items-center">
+        <select
+          aria-label="Filtrer par statut"
+          value={filterStatus}
+          onChange={(e) => navigate({ status: e.target.value, page: '1' })}
+          className={SELECT_CLASS}
+        >
+          {FILTERS.map((f) => (
+            <option key={f.value} value={f.value}>{f.label}</option>
+          ))}
+        </select>
+        <details className="relative group">
+          <summary className={`${SELECT_CLASS} list-none cursor-pointer select-none flex items-center gap-2 [&::-webkit-details-marker]:hidden`}>
+            Parcours de guérison{parcours.length > 0 ? ` (${parcours.length})` : ''}
+            <ChevronDown className="w-3.5 h-3.5 text-slate-500 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="absolute z-20 mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-3 space-y-2">
+            <p className="text-[11px] text-slate-400">Affiche ceux qui correspondent à au moins une case cochée.</p>
+            {PARCOURS_OPTIONS.map((o) => (
+              <label key={o.value} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={parcours.includes(o.value)}
+                  onChange={(e) => {
+                    const next = e.target.checked ? [...parcours, o.value] : parcours.filter((v) => v !== o.value);
+                    navigate({ parcours: next.join(','), page: '1' });
+                  }}
+                />
+                {o.label}
+              </label>
+            ))}
+          </div>
+        </details>
+        {(filterStatus !== 'all' || parcours.length > 0 || searchQ) && (
           <button
-            key={f.value}
-            onClick={() => navigate({ status: f.value, page: '1' })}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filterStatus === f.value
-                ? 'bg-slate-800 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            }`}
+            type="button"
+            onClick={() => { setSearch(''); navigate({ status: 'all', parcours: '', q: '', page: '1' }); }}
+            className="text-xs text-slate-500 hover:text-slate-800 underline underline-offset-2"
           >
-            {f.label}
+            Réinitialiser
           </button>
-        ))}
+        )}
         <span className="ml-auto text-xs text-slate-400 self-center">
           {total} ambassadeur{total !== 1 ? 's' : ''}
         </span>
       </div>
-
-      {/* Audit 2.6 : un nouvel admin ne pouvait pas deviner quelles étapes du
-          pipeline demandent une action de sa part et lesquelles avancent seules. */}
-      <p className="flex items-start gap-2 text-xs text-slate-500 bg-slate-100/70 px-3 py-2 rounded-lg">
-        <Info className="w-3.5 h-3.5 mt-px shrink-0 text-slate-400" />
-        <span>
-          Le candidat avance seul jusqu'au statut <strong className="font-medium">« À valider »</strong> : il accepte
-          les conditions, puis remplit son questionnaire. C'est à ce moment seulement que vous examinez son dossier et
-          décidez.
-        </span>
-      </p>
 
       {initial.length === 0 ? (
         <p className="text-sm text-slate-400 py-8 text-center">Aucun ambassadeur dans cette catégorie.</p>
@@ -653,7 +806,6 @@ export default function AmbassadeursTable({
                   onToggleExpand={() => setExpandedId(expandedId === a.id ? null : a.id)}
                   onAction={(action) => handleAction(a, action)}
                   error={errors[a.id]}
-                  notice={notices[a.id]}
                   onOpenLightbox={(photos, index) => setLightbox({ photos, index })}
                 />
               );
@@ -666,9 +818,9 @@ export default function AmbassadeursTable({
               <thead>
                 <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
                   <th className="text-left px-4 py-3 font-medium w-6"></th>
-                  <th className="text-left px-4 py-3 font-medium">Nom</th>
-                  <th className="text-left px-4 py-3 font-medium">E-mail</th>
-                  <th className="text-left px-4 py-3 font-medium">Ville / Pays</th>
+                  <SortHeader label="Nom" sortKey="nom" sort={sort} dir={dir} onSort={handleSort} />
+                  <SortHeader label="E-mail" sortKey="email" sort={sort} dir={dir} onSort={handleSort} />
+                  <SortHeader label="Ville / Pays" sortKey="ville" sort={sort} dir={dir} onSort={handleSort} />
                   {/* Type, capacité et date d'inscription restent lisibles dans
                       le panneau déplié — les masquer sous 1280px garde la
                       colonne « Action » à l'écran sans scroll horizontal
@@ -677,7 +829,7 @@ export default function AmbassadeursTable({
                   <th className="text-left px-4 py-3 font-medium hidden xl:table-cell">Type</th>
                   <th className="text-left px-4 py-3 font-medium hidden xl:table-cell">Cap.</th>
                   <th className="text-left px-4 py-3 font-medium">Statut</th>
-                  <th className="text-left px-4 py-3 font-medium hidden xl:table-cell">Inscription</th>
+                  <SortHeader label="Inscription" sortKey="inscription" sort={sort} dir={dir} onSort={handleSort} className="hidden xl:table-cell" />
                   <th className="text-left px-4 py-3 font-medium">Action</th>
                 </tr>
               </thead>
@@ -721,7 +873,7 @@ export default function AmbassadeursTable({
                                 className="inline-flex items-center gap-1 bg-pink-50 text-pink-600 text-[10px] font-semibold px-1.5 py-0.5 rounded border border-pink-100"
                               >
                                 <Flower2 className="w-2.5 h-2.5" />
-                                Femmes
+                                Femmes uniquement
                               </span>
                             )}
                           </div>
@@ -771,15 +923,10 @@ export default function AmbassadeursTable({
                       {/* Une action de ligne (Suspendre, Réintégrer) peut échouer
                           sans que le panneau soit déplié — l'erreur doit rester
                           visible dans ce cas aussi (audit 2.1). */}
-                      {!isExpanded && (errors[a.id] || notices[a.id]) && (
+                      {!isExpanded && errors[a.id] && (
                         <tr>
                           <td colSpan={9} className="px-4 pb-3 bg-slate-50/60">
-                            {errors[a.id] && <ErrorMessage>{errors[a.id]}</ErrorMessage>}
-                            {notices[a.id] && (
-                              <p className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-3 py-2 rounded-lg">
-                                {notices[a.id]}
-                              </p>
-                            )}
+                            <ErrorMessage>{errors[a.id]}</ErrorMessage>
                           </td>
                         </tr>
                       )}
@@ -823,7 +970,7 @@ export default function AmbassadeursTable({
                                 );
                               })()}
                               <div>
-                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Questionnaire ambassadeur</p>
+                                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-3">Présentation de l&apos;ambassadeur</p>
                                 <QuestionnairPanel a={a} />
                               </div>
                               {displayStatus === 'enrichment_pending' && (
@@ -839,12 +986,12 @@ export default function AmbassadeursTable({
                                       disabled={isLoading || gaps.blocking.length > 0}
                                       className="px-4 py-2 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 disabled:opacity-40 transition-colors font-medium"
                                     >
-                                      {isLoading ? '…' : 'Valider le questionnaire'}
+                                      {isLoading ? '…' : 'Valider le dossier'}
                                     </button>
                                     <button
                                       onClick={() => handleAction(a, 'rejected')}
                                       disabled={isLoading}
-                                      className="px-4 py-2 bg-slate-100 text-slate-600 text-xs rounded-lg hover:bg-slate-200 disabled:opacity-50 transition-colors font-medium"
+                                      className="px-4 py-2 bg-red-50 text-red-700 text-xs rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors font-medium"
                                     >
                                       {isLoading ? '…' : 'Refuser'}
                                     </button>
@@ -854,11 +1001,6 @@ export default function AmbassadeursTable({
                               )}
 
                               {errors[a.id] && <ErrorMessage>{errors[a.id]}</ErrorMessage>}
-                              {notices[a.id] && (
-                                <p className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-3 py-2 rounded-lg">
-                                  {notices[a.id]}
-                                </p>
-                              )}
                             </div>
                           </td>
                         </tr>

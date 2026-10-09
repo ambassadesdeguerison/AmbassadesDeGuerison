@@ -136,10 +136,17 @@ pendant une panne.
 Pipeline self-service jusqu'au questionnaire — l'admin n'intervient qu'à la fin, sur un dossier complet.
 
 ```
-/inscription
-  │  POST /api/inscriptions
+/inscription — étape 0 : confirmer son adresse e-mail AVANT le formulaire
+  │  POST /api/inscriptions/verify-email → lien /inscription?verify=<jeton signé> (HMAC, 24 h,
+  │  sans état : lib/auth/email-proof.ts). Aucun compte ni profil n'existe à ce stade.
+  │  Le lien ouvre le formulaire avec l'adresse verrouillée (GET /api/inscriptions/verify-email
+  │  valide le jeton). Sans cette étape, n'importe qui inscrivait l'adresse d'un tiers (profil
+  │  rattaché à son compte, rôle d'un compte visiteur existant basculé en « host »).
+  │  POST /api/inscriptions (exige `email_proof` valide pour cette adresse, sinon 403 `email_not_verified`)
   │  → status = 'pending_review'
-  │  → email sendRegistrationConfirmation
+  │  → réponse `login: { token_hash, type }` (adresse déjà prouvée) que le navigateur échange contre une
+  │    session (`verifyOtp`) : exception documentée à « jamais de token_hash dans une réponse », cf CLAUDE.md
+  │  → email sendRegistrationConfirmation (bouton → /dashboard ; le jeton unique est consommé par le navigateur)
   ▼
 /dashboard (encart pending_review : vidéo + PDF + checkbox CGU + bouton)
   │  candidat regarde la vidéo, télécharge le guide, accepte les conditions
@@ -153,9 +160,14 @@ Pipeline self-service jusqu'au questionnaire — l'admin n'intervient qu'à la f
   │   - Photos du lieu : requise (au moins 1), max 5 (paths dans room_photo_urls[])
   │  Suppression d'une photo : DELETE /api/upload/ambassador-photo
   │   (ownership check par préfixe profile.id/)
-  │  PATCH /api/ambassadeur/enrichissement
+  │  Réponses enregistrées en brouillon (PATCH …/enrichissement avec draft:true), sans changer le statut
+  │  Vidéo facultative : POST/PATCH /api/ambassadeur/video (bucket privé ambassador-videos, envoi direct par URL signée)
+  │  PATCH /api/ambassadeur/enrichissement (envoi final)
   │  → status = 'enrichment_pending'
-  │  → garde : refuse si profile_photo_url null
+  │  → garde : refuse si photo de profil / photo du lieu manquante, ou si une réponse obligatoire manque
+  │    (fréquentation, dénomination ou famille d'église sauf « sans église », fonction de responsabilité, guérisons vues,
+  │    message d'accueil, `live_screen` = « sur quoi regarderez-vous le live »)
+  │    — la vidéo, la liste formations/livres et le parcours écrit ne bloquent pas
   │  → email sendEnrichissementRecu (notification admin)
   ▼
 /admin/ambassadeurs (revue du dossier complet)
@@ -208,9 +220,16 @@ Carte publique — le pin apparaît
   ▼
 Pendant le live — visiteur contacte un hôte
   │  POST /api/contact-requests (ou /api/visit-requests)
-  │  → email contact-received-host (hôte notifié + lien /accueillir/[token] + lien /refuser/[token])
+  │  → email contact-received-host (hôte notifié : prénom, e-mail, message + lien /accueillir/[token] + lien /refuser/[token] — sans téléphone)
+  │  (deux jetons par demande : `action_token` = hôte seul, `visitor_token` = visiteur — `/accept` n'a pas
+  │   d'authentification, donc `action_token` ne quitte jamais l'hôte ; cf CLAUDE.md § Modération anti-abus)
   │  → hôte accepte via /accueillir/[token] → email acceptation-visite (adresse + email + WhatsApp de l'hôte)
   │     ou hôte refuse via /refuser/[token] → email refus-visite (visiteur redirigé vers la carte)
+     (deux refus possibles, composant `DeclineChoice` : « Pas disponible cette fois » → la personne peut redemander
+      pour un autre live ; « Ne plus accueillir cette personne » → `contact_requests.declined_permanently = TRUE`,
+      plus aucune demande de ce visiteur chez cette ambassade, tous lives confondus — `lib/visitor/declined-by-host.ts`,
+      403 dans POST /api/visit-requests. Le second demande une confirmation et n'a pas de recours dans l'app :
+      si c'était une erreur, l'équipe repasse `declined_permanently` à FALSE en base.)
   │
   ▼
 Après le live
@@ -257,11 +276,16 @@ POST /api/visitor/account (rate-limité 3/min, revalide la classification)
   │  → insert visitor_profiles (user_id, first_name, email, phone, photo_url)
   │     photo optionnelle : bucket privé `visitor-photos`, compressée WebP, validée
   │     par magic bytes (sharp), jamais bloquante en cas d'échec de traitement
-  │  → generateLink({ type: 'magiclink' }) — un seul token, réutilisé pour :
-  │     (a) bootstrap immédiat de la session navigateur (redirect direct)
-  │     (b) l'e-mail de confirmation (sendVisitorCompteCree, best-effort)
+  │  → generateLink({ type: 'magiclink' }) puis sendVisitorCompteCree (attendu, 502 si
+  │     l'envoi échoue). Le jeton n'est JAMAIS renvoyé au navigateur : la session ne
+  │     s'ouvre que par le clic sur ce lien (vérification réelle de l'adresse — sinon
+  │     n'importe qui créerait un compte avec l'e-mail d'un tiers).
   ▼
-Redirect /auth/confirm?token_hash=...&type=magiclink&redirect=<page d'origine>
+Écran « Regardez votre boîte mail » (/mon-espace/creer) — bouton « Renvoyer le lien »
+  │  (POST /api/auth/magic-link, qui transmet aussi `redirect`)
+  ▼
+Clic sur /auth/confirm?token_hash=...&type=<type du jeton>&redirect=<page d'origine>
+  │  (construit par buildConfirmUrl ; `redirect` filtré par lib/auth/safe-redirect.ts)
   │  → /auth/confirm route sur user_metadata.role : admin → /admin/stats,
   │     visitor → page d'origine (ou /mon-espace), sinon → /dashboard
   ▼
@@ -269,9 +293,28 @@ Formulaire de demande de visite pré-rempli ("Connecté avec {email}", nb person
 message, consentement notifications) → POST /api/visit-requests
   │  Exige une session visiteur authentifiée (401 sinon) — prénom/email/téléphone
   │  viennent de visitor_profiles, jamais du body de la requête
+  │  Plafond : au plus `max_requests_per_visitor_per_event` demandes en cours (pending +
+  │  accepted, 3 par défaut) par visiteur et par live, sinon 429. Une demande refusée ou
+  │  sans réponse libère sa place. Réglable dans /admin/settings/timing
+  │  (event_timing_config, lib/visitor/request-limit.ts)
   ▼
-/mon-espace — espace minimal (email, téléphone éditable, photo de profil éditable, déconnexion)
-  │  PAS un dashboard complet — juste assez pour ne pas retaper ses infos
+/mon-espace — 3 onglets (`TabNav`, onglet actif dans l'URL : `?onglet=demandes|profil|guide`, « Demandes » par défaut)
+  │  • Demandes (`components/MesDemandes.tsx`, `GET /api/visitor/requests`) : « En cours » (live à venir,
+  │    en attente ou acceptée, le live le plus proche d'abord) puis « Historique (N) » replié, « Voir plus »
+  │    par 5. Tri dans `lib/visitor/group-requests.ts` (live terminé = `closed_at` OU fenêtre
+  │    `NEXT_PUBLIC_LIVE_SIGNAL_WINDOW_HOURS` écoulée). Action par carte : « Suivre ma demande » /
+  │    « Voir les détails » → `/visitor/[token]`, « Donner mon avis » → `/feedback/[token]` (acceptée, live
+  │    passé), « Chercher une autre ambassade » → `/`. Une demande restée « en attente » après son live
+  │    s'affiche « Sans réponse ». Badge de l'onglet = demandes en attente d'un live à venir.
+  │    La réponse renvoie `visitor_token` (jeton du visiteur, aucun pouvoir d'acceptation) mais jamais
+  │    `action_token` (jeton de l'hôte) ; `declined_permanently` apparaît comme un refus ordinaire.
+  │    Dates affichées dans le fuseau du navigateur (`formatLiveDate` + `useBrowserTimezone`).
+  │  • Profil (`components/visitor/ProfilTab.tsx`) : e-mail, téléphone éditable, photo, déconnexion.
+  │  • Guide (`components/decouvrir/DecouvrirContent.tsx`, partagé avec la page publique `/decouvrir`) :
+  │    comment se passe une visite, FAQ, témoignage vedette. `app/mon-espace/page.tsx` est un Server
+  │    Component (revalidate 60) qui charge le témoignage et le passe à `MonEspaceClient`.
+  │  Les trois panneaux restent montés (`hidden`) : saisie du téléphone, FAQ et historique ne se perdent pas.
+  │  PAS un dashboard complet — juste assez pour ne pas retaper ses infos et suivre ses demandes
 ```
 
 **Photo de profil visiteur.** Distincte des photos ambassadeur (`ambassador-photos`) :
@@ -304,6 +347,45 @@ de proximité. `lat_precise`/`lng_precise` viennent de l'adresse complète saisi
 `AddressInput` (Nominatim `mode=address`), **jamais publics**, utilisés uniquement par
 `/api/distance` pour le calcul de proximité.
 
+### Jitter décoratif carte publique — `lib/geo/jitter.ts`
+
+Ajouté 2026-09-27 (retour David, discussion `/office-hours`). Problème observé : le
+geocodage se fait au niveau **ville**, pas adresse — plusieurs ambassadeurs d'une même
+ville obtiennent des `lat`/`lng` strictement identiques (le seed en donne un exemple
+volontaire : 6 ambassadeurs Paris à `48.8698, 2.3315` pile). Résultat, ils s'empilaient
+au même pixel sur la carte publique, à n'importe quel niveau de zoom — un artefact de
+base de données visible en démo, pas juste un cas limite théorique.
+
+`GET /api/host-activations` applique désormais `jitterCoordinates(lat, lng, host_id)` à
+chaque pin avant de le renvoyer : décalage pseudo-aléatoire mais **déterministe** (haché
+sur `host_id`, jamais recalculé à la volée), rayon 250m par défaut, échantillonné en
+`r = R·√u` pour une répartition visuellement uniforme dans le disque plutôt que
+concentrée près du centre. Stable entre deux refresh de la carte (`MapPublique.tsx`
+poll toutes les 5s) — un jitter qui bougerait à chaque appel ferait "sauter" les pins,
+pire que le problème d'origine.
+
+**Décision explicitement écartée : dériver le jitter de `lat_precise`/`lng_precise`
+(façon Airbnb — flouter l'adresse réelle plutôt que la ville).** Ça résoudrait le même
+problème visuel de façon "plus vraie", mais un second avis obtenu pendant la session
+`/office-hours` a identifié une faille concrète pour cette app spécifiquement : publier
+un point public ancré (même flouté à 500m-1km) sur la vraie adresse transformerait
+`/api/distance` — déjà un oracle de triangulation contre les vraies coordonnées,
+mitigé par le rate-limit (8 req/min/IP) et l'arrondi au km — en oracle de **raffinement
+local** : au lieu de chercher à l'aveugle sur toute une ville, un attaquant reçoit
+gratuitement (sans consommer le rate-limit) une zone de recherche réduite à 500m-1km,
+ce qui réduit le nombre de requêtes nécessaires d'un ou deux ordres de grandeur et rend
+l'attaque moins détectable. Aggravé par le fait que le public de l'app inclut des hôtes
+en zone rurale/périurbaine (Réunion, Afrique francophone, petites villes) où un rayon de
+flou de 500m peut ne laisser que 5-20 bâtiments candidats — bien en-deçà de la densité
+qui protège ce type de technique dans une grande ville dense.
+
+Le jitter décoratif (`lib/geo/jitter.ts`) évite ce risque par construction : il ne
+dérive **jamais** de `lat_precise`/`lng_precise`, donc ne peut ancrer aucune attaque
+contre `/api/distance`. Contrepartie assumée : le pin jitteré ne correspond à rien de
+réel, c'est un habillage visuel pur — `quartier` (label texte) et "Trier par distance"
+(popup de cluster, calcul serveur) restent les seuls signaux de proximité réels sur la
+carte publique.
+
 ---
 
 ## Routes API — carte des domaines
@@ -313,7 +395,7 @@ de proximité. `lat_precise`/`lng_precise` viennent de l'adresse complète saisi
 | `/api/host-activations` | Pins carte publique | Non (lecture publique) |
 | `/api/visit-requests` | Visiteur → hôte — route unique de création (l'ancienne `/api/contact-requests` a été supprimée, code mort). Exige une session visiteur authentifiée depuis Phase 3 PR3 (401 sinon) | Session visiteur |
 | `/api/distance` | Distance visiteur ↔ ambassadeurs (Haversine, arrondi au km) | Non (rate-limité 8 req/min/IP) |
-| `/api/visitor/account` | Création de compte visiteur (`/mon-espace/creer`) — bootstrap magic link immédiat | Non (rate-limité 3 req/min/IP) |
+| `/api/visitor/account` | Création de compte visiteur (`/mon-espace/creer`) — la session s'ouvre au clic sur le lien e-mail | Non (rate-limité 3 req/min/IP) |
 | `/api/visitor/check-email` | Classification email au blur (`new`/`visitor_existing`/`collision`) | Non (rate-limité 10 req/min/IP) |
 | `/api/visitor/profile` | Lecture/édition du profil visiteur réutilisable (`visitor_profiles`) — GET retourne aussi `photo_signed_url` (signée côté serveur) | Session visiteur |
 | `/api/upload/visitor-photo` | Upload/suppression de la photo de profil visiteur (bucket `visitor-photos`), depuis `/mon-espace` | Session visiteur |
@@ -321,7 +403,8 @@ de proximité. `lat_precise`/`lng_precise` viennent de l'adresse complète saisi
 | `/api/temoignages` | Soumission témoignage public | Non |
 | `/api/testimonials` | Lecture/modération témoignages | Admin |
 | `/api/live-signals` | Signaux live depuis dashboard hôte | Session hôte |
-| `/api/inscriptions` | Création profil ambassadeur | Non |
+| `/api/inscriptions` | Création profil ambassadeur — exige une preuve d'e-mail (`email_proof`) | Non (preuve e-mail) |
+| `/api/inscriptions/verify-email` | Envoi du lien de confirmation d'adresse (POST, 3/min/IP) et validation du jeton (GET) — avant tout compte | Non |
 | `/api/onboarding/complete` | Self-service : pending_review → pre_approved (CGU acceptées) | Session candidat |
 | `/api/onboarding/config` | Config vidéo + PDF onboarding | Public (lecture) / Admin (écriture) |
 | `/api/ambassadeur/enrichissement` | Enrichissement profil (questionnaire) | Session hôte |
@@ -386,6 +469,31 @@ contact actif pour un contact/prospect), déclarées en constantes en tête de
 n'existe. Écart à combler avant un lancement public : soit un cron de purge, soit
 une révision du texte.
 
+### Règle : le téléphone du visiteur n'est montré à l'hôte qu'après acceptation
+
+Corrigé 2026-10-01. Avant, le numéro partait à l'hôte dès l'envoi de la demande
+(e-mail `contact-received-host` + dashboard, même pour une demande refusée), alors
+que la légende de `/mon-espace/creer` disait « s'il accepte votre demande » — un
+écart entre finalité annoncée et traitement réel.
+
+Désormais : l'e-mail de notification ne contient plus le numéro, et
+`app/dashboard/page.tsx` n'affiche « Tél : » que si `status === 'accepted'`.
+`/feedback/host/[token]` lit `visitor_phone` mais filtre déjà sur `status = 'accepted'`
+(le numéro sert à bloquer un visiteur, voir ci-dessous).
+
+**Pourquoi le numéro reste obligatoire.** Il ne sert pas à discuter avant
+l'acceptation, mais à deux choses : joindre le visiteur le jour du live (l'hôte
+a l'e-mail/WhatsApp du visiteur dans l'autre sens seulement après acceptation), et
+**faire respecter la blacklist** (`POST /api/visit-requests` compare e-mail *ou*
+téléphone — une adresse e-mail se recrée en secondes, un numéro beaucoup moins
+facilement). Sans lui, un visiteur bloqué reviendrait avec une autre adresse.
+Légendes et `/confidentialite` disent ces deux usages en français simple.
+
+⚠️ **Masquage côté affichage seulement.** Le dashboard lit `contact_requests` avec la
+clé anon (RLS) : `visitor_phone` reste dans la réponse réseau pour les demandes en
+attente. Un vrai blocage demanderait une route serveur qui ne renvoie le numéro
+qu'aux demandes acceptées.
+
 ### Lien vers /confidentialite depuis la homepage
 
 Corrigé 2026-08-08 : le lien n'existait auparavant que sur `/mon-espace/creer`,
@@ -434,7 +542,7 @@ sensible (génère un lien admin pour n'importe quel email) — sans secret, 403
 variable d'environnement n'est pas exactement `"true"` (la chaîne `"false"` est truthy
 en JS — le guard utilise `=== 'true'`).
 
-**Photos hôtes — bucket privé.** Le bucket Supabase `ambassador-photos` est `public: false`. Les colonnes `profile_photo_url` et `room_photo_urls` dans `host_profiles` stockent un *chemin* Supabase Storage, pas une URL publique. Lire via `lib/storage/photo-url.ts` : `getOwnerPhotoUrl(path)` pour l'ambassadeur lui-même (signed URL courte), `getAdminPhotoUrl(path)` pour la fiche admin. Jamais exposées sur la carte publique ni les pages `/ambassade/[id]`. Photo dans le popup carte : `getPublicMapPhotoUrls()` (signed URLs 24h, cache en mémoire) — uniquement pour les hôtes actifs, jamais l'adresse.
+**Photos hôtes — bucket privé.** Le bucket Supabase `ambassador-photos` est `public: false`. Les colonnes `profile_photo_url` et `room_photo_urls` dans `host_profiles` stockent un *chemin* Supabase Storage, pas une URL publique. Lire via `lib/storage/photo-url.ts` : `getOwnerPhotoUrl(path)` pour l'ambassadeur lui-même (signed URL courte), `getAdminPhotoUrl(path)` pour la fiche admin. Les **photos du lieu** ne sont jamais exposées (carte publique, `/ambassade/[id]`). La **photo de profil** est, elle, assumée publique une fois l'ambassade active (petit avatar dans les popups de la carte, via `getPublicMapPhotoUrls`) — le texte du questionnaire, du dashboard et de `/confidentialite` le dit explicitement (corrigé 2026-09-30 : il affirmait « vue uniquement par David », ce qui était faux). Photo dans le popup carte : `getPublicMapPhotoUrls()` (signed URLs 24h, cache en mémoire) — uniquement pour les hôtes actifs, jamais l'adresse.
 
 **`/api/auth/magic-link` rate-limité** (3 req/min/IP, `proxy.ts`) — génère un lien de connexion admin pour n'importe quel email ; sans rate-limit, un attaquant pourrait épuiser la quota Resend ou sonder l'existence de comptes.
 
@@ -451,14 +559,17 @@ en JS — le guard utilise `=== 'true'`).
 | `MapPublique` | Client Component (`dynamic`, `ssr:false`) | Leaflet + fetch `/api/host-activations` |
 | `EventBanner` | Client Component | Countdown en temps réel (`setInterval`) |
 | `DevOverlay` | Client Component | État local + mutations via `fetch` |
+| `ToastProvider` / `useToast` | Client Component | Notifications de confirmation, montées dans `app/layout.tsx` (survivent à `router.refresh()`). Les routes qui envoient un e-mail l'attendent et remontent `candidateEmail` / `emailSent` — voir CLAUDE.md § Notifications |
 | `app/admin/*` | Server Components + Client Components mixtes | Données init en SSR, interactions en client |
 | `TemoignageCard` | Client Component | "Lire la suite" (expand/collapse état local) |
 | `MissionDuMoment` | Client Component | Carte contextuelle prioritaire — 5 états selon live/demandes/agenda ; `null` si calme |
 | `StatusTimeline` | Client Component | Stepper 4-étapes — **uniquement pour non-validés** (`pending_review`, `pre_approved`, `enrichment_pending`). Revérifie `profilePhotoUrl`/`roomPhotoUrls` avant d'afficher l'étape "Profil enrichi" comme atteinte — un `status='enrichment_pending'` sans dossier complet (possible seulement via donnée créée hors du flux API, ex. script/test) retombe visuellement sur l'étape précédente plutôt que d'afficher un faux "en cours d'examen" (trouvé 2026-08-07, cf `app/dashboard/page.tsx` où l'encart "Ton dossier est en cours d'examen" applique la même garde). |
-| `DashboardTabs` | Client Component | Navigation `/dashboard` par onglets (Accueil/Demandes/Profil/Formation) — **uniquement pour validés**, bottom tabs mobile + tabs sticky desktop. Badge compteur sur "Demandes". Onboarding reste linéaire (pas d'onglets). |
+| `TabNav` | Client Component | Barre d'onglets générique (`components/ui/TabNav.tsx`) : bottom tabs mobile + tabs sticky desktop, `role="tablist"`/`tab`, flèches/Début/Fin au clavier, badge compteur ambre. Utilisée par `DashboardTabs` et `/mon-espace`. Les panneaux portent `role="tabpanel"` avec `tabPanelId`/`tabButtonId`. |
+| `DashboardTabs` | Client Component | Enveloppe de `TabNav` pour `/dashboard` (Accueil/Demandes/Profil/Formation) — **uniquement pour validés**. Badge compteur sur "Demandes". Onboarding reste linéaire (pas d'onglets). L'onglet actif reste un état local (pas dans l'URL, contrairement à `/mon-espace`). |
+| `DecouvrirContent` | Server-compatible | Contenu de « Votre première visite » (réassurance, étapes, FAQ, témoignage, CTA), partagé par `/decouvrir` et l'onglet « Guide » de `/mon-espace`. Le témoignage vient de `lib/decouvrir/featured-testimonial.ts`. |
 | `MesInfosSection` | Client Component | Formulaire édition profil (ville + adresse précise + consignes + tel) |
 | `AddressInput` | Client Component | Autocomplétion Nominatim `mode=address` — calqué sur `CityInput` |
-| `FaqAccordion` | Client Component | Accordéon accessible (`<button aria-expanded>`), état local d'ouverture |
+| `FaqAccordion` | Client Component | Accordéon accessible (`<button aria-expanded>`), état local d'ouverture, ids via `useId()` (présent sur `/decouvrir` et dans `/mon-espace`) |
 
 **Polling** : `MapPublique` et `AdminFeed` refetchent toutes les 5 secondes.
 Pas de WebSocket — Supabase Realtime ajouterait de la complexité pour un usage
@@ -612,9 +723,20 @@ Utilisé dans :
 | `NEXT_PUBLIC_LIVE_SIGNAL_WINDOW_HOURS` | Client + Server | Fenêtre "live en cours" (défaut : 4h) |
 | `NEXT_PUBLIC_ADMIN_TZ_OFFSET` | Client | Offset UTC pour l'admin planning (La Réunion = +4) |
 | `CRON_SECRET` | Server uniquement | Authentification des jobs Vercel Cron |
+| `RESEND_REPLY_TO` | Server uniquement | Adresse des réponses aux e-mails (en-tête Reply-To posé dans `lib/email/send.ts`) ; facultative |
+| `RESEND_ADMIN_EMAIL` | Server uniquement | Destinataire des alertes admin (candidature, questionnaire, 0 hôte actif) |
+| `EMAIL_PROOF_SECRET` | Server uniquement | Signature de la preuve d'e-mail (inscription) et des billets d'envoi vidéo ; repli sur `SUPABASE_SERVICE_ROLE_KEY` |
+| `NEXT_PUBLIC_YOUTUBE_CHANNEL_URL` | Client | Lien du bandeau « live en cours » (facultatif) |
+| `LIVE_WINDOW_PAST_HOURS` / `LIVE_WINDOW_FUTURE_HOURS` | Server uniquement | Fenêtre du feed admin (voir plus bas) |
+| `DEV_OVERLAY_SECRET` | Server uniquement | Secret exigé par `/api/dev/*` quand le DevOverlay est actif en production |
+
+Liste complète, valeurs et ordre de mise en place : [`mise-en-service.md`](./mise-en-service.md).
 | `EMAIL_PREVIEW` | Server uniquement | Active `/dev/emails` (doit valoir exactement `"true"`) |
 | `USE_MAILHOG` | Server uniquement | `"true"` route tous les envois (`lib/email/send.ts`) vers Mailhog (SMTP local) au lieu de Resend — test des vrais flux applicatifs sans dépendre d'adresses e-mail réelles |
 | `MAILHOG_SMTP_HOST` / `MAILHOG_SMTP_PORT` | Server uniquement | Hôte/port du conteneur Mailhog (défaut : `localhost:1025`) |
+| `PCLOUD_CLIENT_ID` / `PCLOUD_CLIENT_SECRET` | Local uniquement | App key / App secret pCloud — servent seulement à obtenir le jeton (`scripts/pcloud-token.js`) |
+| `PCLOUD_ACCESS_TOKEN` | Server uniquement | Jeton pCloud (secret, n'expire pas) — active le stockage des vidéos sur pCloud ; absent = repli sur le bucket Supabase |
+| `PCLOUD_API_HOST` | Server uniquement | `eapi.pcloud.com` (Europe) ou `api.pcloud.com` (États-Unis) — celui du compte |
 | `NODE_ENV` | Server + Build | `development` active le DevOverlay et `/api/dev/*` |
 
 ---
@@ -634,23 +756,23 @@ Mis à jour manuellement à chaque PR significative.
 
 | Feature | Statut | Routes principales | Gap / Note |
 |---------|--------|-------------------|------------|
-| Carte publique (pins) | ✅ | `GET /api/host-activations` | Cluster auto par proximité en pixels à l'écran (`leaflet.markercluster`, recalculé à chaque zoom — remplace juillet 2026 l'ancien groupement par coordonnées exactes qui masquait silencieusement les pins proches mais non identiques). Champ `quartier` + message de présentation (`presentation_message`, 240 car. max) + photo de profil (avatar 28px, signed URL 24h) affichés dans les popups (cluster + pin individuel) si renseignés. Bouton "Trier par distance" dans les clusters (géolocalisation éphémère, voir section dédiée). |
+| Carte publique (pins) | ✅ | `GET /api/host-activations` | Cluster auto par proximité en pixels à l'écran (`leaflet.markercluster`, recalculé à chaque zoom — remplace juillet 2026 l'ancien groupement par coordonnées exactes qui masquait silencieusement les pins proches mais non identiques). Champ `quartier` + message de présentation (`presentation_message`, 240 car. max) + photo de profil (avatar 28px, signed URL 24h) affichés dans les popups (cluster + pin individuel) si renseignés. Bouton "Trier par distance" dans les clusters (géolocalisation éphémère, voir section dédiée). **Jitter décoratif** (`lib/geo/jitter.ts`, 2026-09-27) appliqué à chaque pin avant renvoi — sépare visuellement les ambassadeurs d'une même ville géocodés au même point exact ; ne dérive jamais de `lat_precise`/`lng_precise`, voir § Jitter décoratif carte publique. |
 | Politique de confidentialité (`/confidentialite`) | ⚠️ | `app/confidentialite/page.tsx` | Page statique 8 sections (responsable, données collectées, ce qu'on ne fait pas, bases légales, durées, droits, sous-traitants, mineurs). **3 placeholders `[À COMPLÉTER]` bloquent la publication publique** : entité juridique, adresse du siège, e-mail de contact RGPD — mentions obligatoires (art. 13 RGPD), volontairement laissées visibles plutôt que remplies d'une valeur plausible qui passerait la relecture. Voir § Transparence des données. |
-| Page de préparation visiteur (`/decouvrir`) | ✅ | `app/decouvrir/page.tsx` | Réassurance + 3 étapes + FAQ accessible (`FaqAccordion`) + témoignage vedette (fallback global si aucun pour le prochain live) + CTA retour carte. CTA discret "C'est votre première fois ?" sur `MapPublique` (coin bas-droit, masquable, mémorisé `localStorage`). |
+| Page de préparation visiteur (`/decouvrir`) | ✅ | `app/decouvrir/page.tsx` | Contenu dans `DecouvrirContent`, repris par l'onglet « Guide » de `/mon-espace`. Réassurance + 3 étapes + FAQ accessible (`FaqAccordion`) + témoignage vedette (fallback global si aucun pour le prochain live) + CTA retour carte. CTA discret "C'est votre première fois ?" sur `MapPublique` (coin bas-droit, masquable, mémorisé `localStorage`). |
 | Géolocalisation auto au premier chargement | ✅ | `MapPublique` → `map.locate()` | Zoom métropole si permission acceptée, vue monde sinon (silencieux). Sautée si une position de carte est déjà mémorisée (`localStorage['map-view-state']`) — voir ligne dédiée ci-dessous. |
 | Mémorisation de la position carte (centre + zoom) | ✅ | `components/MapPublique.tsx` → `readSavedMapView()`/`saveMapView()` | `localStorage['map-view-state']` (`{lat, lng, zoom}`), mis à jour sur `moveend`/`zoomend`. Au montage suivant, la carte s'initialise directement sur cette position — pas de `setView([20,10],3)` ni de géolocalisation auto/`flyTo` — pour éviter de réanimer un zoom à chaque refresh alors que le visiteur avait déjà positionné la carte. Le bouton "Me localiser" (manuel) garde son `flyTo` animé. |
 | EventBanner (5 états) | ✅ | `lib/homepage-data.ts` → `app/page.tsx` | |
 | Overlay carte vide contextuel (7 états) | ✅ | `components/MapPublique.tsx` → `EmptyMapContent` | |
-| Inscription ambassadeur | ✅ | `POST /api/inscriptions` | Double validation lat/lng : frontend (`form.lat == null`) + API 400. `host-activations` filtre silencieusement `hp.lat && hp.lng`. Champ optionnel `quartier` (texte libre). |
-| Champ quartier (profil ambassadeur) | ✅ | `host_profiles.quartier`, `PATCH /api/ambassadeur/profile` | Texte libre optionnel (ex : "Paris 15e"). Saisissable à l'inscription et modifiable dans `MesInfosSection`. Affiché dans les popups carte + fiche publique `/ambassade/[id]` + fiche live `/live/[event_id]/ambassade/[host_id]` sous la ligne ville/pays. |
+| Inscription ambassadeur | ✅ | `POST /api/inscriptions`, `/api/inscriptions/verify-email` | Adresse confirmée par e-mail avant d'ouvrir le formulaire (jeton signé sans état, 24 h, `lib/auth/email-proof.ts`) — rien n'est créé avant. Double validation lat/lng : frontend (`form.lat == null`) + API 400. `host-activations` filtre silencieusement `hp.lat && hp.lng`. |
+| Champ quartier (profil ambassadeur) | ✅ | `host_profiles.quartier`, `PATCH /api/ambassadeur/profile` | Texte libre optionnel (ex : "Paris 15e"). **Plus de saisie manuelle à l'inscription** (retiré 2026-09-27, retour David) — auto-déduit du geocodage de l'adresse (`AddressInput` → `extractQuartier`, `lib`/`api/geocode`), modifiable après coup dans `MesInfosSection`. Sert notamment à désambiguïser visuellement les ambassadeurs d'un même cluster carte (plusieurs hôtes d'une même ville partagent le même `lat`/`lng` de géocodage ville — voir § Distance visiteur ↔ ambassadeur pour le mécanisme complémentaire de tri par distance). Affiché dans les popups carte + fiche publique `/ambassade/[id]` + fiche live `/live/[event_id]/ambassade/[host_id]` sous la ligne ville/pays. |
 | Onboarding self-service | ✅ | `PATCH /api/onboarding/complete` | Gate inline dans `/dashboard` pour `pending_review` : vidéo + PDF + CGU + bouton. Idempotent. Aucune action admin requise. |
 | Validation finale ambassadeur (admin) | ✅ | `PATCH /api/admin/ambassadeurs/[id]/status` | Actions : `validated` (depuis enrichment_pending), `validated_bypass` (escape hatch API — plus de bouton UI), `rejected` (email `sendRefusCandidature` au candidat), `suspended`, `reactiver` (→ `validated` + email uniquement si dossier complet, sinon → `enrichment_pending` sans email). L'action `pre_approved` a été retirée — transition self-service. |
 | Activation via lien email campagne | ✅ | `POST /api/campaign-activations` | |
-| Self-activation toggle (dashboard hôte) | ✅ | `PATCH /api/host-activations/[id]` | CTA "Je participe à ce live" / badge "Vous participez" dans `/dashboard` |
+| Self-activation toggle (dashboard hôte) | ✅ | `PATCH /api/host-activations/[id]` | CTA "J'ouvre ma maison / mon église pour ce live" / badge "Votre maison est ouverte…" / lien "Finalement, je ne peux pas accueillir" dans `/dashboard` (libellés selon `host_type`, `lib/dashboard/participation-labels.ts`) |
 | Édition profil ambassadeur | ✅ | `PATCH /api/ambassadeur/profile` | Ville (+ re-géocodage), adresse précise (`lat_precise`/`lng_precise` via `AddressInput`/Nominatim), consignes, téléphone. Email admin si ville change. |
 | Photo compressée (upload ambassadeur) | ✅ | `POST /api/upload/ambassador-photo` | `lib/image/compress-photo.ts` (Sharp) : profil → 512×512 WebP cover-fit ; lieu → max 1200px WebP contain-fit sans upscale. Toutes les photos converties en `.webp`. |
 | Demandes de visite (visiteur → hôte) | ✅ | `POST /api/visit-requests` | Insère dans `contact_requests` (table correcte). Téléphone visiteur **obligatoire** (contrainte `NOT NULL` + validation `isValidPhoneNumber`). Exige une session visiteur authentifiée (Phase 3 PR3) — infos lues depuis `visitor_profiles`, jamais du body. |
-| Profil visiteur réutilisable | ✅ | `POST /api/visitor/account`, `GET/PATCH /api/visitor/profile`, `POST/DELETE /api/upload/visitor-photo`, `/mon-espace`, `/mon-espace/creer` | Compte créé explicitement via `/mon-espace/creer` (prénom, email, téléphone, photo optionnelle) au moment du premier "Contacter", pas en best-effort silencieux. Bootstrap magic link immédiat. Photo modifiable après création depuis `/mon-espace`. Voir section dédiée. |
+| Profil visiteur réutilisable | ✅ | `POST /api/visitor/account`, `GET/PATCH /api/visitor/profile`, `POST/DELETE /api/upload/visitor-photo`, `/mon-espace`, `/mon-espace/creer` | Compte créé explicitement via `/mon-espace/creer` (prénom, email, téléphone, photo optionnelle) au moment du premier "Contacter", pas en best-effort silencieux. Adresse vérifiée par le lien e-mail avant toute session. Photo modifiable après création depuis `/mon-espace`. Voir section dédiée. |
 | Distance visiteur ↔ ambassadeur | ✅ | `POST /api/distance` | Géolocalisation navigateur éphémère (jamais persistée) + Haversine arrondi au km. Rate-limité 8 req/min/IP. Ne retourne jamais de coordonnées. |
 | Témoignages — soumission publique | ✅ | `POST /api/temoignages` | |
 | Témoignages — modération admin | ✅ | `/admin/temoignages` | |
@@ -663,7 +785,7 @@ Mis à jour manuellement à chaque PR significative.
 | Clôture live | ✅ | `POST /api/admin/live/close` + `LiveCloseButton` | Bouton dans `/admin/live`. Confirmation utilisateur avant clôture. Désactive `host_activations.is_active` (carte publique) **et** renseigne `events.closed_at` (corrigé août 2026 — l'ancienne version ne touchait que `host_activations`, donc `getCurrentEvent()` continuait de désigner le même live comme "en cours" par fenêtre horaire après refresh, et le bouton se réaffichait comme si de rien n'était). `getCurrentEvent()` exclut désormais tout event avec `closed_at` non nul de la sélection "en cours" — bascule immédiate sur le fallback "dernier live passé". `router.refresh()` après clôture pour refléter le changement sans reload manuel. |
 | Vue générale admin (Briefing factuel) | ✅ | `/admin/stats` | Refonte 2026-05-07 (v0.1.7.0) : 4 sections sobres (action queue Camille / témoignages récents / max 5 ambassades à vérifier / snapshot footer). Helpers : `lib/admin/event-window.ts`, `lib/admin/stats-helpers.ts`, `lib/admin/context-label.ts`. Tracking : `lib/admin/page-view-log.ts` (stdout JSON, Vercel logs). Pivot post-CEO/Codex : pas de narrative pastoral templaté en V1 — mesurer l'usage avant d'enrichir (cf TODO-22). |
 | Multi-admin (gestion équipe) | ✅ | `POST/DELETE /api/admin/team` | Requiert `super_admin`. UI dans `/admin/team` |
-| Onboarding questionnaire | ✅ | `/dashboard/questionnaire` + `POST /api/ambassadeur/enrichissement` | |
+| Onboarding questionnaire | ✅ | `/dashboard/questionnaire` + `PATCH /api/ambassadeur/enrichissement`, `/api/ambassadeur/video` | v2 (2026-10-01) : sections repliables, brouillon automatique, liste formations/livres, vidéo VideoAsk (stockage pCloud, envoi par morceaux via nos routes ; repli Supabase sans jeton). Champs obligatoires validés côté formulaire **et** côté serveur (`lib/questionnaire/completeness.ts`). Voir CLAUDE.md § Questionnaire enrichi v2. |
 | Formulaire feedback visiteur | ✅ | `/feedback/[token]` | Route existante, jamais déclenchée automatiquement (cron non actif). QA UX 2026-08-07 : la page vérifie désormais `live_feedbacks` **avant** d'afficher le formulaire — un visiteur qui reclique son lien voit « Vous avez déjà donné votre avis » au lieu de tout ressaisir pour finir sur un « Feedback déjà soumis » rouge (la contrainte `live_feedbacks_unique` rejetait l'insert, la saisie était perdue). Étoiles : pattern `radiogroup` complet (un seul arrêt de tabulation par critère, navigation aux flèches, 44px) — il en fallait 20 pour traverser le formulaire. |
 | Désabonnement email | ✅ | `GET /api/unsubscribe/[token]` | Écrit deux traces (`campaign_recipients.status='unsubscribed'` + `contact_requests.visitor_notifications_optin=false`), **toutes deux relues** par `getUnsubscribedEmails()` avant chaque envoi. Jusqu'au 2026-08-07 aucune n'était consultée : le lien de désabonnement était décoratif, le visiteur recevait la campagne suivante. |
 | Upload photo ambassadeur | ✅ | `POST /api/upload/ambassador-photo` (`type=profile\|room`) | Bucket `ambassador-photos` **privé** — stocke un chemin, signed URL via `lib/storage/photo-url.ts`. Profile = 1 photo (requise). Room = max 5, append, au moins 1 requise (garde côté API `PATCH /api/ambassadeur/enrichissement`, 2026-08-07). Le questionnaire de validation expose les deux. |
@@ -759,7 +881,7 @@ conception le fait.
 | `POST /api/visit-requests` | Visiteur → demande contact hôte (téléphone obligatoire) | Session visiteur | ✅ |
 | ~~`POST /api/contact-requests`~~ | **Supprimée** (juillet 2026) — référençait une colonne inexistante (`visitor_whatsapp`), jamais appelée par le frontend | — | 💀 Supprimée |
 | `POST /api/distance` | Distance visiteur ↔ ambassadeurs (Haversine, km arrondi) | Non (rate-limité) | ✅ |
-| `POST /api/visitor/account` | Création de compte visiteur + bootstrap magic link (`/mon-espace/creer`) | Non (rate-limité 3/min/IP) | ✅ |
+| `POST /api/visitor/account` | Création de compte visiteur + e-mail de vérification (`/mon-espace/creer`) | Non (rate-limité 3/min/IP) | ✅ |
 | `POST /api/visitor/check-email` | Classification email au blur (new/visitor_existing/collision) | Non (rate-limité 10/min/IP) | ✅ |
 | `GET/PATCH /api/visitor/profile` | Profil visiteur réutilisable (email, téléphone, `photo_signed_url` signée côté serveur) | Session visiteur | ✅ |
 | `POST/DELETE /api/upload/visitor-photo` | Upload/suppression photo de profil visiteur (`/mon-espace`, bucket `visitor-photos`) | Session visiteur | ✅ |
@@ -770,7 +892,8 @@ conception le fait.
 | `GET /api/testimonials` | Lecture témoignages (admin) | Admin | ✅ |
 | `POST /api/live-signals` | Signal live depuis dashboard hôte | Session hôte | ✅ |
 | `GET /api/live-signals` | Feed signaux (admin/live) | Admin | ✅ |
-| `POST /api/inscriptions` | Création profil ambassadeur | Non | ✅ |
+| `POST /api/inscriptions` | Création profil ambassadeur (preuve d'e-mail obligatoire, 403 sinon) | Non | ✅ |
+| `POST/GET /api/inscriptions/verify-email` | Lien de confirmation d'adresse avant l'inscription (POST) / validation du jeton (GET) | Non (rate-limité 3/min/IP) | ✅ |
 | `PATCH /api/onboarding/complete` | Self-service : pending_review → pre_approved | Session candidat | ✅ |
 | `GET /api/onboarding/config` | Config vidéo + PDF onboarding (lecture publique) | Public | ✅ |
 | `PATCH /api/ambassadeur/enrichissement` | Enrichissement profil (questionnaire, photos) | Session hôte | ✅ |

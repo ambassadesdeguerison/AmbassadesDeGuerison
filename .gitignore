@@ -50,3 +50,5 @@ screenshots/
 
 .vercel
 .env*
+# Le modèle (sans valeurs réelles) reste versionné
+!.env.local.example

@@ -66,7 +66,7 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
       setError(data.error ?? 'Une erreur est survenue.');
       setLoading(false);
     } else {
-      router.push(`/visitor/${data.action_token}`);
+      router.push(`/visitor/${data.visitor_token}`);
     }
   }
 
@@ -74,7 +74,7 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
     return (
       <div className="space-y-3 text-center py-2">
         <p className="text-slate-500 text-sm">
-          Créez votre compte visiteur pour contacter {hostName} — vos informations seront réutilisées pour vos prochaines demandes.
+          Pour écrire à {hostName}, créez d&apos;abord votre compte : c&apos;est rapide, et vous n&apos;aurez pas à tout retaper la prochaine fois.
         </p>
         <Link
           href={`/mon-espace/creer?redirect=${encodeURIComponent(typeof window !== 'undefined' ? window.location.pathname : '')}`}
@@ -83,7 +83,7 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
           Créer mon compte
         </Link>
         <p className="text-center text-xs text-slate-400">
-          Déjà venu ? <Link href="/auth" className="text-indigo-600 hover:underline">Se connecter</Link>
+          Vous avez déjà un compte ? <Link href="/auth" className="text-indigo-600 hover:underline">Se connecter</Link>
         </p>
       </div>
     );
@@ -102,7 +102,7 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
         <legend className="text-xs text-slate-400 uppercase tracking-wide mb-3">Logistique</legend>
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Nombre de personnes</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Combien de personnes viendront (vous compris) ?</label>
             <input
               type="number"
               min={1}
@@ -123,8 +123,11 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
           onChange={(e) => set('visitor_message', e.target.value)}
           rows={3}
           className={inputCls}
-          placeholder={`Un mot pour ${hostName} (optionnel) — présentation, situation particulière…`}
+          placeholder={`Un mot pour ${hostName} (si vous le souhaitez) — présentation, situation particulière…`}
         />
+        <p className="text-xs text-slate-400 mt-2">
+          Dites en une phrase qui vous êtes et pourquoi vous voulez venir. L&apos;ambassadeur lit ce message avant de répondre.
+        </p>
       </fieldset>
 
       {/* Consentement */}
@@ -137,7 +140,7 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
         />
         <span className="text-xs text-slate-500 leading-relaxed">
           Je souhaite être informé(e) des prochains lives de David Théry.
-          <span className="text-slate-400"> Désinscription possible à tout moment.</span>
+          <span className="text-slate-400"> Vous pouvez vous désabonner à tout moment.</span>
         </span>
       </label>
 
@@ -147,7 +150,7 @@ export default function VisitRequestForm({ eventId, hostProfileId, hostName }: P
       {error && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
 
       <p className="text-slate-400 text-xs leading-relaxed">
-        L'ambassadeur se réserve le droit d'accepter ou non votre demande.
+        L&apos;ambassadeur décide d&apos;accepter ou non votre demande. Vous aurez sa réponse par e-mail.
       </p>
 
       <button

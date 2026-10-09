@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 
 type DevState = 'live' | 'live-zero' | 'soon' | 'soon-confirmed' | 'upcoming' | 'upcoming-confirmed' | 'past' | 'closed' | 'blank';
@@ -8,6 +8,15 @@ type DevState = 'live' | 'live-zero' | 'soon' | 'soon-confirmed' | 'upcoming' | 
 // En prod, le DevOverlay est protégé par un secret (vérifié côté server).
 // Le secret est saisi une fois par l'utilisateur et conservé en localStorage.
 const SECRET_STORAGE_KEY = 'dev-overlay-secret';
+
+const subscribeNever = () => () => {};
+function readStoredSecret(): string {
+  try {
+    return window.localStorage.getItem(SECRET_STORAGE_KEY) ?? '';
+  } catch {
+    return '';
+  }
+}
 const SECRET_REQUIRED = process.env.NEXT_PUBLIC_DEV_OVERLAY === 'true';
 
 const QUICK_EMAILS = [
@@ -38,16 +47,18 @@ export default function DevOverlay() {
   const [linkLoading, setLinkLoading] = useState(false);
   const [linkError, setLinkError] = useState('');
   const [stateError, setStateError] = useState('');
+  const [feedbackEmail, setFeedbackEmail] = useState('');
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackResult, setFeedbackResult] = useState('');
+  const [feedbackError, setFeedbackError] = useState('');
 
   // Secret saisi par l'utilisateur en prod (en dev local, non requis)
-  const [secret, setSecret] = useState<string>('');
+  // Lu depuis localStorage sans passer par un effet ; `secretOverride` porte les changements
+  // faits pendant la session (saisie, effacement après un 403).
+  const storedSecret = useSyncExternalStore(subscribeNever, readStoredSecret, () => '');
+  const [secretOverride, setSecret] = useState<string | null>(null);
+  const secret = secretOverride ?? storedSecret;
   const [secretInput, setSecretInput] = useState('');
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const stored = window.localStorage.getItem(SECRET_STORAGE_KEY);
-    if (stored) setSecret(stored);
-  }, []);
 
   const saveSecret = useCallback(() => {
     const trimmed = secretInput.trim();
@@ -97,6 +108,32 @@ export default function DevOverlay() {
     },
     [router, headers, clearSecret],
   );
+
+  const sendDemoFeedback = useCallback(async () => {
+    setFeedbackLoading(true);
+    setFeedbackError('');
+    setFeedbackResult('');
+    try {
+      const res = await fetch('/api/dev/send-feedback', {
+        method: 'POST',
+        headers: headers(),
+        body: JSON.stringify({ overrideEmail: feedbackEmail || undefined }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (res.status === 403) clearSecret();
+        setFeedbackError(body.error ?? `Erreur ${res.status}`);
+        return;
+      }
+      setFeedbackResult(
+        `${body.event} — ${body.visitorsSent} email(s) visiteur, ${body.hostsSent} email(s) hôte envoyés.`
+      );
+    } catch {
+      setFeedbackError('Erreur réseau.');
+    } finally {
+      setFeedbackLoading(false);
+    }
+  }, [feedbackEmail, headers, clearSecret]);
 
   const generateLink = useCallback(async () => {
     if (!email) return;
@@ -227,6 +264,42 @@ export default function DevOverlay() {
               <p className="mt-1 text-[10px] text-green-400">
                 → État {currentState} actif. Rafraîchissez si nécessaire.
               </p>
+            )}
+          </section>
+
+          <div className="mb-3 border-t border-white/10" />
+
+          {/* Feedback post-live (démo, cron désactivé hors prod) */}
+          <section className="mb-3">
+            <div className="mb-1.5 text-[10px] uppercase tracking-wider text-white/40">
+              Feedback post-live
+            </div>
+            <input
+              type="email"
+              value={feedbackEmail}
+              onChange={(e) => {
+                setFeedbackEmail(e.target.value);
+                setFeedbackResult('');
+                setFeedbackError('');
+              }}
+              placeholder="Rediriger vers (optionnel)"
+              className="mb-1 w-full rounded bg-white/10 px-2 py-1.5 text-white placeholder-white/30 outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <button
+              onClick={sendDemoFeedback}
+              disabled={feedbackLoading}
+              className="w-full rounded bg-indigo-600 px-2 py-1.5 text-white hover:bg-indigo-500 disabled:opacity-40"
+            >
+              {feedbackLoading ? 'Envoi…' : "Envoyer les emails feedback"}
+            </button>
+            <p className="mt-1 text-[10px] text-white/40 leading-relaxed">
+              Envoie les emails feedback (hôte + visiteurs) de l&apos;event démo. Laisser vide = adresses réelles du seed ; renseigner une adresse = tous les envois y sont redirigés (liens de token conservés).
+            </p>
+            {feedbackError && (
+              <p className="mt-1 text-[10px] text-red-400">{feedbackError}</p>
+            )}
+            {feedbackResult && (
+              <p className="mt-1 text-[10px] text-green-400">{feedbackResult}</p>
             )}
           </section>
 

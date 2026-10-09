@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Users, MessageCircle } from 'lucide-react';
+import DeclineChoice from '@/components/DeclineChoice';
 
 interface Props {
   token: string;
@@ -18,18 +19,21 @@ interface Props {
 export default function AccueillirClient({
   token, status, visitorName, nbPersonnes, message, hostName, eventTitle, eventDate,
 }: Props) {
-  const [loading, setLoading] = useState<'accept' | 'decline' | null>(null);
+  const [loading, setLoading] = useState<'accept' | { permanent: boolean } | null>(null);
   const [done, setDone] = useState<'accepted' | 'declined' | null>(
     status === 'accepted' ? 'accepted' : status === 'declined' ? 'declined' : null
   );
   const [error, setError] = useState('');
 
-  async function handleAction(action: 'accept' | 'decline') {
-    setLoading(action);
+  async function handleAction(action: 'accept' | 'decline', permanent = false) {
+    setLoading(action === 'accept' ? 'accept' : { permanent });
     setError('');
 
     const route = action === 'accept' ? 'accept' : 'decline';
-    const res = await fetch(`/api/visit-requests/${token}/${route}`, { method: 'POST' });
+    const res = await fetch(`/api/visit-requests/${token}/${route}`, {
+      method: 'POST',
+      ...(action === 'decline' && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ permanent }) }),
+    });
     const data = await res.json();
 
     if (res.ok || data.message) {
@@ -46,10 +50,10 @@ export default function AccueillirClient({
         <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-4" />
         <p className="text-slate-800 font-semibold text-lg mb-2">Demande acceptée !</p>
         <p className="text-slate-500 text-sm leading-relaxed mb-6">
-          {visitorName} recevra vos coordonnées par e-mail.
+          {visitorName} va recevoir votre adresse par e-mail. Vous pouvez voir son numéro de téléphone sur votre espace.
         </p>
         <Link href="/dashboard" className="inline-block text-indigo-600 text-sm hover:underline">
-          Mon espace ambassadeur
+          Aller sur mon espace
         </Link>
       </div>
     );
@@ -61,10 +65,10 @@ export default function AccueillirClient({
         <CheckCircle2 className="w-10 h-10 text-slate-400 mx-auto mb-4" />
         <p className="text-slate-800 font-semibold mb-2">Demande refusée</p>
         <p className="text-slate-500 text-sm leading-relaxed mb-6">
-          {visitorName} a été prévenu(e). Il pourra chercher une autre ambassade.
+          {visitorName} a été prévenu(e) par e-mail.
         </p>
         <Link href="/dashboard" className="inline-block text-indigo-600 text-sm hover:underline">
-          Mon espace ambassadeur
+          Aller sur mon espace
         </Link>
       </div>
     );
@@ -102,17 +106,19 @@ export default function AccueillirClient({
         <button
           onClick={() => handleAction('accept')}
           disabled={!!loading}
-          className="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          className="w-full bg-emerald-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
         >
-          {loading === 'accept' ? 'En cours…' : "J'accueille"}
+          {loading === 'accept' ? 'En cours…' : `J'accueille ${visitorName}`}
         </button>
-        <button
-          onClick={() => handleAction('decline')}
-          disabled={!!loading}
-          className="w-full border border-slate-200 text-slate-600 py-3 rounded-xl font-medium text-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
-        >
-          {loading === 'decline' ? 'En cours…' : 'Je ne peux pas'}
-        </button>
+      </div>
+
+      <div className="mt-6 pt-5 border-t border-slate-100">
+        <p className="text-sm font-medium text-slate-700 mb-3">Vous ne pouvez pas accueillir {visitorName} ?</p>
+        <DeclineChoice
+          visitorName={visitorName}
+          loading={loading !== null && loading !== 'accept' ? loading : false}
+          onDecline={(permanent) => handleAction('decline', permanent)}
+        />
       </div>
     </div>
   );

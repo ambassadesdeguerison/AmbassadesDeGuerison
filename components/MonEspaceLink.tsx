@@ -5,7 +5,9 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/browser';
 import Avatar from '@/components/ui/Avatar';
 
-type Role = 'admin' | 'visitor' | 'host';
+// 'none' = connecté, mais sans profil (ni ambassadeur ni visiteur) : compte créé par une
+// connexion sans inscription, ou profil supprimé. Ni avatar « ? » ni espace à proposer.
+type Role = 'admin' | 'visitor' | 'host' | 'none';
 
 export default function MonEspaceLink({ onRoleResolved }: { onRoleResolved?: (role: Role | null) => void }) {
   // null = pas encore résolu (rien affiché) ; '' = pas de session, aucun
@@ -30,35 +32,47 @@ export default function MonEspaceLink({ onRoleResolved }: { onRoleResolved?: (ro
         return;
       }
       if (userRole === 'visitor') {
-        setHref('/mon-espace');
-        setRole('visitor');
-        onRoleResolved?.('visitor');
         const res = await fetch('/api/visitor/profile');
         if (res.ok) {
           const profile = await res.json();
           setFirstName(profile.first_name ?? '');
           setPhotoUrl(profile.photo_signed_url ?? null);
+          setHref('/mon-espace');
+          setRole('visitor');
+          onRoleResolved?.('visitor');
+        } else {
+          // Compte visiteur sans profil : /mon-espace le renverrait silencieusement vers l'accueil.
+          setFirstName(data.user?.email ?? '');
+          setHref('/auth');
+          setRole('none');
+          onRoleResolved?.('none');
         }
         return;
       }
       if (data.user) {
-        setHref('/dashboard');
-        setRole('host');
-        onRoleResolved?.('host');
+        // maybeSingle : « aucun profil » est un état normal, pas une erreur (PGRST116 avec single()).
         const { data: host } = await supabase
           .from('host_profiles')
           .select('first_name, profile_photo_url')
           .eq('user_id', data.user.id)
-          .single();
-        if (host) {
-          setFirstName(host.first_name ?? '');
-          if (host.profile_photo_url) {
-            const { data: signed } = await supabase.storage
-              .from('ambassador-photos')
-              .createSignedUrl(host.profile_photo_url, 900);
-            setPhotoUrl(signed?.signedUrl ?? null);
-          }
+          .maybeSingle();
+        if (!host) {
+          setFirstName(data.user.email ?? '');
+          setHref('/auth');
+          setRole('none');
+          onRoleResolved?.('none');
+          return;
         }
+        setFirstName(host.first_name ?? '');
+        if (host.profile_photo_url) {
+          const { data: signed } = await supabase.storage
+            .from('ambassador-photos')
+            .createSignedUrl(host.profile_photo_url, 900);
+          setPhotoUrl(signed?.signedUrl ?? null);
+        }
+        setHref('/dashboard');
+        setRole('host');
+        onRoleResolved?.('host');
         return;
       }
       setHref('');
@@ -90,7 +104,7 @@ export default function MonEspaceLink({ onRoleResolved }: { onRoleResolved?: (ro
       className="flex items-center gap-1.5 text-sm px-2 py-2.5 sm:py-1.5 rounded-lg font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
     >
       <Avatar photoUrl={photoUrl} firstName={firstName} size={28} />
-      <span className="sr-only">Mon espace</span>
+      <span className="sr-only">{role === 'none' ? 'Mon compte' : 'Mon espace'}</span>
     </Link>
   );
 }

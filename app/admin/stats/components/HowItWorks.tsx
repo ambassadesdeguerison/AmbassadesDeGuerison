@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 
 // Audit admin 2026-08-07 (T.7) : aucun écran d'accueil ou d'aide. Un nouvel
@@ -15,11 +15,11 @@ const STORAGE_KEY = 'admin-how-it-works-dismissed';
 const STEPS: { title: string; body: string }[] = [
   {
     title: 'Le candidat avance seul',
-    body: "Il s'inscrit, regarde la vidéo, accepte les conditions, puis remplit son questionnaire avec ses photos. Vous n'avez rien à faire pendant cette phase.",
+    body: "Il s'inscrit, regarde la vidéo, valide son engagement, puis se présente avec ses photos. Vous n'avez rien à faire pendant cette phase.",
   },
   {
     title: 'Vous validez le dossier',
-    body: 'Quand son questionnaire est complet, il passe « À valider » dans Ambassadeurs. Vous examinez ses photos et son parcours, puis vous validez ou refusez.',
+    body: 'Quand sa présentation est complète, il passe « À valider » dans Ambassadeurs. Vous examinez ses photos et son parcours, puis vous validez ou refusez.',
   },
   {
     title: 'Le live rend l\'ambassade visible',
@@ -27,28 +27,31 @@ const STEPS: { title: string; body: string }[] = [
   },
   {
     title: 'Après le live',
-    body: 'Clôturez le live pour retirer les points de la carte. Modérez les témoignages déposés, et traitez les signalements éventuels dans Retours post-live.',
+    body: 'Clôturez le live pour retirer les points de la carte. Modérez les témoignages déposés, et traitez les signalements éventuels dans Retours après le live.',
   },
 ];
 
-export default function HowItWorks() {
-  // Fermé par défaut au premier rendu : évite un flash d'ouverture chez
-  // quelqu'un qui l'avait déjà masqué (localStorage est illisible en SSR).
-  const [open, setOpen] = useState(false);
-  const [ready, setReady] = useState(false);
+// Instantané serveur `null` = « pas encore lu » : localStorage est illisible en SSR.
+function readHidden(): boolean | null {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+const subscribeNever = () => () => {};
 
-  useEffect(() => {
-    try {
-      setOpen(localStorage.getItem(STORAGE_KEY) !== '1');
-    } catch {
-      setOpen(true);
-    }
-    setReady(true);
-  }, []);
+export default function HowItWorks() {
+  const storedHidden = useSyncExternalStore(subscribeNever, readHidden, () => null);
+  const [override, setOverride] = useState<boolean | null>(null);
+  // Rien n'est rendu avant la lecture : évite un flash d'ouverture chez
+  // quelqu'un qui l'avait déjà masqué.
+  const ready = storedHidden !== null;
+  const open = override ?? (storedHidden === null ? false : !storedHidden);
 
   function toggle() {
     const next = !open;
-    setOpen(next);
+    setOverride(next);
     try {
       if (next) localStorage.removeItem(STORAGE_KEY);
       else localStorage.setItem(STORAGE_KEY, '1');

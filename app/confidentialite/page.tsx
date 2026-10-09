@@ -74,8 +74,9 @@ const SECTIONS: Section[] = [
             votre espace et vous transmettre la réponse de l’ambassadeur.
           </li>
           <li>
-            <strong className="text-slate-700">Téléphone</strong> — pour que
-            l’ambassadeur puisse vous joindre s’il accepte votre demande. Jamais affiché
+            <strong className="text-slate-700">Téléphone</strong> — l’ambassadeur ne le
+            voit que s’il accepte votre demande, pour pouvoir vous appeler le jour du live.
+            Nous l’utilisons aussi pour écarter les personnes bloquées. Jamais affiché
             publiquement.
           </li>
           <li>
@@ -105,8 +106,26 @@ const SECTIONS: Section[] = [
             <em>vous</em> acceptez sa demande.
           </li>
           <li>
+            <strong className="text-slate-700">Photo de profil</strong> — vue par
+            l’équipe pour valider votre candidature, puis affichée en petit sur la
+            carte publique tant que votre ambassade est active.
+          </li>
+          <li>
             <strong className="text-slate-700">Photos de votre lieu</strong> — stockées
             de façon privée, visibles par vous et par l’équipe.
+          </li>
+          <li>
+            <strong className="text-slate-700">Réponses de présentation</strong> —
+            fréquentation d’une église, dénomination, fonction de responsabilité,
+            formations et livres, guérisons vues. Elles touchent à vos convictions
+            religieuses : vous les donnez volontairement, elles ne sont vues que par
+            l’équipe et ne sont jamais publiées.
+          </li>
+          <li>
+            <strong className="text-slate-700">Vidéo de présentation</strong> —
+            enregistrée dans un espace privé, visible uniquement par les
+            administrateurs, jamais publiée. Vous pouvez en demander la suppression
+            à tout moment.
           </li>
         </ul>
       </>
@@ -125,8 +144,8 @@ const SECTIONS: Section[] = [
         </li>
         <li>Nous n’utilisons pas de cookies publicitaires ni de traceurs tiers.</li>
         <li>
-          Nous ne publions jamais votre photo. Elle n’est visible que par l’ambassadeur
-          que vous avez contacté.
+          Nous ne publions jamais la photo d’un visiteur. Elle n’est visible que par
+          l’ambassadeur que vous avez contacté.
         </li>
       </ul>
     ),
@@ -144,11 +163,13 @@ const SECTIONS: Section[] = [
           <strong className="text-slate-700">L’exécution de votre demande</strong> —
           prénom, e-mail et téléphone sont nécessaires pour qu’une rencontre puisse
           s’organiser. Sans eux, l’ambassadeur ne peut ni vous répondre ni vous
-          accueillir.
+          accueillir. Le téléphone n’est transmis à l’ambassadeur qu’après son accord.
         </li>
         <li>
           <strong className="text-slate-700">Notre intérêt légitime</strong> — pour la
-          sécurité des personnes qui ouvrent leur maison (prévention des abus).
+          sécurité des personnes qui ouvrent leur maison (prévention des abus). Par
+          exemple, votre numéro permet de refuser une demande venant d’une personne
+          déjà bloquée.
         </li>
       </ul>
     ),

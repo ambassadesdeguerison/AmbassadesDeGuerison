@@ -45,6 +45,13 @@ export default function AddressInput({
   required,
 }: AddressInputProps) {
   const [query, setQuery] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
+  // Valeur changée de l'extérieur (ex : le parent recharge le profil) : la saisie suit,
+  // ajustée pendant le rendu plutôt que par un effet.
+  if (value !== prevValue) {
+    setPrevValue(value);
+    setQuery(value);
+  }
   const [results, setResults] = useState<AddressResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
@@ -58,21 +65,22 @@ export default function AddressInput({
       hasUserTyped.current = false;
       ownedValueRef.current = value;
     }
-    setQuery(value);
   }, [value]);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (query.length < 5) { setResults([]); setOpen(false); return; }
+    // Saisie trop courte : on vide les suggestions, dans un callback plutôt que dans le corps de l'effet.
+    const tooShort = query.length < 5;
 
     debounceRef.current = setTimeout(async () => {
+      if (tooShort) { setResults([]); setOpen(false); return; }
       setLoading(true);
       const res = await fetch(`/api/geocode?mode=address&q=${encodeURIComponent(query)}`).catch(() => null);
       const data: AddressResult[] = res?.ok ? await res.json() : [];
       setResults(data);
       setOpen(hasUserTyped.current && data.length > 0);
       setLoading(false);
-    }, 400);
+    }, tooShort ? 0 : 400);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);

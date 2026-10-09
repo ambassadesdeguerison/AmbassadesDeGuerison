@@ -27,7 +27,7 @@ export default async function AdminSettingsPage() {
       <AdminPage width="narrow">
         <AdminPageHeader
           title="Paramètres"
-          subtitle="Contenu d'onboarding des candidats et délais des envois automatiques."
+          subtitle="Contenu d'accueil des candidats, délais des envois automatiques et limites de demandes."
         />
 
         <div className="space-y-4">
@@ -44,10 +44,10 @@ export default async function AdminSettingsPage() {
               <Timer className="w-4 h-4 text-indigo-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-800">Délais et affichage</p>
+              <p className="text-sm font-medium text-slate-800">Délais, affichage et limites</p>
               <p className="text-xs text-slate-400 mt-0.5">
-                Quand les e-mails de campagne et de retour d'expérience partent, et à partir de quand la carte annonce
-                un live imminent.
+                Quand les e-mails de campagne et de retour d&apos;expérience partent, quand la carte annonce un live
+                imminent, et le nombre de demandes qu&apos;un visiteur peut envoyer par live.
               </p>
             </div>
             <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors shrink-0" />

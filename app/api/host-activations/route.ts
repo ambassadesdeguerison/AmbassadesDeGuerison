@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getPublicMapPhotoUrls } from '@/lib/storage/photo-url';
+import { jitterCoordinates } from '@/lib/geo/jitter';
+import { firstRow } from '@/lib/supabase/relation';
 
 // Polling 30s depuis la carte publique
 export const revalidate = 0;
@@ -59,28 +61,34 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const rows = (data ?? []).filter((a) => {
-    const hp = a.host_profiles as any;
-    return hp && hp.lat && hp.lng && !hp.geocoding_failed;
+  const rows = (data ?? []).flatMap((a) => {
+    const hp = firstRow(a.host_profiles);
+    return hp && hp.lat && hp.lng && !hp.geocoding_failed ? [{ a, hp }] : [];
   });
 
   // Signed URLs uniquement pour les hôtes actifs (photo affichée en popup,
   // jamais sur le pin) — pas de coût de signature pour les pins grisés.
   const activePhotoPaths = rows
-    .filter((a) => a.is_active)
-    .map((a) => (a.host_profiles as any).profile_photo_url)
-    .filter(Boolean);
+    .filter(({ a }) => a.is_active)
+    .map(({ hp }) => hp.profile_photo_url)
+    .filter((path): path is string => Boolean(path));
   const photoUrls = await getPublicMapPhotoUrls(activePhotoPaths);
 
-  const pins = rows.map((a) => {
-    const hp = a.host_profiles as any;
+  const pins = rows.map(({ a, hp }) => {
+    // Jitter décoratif (retour David 2026-09-27, voir lib/geo/jitter.ts) :
+    // plusieurs ambassadeurs d'une même ville partagent aujourd'hui des lat/lng
+    // identiques (géocodage ville) et s'empilaient au même pixel sur la carte,
+    // quel que soit le zoom. Décalage déterministe dérivé de host_id — ne dérive
+    // JAMAIS de lat_precise/lng_precise (voir commentaire du fichier pour la
+    // raison : ça aurait amplifié /api/distance en oracle de triangulation).
+    const { lat, lng } = jitterCoordinates(hp.lat, hp.lng, hp.id);
     return {
       id: hp.id,
       first_name: hp.first_name,
       city: hp.city,
       country: hp.country,
-      lat: hp.lat,
-      lng: hp.lng,
+      lat,
+      lng,
       is_active: a.is_active,
       is_full: a.is_full,
       accepted_count: a.accepted_count,

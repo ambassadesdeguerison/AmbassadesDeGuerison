@@ -18,9 +18,13 @@ export default function LiveTestimonialsCounter({ eventId }: { eventId: string |
   }, [eventId]);
 
   useEffect(() => {
-    fetchCount();
+    // Premier appel différé d'un tick : `fetchCount` met à jour l'état, ce qu'un effet ne doit pas faire de façon synchrone.
+    const first = setTimeout(fetchCount, 0);
     const interval = setInterval(fetchCount, 15_000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(first);
+      clearInterval(interval);
+    };
   }, [fetchCount]);
 
   const href = eventId

@@ -1,7 +1,12 @@
 -- ============================================================
 -- RESET COMPLET — DavidTheryApp (pivot live-driven v2)
 -- Usage : supabase db query --linked --file scripts/reset-db.sql
+--         (ou coller le fichier dans Supabase > SQL Editor)
 -- ⚠️  Supprime TOUTES les données et recrée le schéma proprement
+--
+-- Ce fichier porte l'ÉTAT FINAL de tous les scripts/migration-*.sql : sur une base neuve ou remise à
+-- zéro, il suffit seul — ne PAS rejouer les migrations après lui. Les migrations ne servent qu'à mettre
+-- à jour une base qui contient déjà de vraies données (et alors, ne JAMAIS lancer ce fichier).
 -- ============================================================
 
 -- ============================================================
@@ -75,6 +80,7 @@ CREATE TABLE host_profiles (
   lng_precise            DOUBLE PRECISION,
   quartier               TEXT        DEFAULT NULL,
   presentation_message   TEXT        DEFAULT NULL CHECK (char_length(presentation_message) <= 240),
+  live_screen            TEXT,
   is_women_only          BOOLEAN     NOT NULL DEFAULT FALSE,
   geocoding_failed       BOOLEAN     DEFAULT FALSE,
   address_private        TEXT,
@@ -97,8 +103,17 @@ CREATE TABLE host_profiles (
   church_attendance      TEXT,
   denomination           TEXT,
   parcours_spirituel     TEXT,
-  livres_lus             TEXT,
+  livres_lus             TEXT,        -- texte libre : « autres livres ou formations » (hors catalogue)
   conferences_assistees  BOOLEAN     DEFAULT FALSE,
+  -- Questionnaire v2 (2026-09-30) : listes à cocher (slugs de lib/questionnaire/catalog.ts),
+  -- signaux pastoraux (NULL = pas encore répondu) et vidéo de présentation facultative.
+  books_read             TEXT[]      NOT NULL DEFAULT '{}',
+  trainings_done         TEXT[]      NOT NULL DEFAULT '{}',
+  has_seen_healings      BOOLEAN,
+  has_leadership_role    BOOLEAN,
+  leadership_role        TEXT,
+  intro_video_path       TEXT,        -- chemin Storage (bucket privé ambassador-videos), jamais une URL
+  intro_video_mime       TEXT,
   admin_notes            TEXT,
   -- Nouveau cycle de statut (remplace pending_onboarding/active)
   status                 TEXT        NOT NULL DEFAULT 'pending_review'
@@ -169,7 +184,17 @@ CREATE TABLE contact_requests (
   visitor_message             TEXT,
   status                      TEXT        NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending', 'accepted', 'declined', 'cancelled_no_response')),
+  -- TRUE seulement si l'ambassadeur a choisi « ne plus accueillir cette personne » :
+  -- plus aucune demande chez cette ambassade, pour aucun live. Un refus simple
+  -- (« pas disponible cette fois ») laisse FALSE.
+  declined_permanently        BOOLEAN     NOT NULL DEFAULT FALSE,
+  -- Jeton de l'HÔTE uniquement (liens /accueillir et /refuser, dashboard). Ne jamais
+  -- le renvoyer au visiteur ni le mettre dans un e-mail visiteur : /accept n'a pas
+  -- d'authentification, qui le détient peut accepter la demande.
   action_token                UUID        NOT NULL DEFAULT gen_random_uuid(),
+  -- Jeton du VISITEUR (suivi /visitor, feedback, aide). Ne donne aucun pouvoir
+  -- d'acceptation ni de refus.
+  visitor_token               UUID        NOT NULL DEFAULT gen_random_uuid(),
   visitor_notifications_optin BOOLEAN     DEFAULT TRUE,
   UNIQUE (host_activation_id, visitor_email),
   created_at                  TIMESTAMPTZ DEFAULT NOW()
@@ -305,23 +330,19 @@ CREATE TABLE event_timing_config (
   feedback_days_after              INTEGER     DEFAULT 1,
   queue_aging_days                 INTEGER     DEFAULT 5,
   soon_threshold_days              INTEGER     DEFAULT 2,
+  -- Plafond anti-démarchage : demandes en cours (pending + accepted) par visiteur et par live
+  max_requests_per_visitor_per_event INTEGER   NOT NULL DEFAULT 3 CHECK (max_requests_per_visitor_per_event >= 1),
   updated_at                       TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT single_row CHECK (id = 1)
 );
 INSERT INTO event_timing_config (id) VALUES (1) ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- 3. VUE PUBLIQUE (colonnes admin-only exclues)
+-- 3. (vue publique supprimée le 2026-10-01)
 -- ============================================================
-
-CREATE VIEW host_profiles_public AS
-SELECT
-  id, user_id, first_name, last_name, host_type, church_subtype,
-  city, country, lat, lng, geocoding_failed,
-  whatsapp_group_url,
-  capacity, consignes, viewing_setup, profile_photo_url,
-  status, created_at
-FROM host_profiles;
+-- host_profiles_public n'était utilisée nulle part et n'avait pas de filtre sur le statut (noms, consignes
+-- et lien WhatsApp des candidats lisibles par tous). Les données publiques passent par les routes serveur
+-- (/api/host-activations, pages /ambassade/[id]) qui sélectionnent explicitement leurs colonnes.
 
 -- ============================================================
 -- 4. FONCTIONS ADMIN (SECURITY DEFINER — bypass RLS sur admin_users)
@@ -489,11 +510,12 @@ CREATE POLICY "events_public_read" ON events
 CREATE POLICY "events_admin_write" ON events
   FOR ALL USING (is_admin(auth.uid()));
 
--- host_profiles : validés visibles publiquement, owner full, admin full
-CREATE POLICY "host_profiles_public_read" ON host_profiles
-  FOR SELECT USING (status = 'validated');
-CREATE POLICY "host_profiles_owner_full" ON host_profiles
-  FOR ALL USING (auth.uid() = user_id);
+-- host_profiles : AUCUNE lecture publique (corrigé le 2026-10-01 : la lecture publique des profils validés
+-- exposait téléphone, adresse privée et réponses du questionnaire à n'importe qui avec la clé publique).
+-- Le propriétaire lit sa ligne mais ne l'écrit pas directement (une écriture libre lui permettait de changer
+-- son propre `status`) : toutes les écritures passent par les routes serveur (clé service). Admin : tout.
+CREATE POLICY "host_profiles_owner_read" ON host_profiles
+  FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "host_profiles_admin_full" ON host_profiles
   FOR ALL USING (is_admin(auth.uid()));
 
@@ -588,6 +610,7 @@ CREATE INDEX idx_host_activations_event        ON host_activations(event_id);
 CREATE INDEX idx_host_activations_active       ON host_activations(event_id, is_active) WHERE is_active = TRUE;
 CREATE INDEX idx_live_signals_event            ON live_signals(event_id, status);
 CREATE INDEX idx_contact_requests_token        ON contact_requests(action_token);
+CREATE UNIQUE INDEX idx_contact_requests_visitor_token ON contact_requests(visitor_token);
 CREATE INDEX idx_contact_requests_visitor_profile ON contact_requests(visitor_profile_id) WHERE visitor_profile_id IS NOT NULL;
 CREATE INDEX idx_live_feedbacks_reported       ON live_feedbacks(reported, created_at DESC) WHERE reported = TRUE;
 CREATE INDEX idx_scheduled_campaigns_dispatch  ON scheduled_campaigns(scheduled_at, status) WHERE status = 'pending';
@@ -615,6 +638,19 @@ VALUES (
   false,
   5242880,
   ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Vidéos de présentation (questionnaire v2) — bucket privé, admin seulement, via signed URL.
+-- Limite 50 Mo = plafond de fichier du plan gratuit Supabase. Stockage provisoire :
+-- prévu pour être remplacé par pCloud (structure année/mois lisible sans API).
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'ambassador-videos',
+  'ambassador-videos',
+  false,
+  52428800,
+  ARRAY['video/mp4', 'video/webm', 'video/quicktime']
 )
 ON CONFLICT (id) DO NOTHING;
 
@@ -719,3 +755,22 @@ USING (
   AND auth.role() = 'authenticated'
   AND (storage.foldername(name))[1] = auth.uid()::text
 );
+
+
+-- ============================================================
+-- 11. DROITS D'ACCÈS À L'API DATA (GRANT)
+-- ============================================================
+-- Depuis mai 2026, un projet Supabase neuf n'ouvre plus automatiquement les nouvelles tables de `public`
+-- à l'API (case « Automatically expose new tables » décochée à la création). Sans ce bloc, sur un projet
+-- neuf, TOUTES les requêtes échouent en « permission denied » — alors que sur l'ancien projet, créé avant
+-- le changement, les droits étaient accordés d'office.
+--
+-- Ces droits reproduisent l'ancien comportement. Ils n'ouvrent rien à eux seuls : la sécurité reste portée
+-- par la RLS (activée sur les 15 tables, section 6) et par `node scripts/probe-access.js`.
+-- Idempotent. Toute NOUVELLE table ajoutée plus tard doit recevoir ses propres GRANT (et sa RLS).
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+
+GRANT ALL ON ALL TABLES    IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;

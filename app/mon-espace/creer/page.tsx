@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Camera, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Camera, Loader2, Mail, X } from 'lucide-react';
 import AppHeader from '@/components/AppHeader';
 import PhoneInput from '@/components/ui/PhoneInput';
 import { isValidPhoneNumber } from 'react-phone-number-input';
@@ -40,6 +40,8 @@ function CreerCompteContent() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [emailStatus, setEmailStatus] = useState<EmailStatus>('idle');
+  // Acte positif clair requis (RGPD) : jamais pré-cochée, le bouton reste inactif tant qu'elle ne l'est pas.
+  const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
 
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -49,6 +51,8 @@ function CreerCompteContent() {
   const [formError, setFormError] = useState('');
   const [magicLinkSending, setMagicLinkSending] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  // Compte créé : la session ne s'ouvre qu'au clic sur le lien reçu par e-mail.
+  const [awaitingVerification, setAwaitingVerification] = useState(false);
 
   async function handleEmailBlur() {
     const trimmed = email.trim();
@@ -93,7 +97,7 @@ function CreerCompteContent() {
     await fetch('/api/auth/magic-link', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.trim() }),
+      body: JSON.stringify({ email: email.trim(), redirect: redirect ?? undefined }),
     }).catch(() => {});
     setMagicLinkSending(false);
     setMagicLinkSent(true);
@@ -101,9 +105,10 @@ function CreerCompteContent() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!acceptedPrivacy) return;
     if (emailStatus === 'collision' || emailStatus === 'visitor_existing') return;
     if (!isValidPhoneNumber(phone)) {
-      setFormError('Merci de renseigner un numéro de téléphone valide.');
+      setFormError('Ce numéro de téléphone ne semble pas valide, pouvez-vous le vérifier ?');
       return;
     }
     setSubmitting(true);
@@ -114,6 +119,7 @@ function CreerCompteContent() {
     body.set('email', email.trim());
     body.set('phone', phone);
     if (photoFile) body.set('file', photoFile);
+    if (redirect) body.set('redirect', redirect);
 
     const res = await fetch('/api/visitor/account', { method: 'POST', body });
     const data = await res.json().catch(() => ({}));
@@ -128,12 +134,12 @@ function CreerCompteContent() {
       return;
     }
 
-    const target = redirect && redirect.startsWith('/') ? redirect : '/mon-espace';
-    router.push(`/auth/confirm?token_hash=${data.token_hash}&type=magiclink&redirect=${encodeURIComponent(target)}`);
+    setAwaitingVerification(true);
+    setSubmitting(false);
   }
 
   const canSubmit =
-    firstName.trim() && email.trim() && isValidPhoneNumber(phone) &&
+    firstName.trim() && email.trim() && isValidPhoneNumber(phone) && acceptedPrivacy &&
     emailStatus !== 'collision' && emailStatus !== 'visitor_existing' && !submitting;
 
   if (checkingSession) {
@@ -142,6 +148,40 @@ function CreerCompteContent() {
         <AppHeader />
         <main className="flex-1 flex items-center justify-center bg-slate-50">
           <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
+        </main>
+      </>
+    );
+  }
+
+  if (awaitingVerification) {
+    return (
+      <>
+        <AppHeader />
+        <main className="flex-1 bg-slate-50 px-4 py-8">
+          <div className="max-w-lg mx-auto bg-white rounded-2xl border border-slate-100 shadow-sm p-6 text-center space-y-3">
+            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto">
+              <Mail className="w-6 h-6 text-indigo-500" />
+            </div>
+            <h1 className="text-lg font-semibold text-slate-800">Regardez votre boîte mail</h1>
+            <p className="text-slate-500 text-sm">
+              Nous venons d&apos;écrire à <strong className="text-slate-700">{email.trim()}</strong>. Un clic sur le lien
+              confirme votre adresse et vous ramène {redirect ? 'à votre demande' : 'dans votre espace'}.
+            </p>
+            <p className="text-slate-400 text-xs">Rien ne vous est parvenu ? Pensez à regarder dans les courriers indésirables.</p>
+            {magicLinkSent ? (
+              <p className="text-indigo-600 text-sm pt-1">Nouveau lien envoyé.</p>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSendMagicLink}
+                disabled={magicLinkSending}
+                className="inline-flex items-center gap-1.5 text-indigo-600 text-sm font-medium hover:underline disabled:opacity-50 pt-1"
+              >
+                {magicLinkSending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Renvoyer le lien
+              </button>
+            )}
+          </div>
         </main>
       </>
     );
@@ -160,16 +200,17 @@ function CreerCompteContent() {
             <div>
               <h1 className="text-lg font-semibold text-slate-800">Créer votre compte</h1>
               <p className="text-slate-500 text-sm mt-1">
-                Pour contacter un ambassadeur et retrouver vos prochaines demandes sans tout retaper.
+                Pour contacter un ambassadeur et retrouver vos demandes sans tout ressaisir.
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Prénom <span className="text-red-500">*</span>
+                <label htmlFor="visitor-first-name" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Votre prénom <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="visitor-first-name"
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -180,10 +221,11 @@ function CreerCompteContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  E-mail <span className="text-red-500">*</span>
+                <label htmlFor="visitor-email" className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Votre adresse e-mail <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="visitor-email"
                   type="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setEmailStatus('idle'); }}
@@ -195,9 +237,9 @@ function CreerCompteContent() {
 
                 {emailStatus === 'visitor_existing' && (
                   <div className="mt-2 bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-sm text-indigo-800">
-                    Vous avez déjà un compte avec cet e-mail.
+                    Vous avez déjà un compte avec cette adresse.
                     {magicLinkSent ? (
-                      <p className="text-indigo-600 text-xs mt-2">Lien envoyé — vérifiez votre boîte mail.</p>
+                      <p className="text-indigo-600 text-xs mt-2">C&apos;est envoyé, regardez dans votre boîte mail.</p>
                     ) : (
                       <button
                         type="button"
@@ -206,7 +248,7 @@ function CreerCompteContent() {
                         className="mt-2 inline-flex items-center gap-1.5 bg-indigo-600 text-white text-xs font-medium px-3 py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
                       >
                         {magicLinkSending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                        Recevoir mon lien de connexion
+                        M&apos;envoyer un lien de connexion
                       </button>
                     )}
                   </div>
@@ -214,21 +256,21 @@ function CreerCompteContent() {
 
                 {emailStatus === 'collision' && (
                   <div className="mt-2 bg-red-50 border border-red-100 rounded-xl p-3 text-sm text-red-800">
-                    Cet e-mail est déjà utilisé pour un autre type de compte sur Ambassades de Guérison.
-                    Merci d'utiliser une autre adresse pour votre compte visiteur.
+                    Cette adresse est déjà utilisée pour un autre type de compte sur Ambassades de Guérison.
+                    Merci d&apos;en choisir une autre pour votre compte visiteur.
                   </div>
                 )}
 
                 {emailStatus !== 'collision' && emailStatus !== 'visitor_existing' && (
                   <p className="text-xs text-slate-400 mt-2">
-                    Sert à vous connecter et à recevoir la réponse de l'ambassadeur.
+                    Pour vous connecter et recevoir la réponse de l&apos;ambassadeur.
                   </p>
                 )}
               </div>
 
               <div>
                 <PhoneInput
-                  label="Téléphone"
+                  label="Votre numéro de téléphone"
                   id="visitor-account-phone"
                   required
                   value={phone}
@@ -236,13 +278,13 @@ function CreerCompteContent() {
                   placeholder="+33 6 12 34 56 78"
                 />
                 <p className="text-xs text-slate-400 mt-2">
-                  Permet à l'ambassadeur de vous joindre s'il accepte votre demande — jamais affiché publiquement.
+                  L&apos;ambassadeur ne voit votre numéro que s&apos;il accepte votre demande. Il peut alors vous appeler si besoin le jour du live. Nous l&apos;utilisons aussi pour écarter les personnes bloquées. Il n&apos;est jamais affiché publiquement.
                 </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Photo de profil <span className="text-slate-400 font-normal">(optionnel)</span>
+                  Votre photo <span className="text-slate-400 font-normal">(si vous le souhaitez)</span>
                 </label>
 
                 {photoPreview ? (
@@ -264,7 +306,7 @@ function CreerCompteContent() {
                   <label
                     role="button"
                     tabIndex={0}
-                    aria-label="Ajouter une photo de profil (optionnel)"
+                    aria-label="Ajouter votre photo (si vous le souhaitez)"
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); }}
                     className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-indigo-200 bg-indigo-50 px-4 py-5 text-center cursor-pointer hover:border-indigo-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   >
@@ -277,11 +319,27 @@ function CreerCompteContent() {
                 )}
                 {photoError && <p className="text-red-600 text-xs mt-1.5">{photoError}</p>}
                 <p className="text-xs text-slate-400 mt-2">
-                  Aide l'ambassadeur à savoir qui il accueille — jamais publiée, visible uniquement par lui.
+                  Celui ou celle qui ouvre sa maison aime savoir qui va entrer chez lui. Un visage, c&apos;est déjà un début de rencontre. Elle n&apos;est jamais publiée : seul l&apos;ambassadeur la voit.
                 </p>
               </div>
 
               {formError && <p className="text-red-600 text-sm bg-red-50 px-3 py-2 rounded-lg">{formError}</p>}
+
+              <label className="flex items-start gap-2.5 text-sm text-slate-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedPrivacy}
+                  onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span>
+                  En créant votre compte, vous acceptez notre{' '}
+                  <Link href="/confidentialite" target="_blank" className="text-indigo-600 hover:underline">
+                    politique de confidentialité
+                  </Link>
+                  .
+                </span>
+              </label>
 
               <button
                 type="submit"
@@ -291,14 +349,6 @@ function CreerCompteContent() {
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                 Créer mon compte
               </button>
-
-              <p className="text-center text-xs text-slate-400">
-                En créant votre compte, vous acceptez notre{' '}
-                <Link href="/confidentialite" className="text-indigo-600 hover:underline">
-                  politique de confidentialité
-                </Link>
-                .
-              </p>
 
               <p className="text-center text-xs text-slate-400">
                 Déjà un compte ? <Link href="/auth" className="text-indigo-600 hover:underline">Se connecter</Link>

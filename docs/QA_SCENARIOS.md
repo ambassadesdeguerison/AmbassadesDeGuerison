@@ -137,9 +137,11 @@ node scripts/magic-link.js david.thery@demo.fr
 
 ### Cluster de pins co-localisés (état `live` recommandé)
 
-> Vérifie le regroupement des pins quand plusieurs ambassadeurs sont à la même coordonnée. Avec les seeds : 6 ambassadeurs à Paris (Marie + 5 cluster) au point `48.8698, 2.3315`.
+> Vérifie le regroupement des pins quand plusieurs ambassadeurs partagent la même coordonnée ville. Avec les seeds : 6 ambassadeurs à Paris (Marie + 5 cluster) géocodés au point `48.8698, 2.3315` — depuis le jitter décoratif (`lib/geo/jitter.ts`, 2026-09-27), `GET /api/host-activations` renvoie 6 points distincts décalés de ~250m max autour de ce point, pas 6 fois la même coordonnée.
 
-- [ ] En état `live`, zoomer sur Paris → un seul pin visible (cercle indigo) avec un badge `6` (ou le nombre actif selon l'état du live)
+- [ ] En état `live`, zoom niveau ville/pays sur Paris → toujours regroupés en un seul pin (cercle indigo) avec un badge `6` (ou le nombre actif selon l'état du live) — le jitter (~250m) reste sous le seuil de clustering en pixels à ce niveau de zoom, comportement inchangé
+- [ ] Zoomer fortement (niveau rue/quartier) → les 6 pins se séparent en marqueurs individuels (plus de badge `6`) — vérifie que le jitter a bien produit des coordonnées distinctes, pas juste un artefact visuel
+- [ ] Aucun des 6 pins jittérés ne retombe exactement sur les coordonnées d'origine (`48.8698, 2.3315`) — sinon le jitter n'a pas été appliqué
 - [ ] Le pin cluster est rond (pas teardrop) et plus large (36×36 px) que les pins individuels
 - [ ] Cliquer sur le cluster → popup s'ouvre avec un titre "N ambassades · Paris"
 - [ ] Le popup liste chaque ambassadeur : prénom, type (Domicile / Église), places (`accepted_count/capacity`), lien "Contacter →"
@@ -301,10 +303,7 @@ node scripts/magic-link.js david.thery@demo.fr
 - [ ] Bouton "Continuer" désactivé si `lat == null` (ville tapée sans sélection dropdown)
 - [ ] Sélectionner une ville étrangère (ex: "Yaoundé") → pays bascule automatiquement sur "Cameroun"
 - [ ] `CountrySelect` : pays épinglés (FR, BE, CH, CA, LU, MA, SN, CI, CM) visibles en premier
-- [ ] **Champ quartier** (optionnel) : visible après le sélecteur de pays, placeholder "ex : Paris 15e, Abidjan Cocody, Lyon Presqu'île", note explicite "Aide les visiteurs à te retrouver s'ils sont dans le même quartier."
-- [ ] Laisser le champ quartier vide → soumission réussie (`quartier = null` en DB)
-- [ ] Remplir le champ quartier → `host_profiles.quartier` sauvegardé en DB
-- [ ] Bouton "Continuer" **non bloqué** si quartier vide (champ optionnel)
+- [ ] **Pas de champ quartier saisissable à l'étape 1** (retiré 2026-09-27) — `quartier` est désormais exclusivement auto-déduit du geocodage de l'adresse à l'étape 2, jamais saisi manuellement à l'inscription
 - [ ] Soumettre → `host_profiles.phone`, `host_profiles.last_name` sauvegardés en DB
 
 ### Étape 2 — Type d'ambassade
@@ -315,7 +314,9 @@ node scripts/magic-link.js david.thery@demo.fr
 
 ### Soumission
 
-- [ ] Succès → profil créé avec statut `pending_review` → écran inline "Inscription confirmée !" + e-mail affiché + CTA "Accéder à mon espace ambassadeur" → `/auth`
+- [ ] Succès → profil créé avec statut `pending_review` → écran inline « Votre demande est bien reçue ! » + e-mail affiché. La réponse de `POST /api/inscriptions` porte `login: { token_hash, type }` et le navigateur ouvre la session (`verifyOtp`) : CTA « Continuer mon inscription » → `/dashboard`, sans repasser par `/auth`
+- [ ] Si le jeton est absent ou refusé (simuler en échouant `generateLink`) : l'inscription réussit quand même, CTA « Me connecter pour continuer » → `/auth`
+- [ ] E-mail de confirmation : bouton « Continuer mon inscription » → `/dashboard` (plus de lien de connexion dans l'e-mail : le jeton unique est consommé par le navigateur). Ouvert sur un autre appareil → arrive sur `/auth`
 - [ ] Email déjà existant → message d'erreur "Un compte ambassadeur existe déjà avec cet e-mail. Connecte-toi depuis la page de connexion." (humanisé depuis l'erreur Postgres `duplicate key`)
 - [ ] Honeypot rempli → 200 silencieux
 
@@ -430,14 +431,15 @@ node scripts/magic-link.js david.thery@demo.fr
 - [ ] Cliquer le chevron d'un ambassadeur `validated` → panneau s'ouvre
 - [ ] Section "Photos" en haut du panneau : photo de profil (encadrée indigo) + photos du lieu (vue 1, vue 2…) si présentes
 - [ ] Cliquer une vignette → ouvre la **lightbox** intégrée (pas un nouvel onglet) : image plein écran, navigation clavier (`←`/`→` entre photos, `Échap` pour fermer), flèches cliquables si plusieurs photos, légende "Vue N du lieu d'accueil — i/N", clic hors-image ferme
-- [ ] Bloc "Engagement spirituel" (fond indigo clair) en tête du panneau : Défi Guérison (Oui/Non), Conférence DT (Oui/Non), fréquentation église si renseignée, parcours spirituel, livres/formations — c'est le signal que Camille regarde en premier
-- [ ] Sous le bloc pastoral : téléphone + dénomination (si renseignés) dans une grille séparée
-- [ ] Si questionnaire non rempli → message "Questionnaire non encore rempli"
+- [ ] Bloc "Engagement spirituel" (fond indigo clair) en tête du panneau : fréquentation d'église, dénomination, fonction de responsabilité, guérisons vues (« Non renseigné » distinct de « Non »), « Formations, livres et conférence » (« Aucune indiquée » si rien), « Vidéo de présentation » (lecteur + lien de téléchargement, ou « Non fournie »), parcours écrit étiqueté « en secours de la vidéo »
+- [ ] Sous le bloc pastoral : téléphone
+- [ ] Groupe réservé aux femmes → mention rose « Groupe réservé aux femmes » en haut du dossier + badge « Femmes uniquement » à côté du nom
+- [ ] Si questionnaire non rempli → message "Présentation pas encore remplie"
 
 ### Signal de dossier incomplet (badge "N manquant(s)")
 
-- [ ] Un ambassadeur `enrichment_pending` avec un dossier incomplet (photo profil manquante, photo du lieu manquante, ou parcours spirituel vide) affiche un badge ambre "N manquant(s)" à côté du badge de statut, **visible sans déplier la ligne**
-- [ ] Survoler le badge (title) → liste les éléments manquants ("photo de profil manquante", "photo du lieu manquante", "parcours spirituel vide")
+- [ ] Un ambassadeur `enrichment_pending` avec un dossier incomplet (photo profil manquante ou photo du lieu manquante) affiche un badge rouge "N photo(s) manquante(s)" ; ni vidéo ni parcours écrit : badge gris informatif « Sans vidéo ni parcours » à côté du badge de statut, **visible sans déplier la ligne**
+- [ ] Survoler le badge (title) → liste les éléments manquants ("photo de profil manquante", "photo du lieu manquante" ; en gris : "ni vidéo de présentation ni parcours écrit")
 - [ ] Un ambassadeur `enrichment_pending` avec dossier complet → pas de badge
 
 ### Vue mobile (<640px)
@@ -667,11 +669,17 @@ npm run test:e2e
 - [ ] Un profil `pending_review` accédant à `/dashboard/questionnaire` → message "Ce questionnaire n'est accessible que pour les candidats pré-approuvés" + lien retour
 - [ ] Un profil `validated` accédant → même message de blocage
 - [ ] Un profil `pre_approved` → le formulaire s'affiche complet
-- [ ] Champs présents : case "J'ai suivi le Défi Guérison", case "J'ai déjà assisté à une conférence de David Théry", select fréquentation église (3 options), champ dénomination (optionnel), textarea parcours spirituel, textarea livres (max 300 chars)
+- [ ] Quatre sections repliables (seule « Formations suivies et livres lus » est ouverte au départ) ; l'en-tête de chacune indique « N à remplir » ou « Complété »
+- [ ] **Formations et livres** : liste déroulante avec recherche (formations d'abord, puis livres), cases « J'ai assisté à une conférence de David Théry » et « D'autres livres ou formations m'ont marqué » sous la liste ; cocher « autres » affiche « Quels autres livres ou formations vous ont marqué ? », le décocher efface la saisie
+- [ ] **Pratique ecclésiale** : fréquentation d'église (3 options), « Dénomination ou famille d’église » (non exigée si « Je ne fréquente pas une église »), fonction de responsabilité oui/non (« Laquelle ? » si oui ; exemples : groupe de maison, diacre, pasteur, prêtre)
+- [ ] **Parcours personnel** : « Avez-vous déjà vu des personnes guéries suite à votre prière ? » oui/non (sans légende), vidéo de présentation (VideoAsk) ; le champ « parcours spirituel » n'apparaît qu'en secours (problème caméra/enregistrement/envoi, ou lien « Un souci avec la vidéo ? »)
+- [ ] Les réponses s'enregistrent automatiquement (« Brouillon enregistré à HH:MM ») : recharger la page les retrouve, même depuis un autre appareil
 - [ ] **Section photos** : 2 blocs distincts
-  - Bloc "Photo de profil — requise" : dropzone unique, preview après upload, bouton supprimer (croix)
-  - Bloc "Photos du lieu d'accueil — requises (max 5, N/5)" : compteur dynamique, grid 3 colonnes après le 1er upload, croix de suppression sur chaque vignette, dropzone disparaît à 5/5
-- [ ] Bouton "Envoyer mon profil pour validation" reste désactivé tant que la photo de profil OU aucune photo du lieu ne sont uploadées + hint ambre correspondant
+  - Bloc "Photo de profil" : dropzone unique, preview après upload, bouton supprimer (croix) ; légende « affichée en petit sur la carte publique »
+  - Bloc "Photos du lieu d'accueil (max 5, N/5)" : compteur dynamique, grid 3 colonnes après le 1er upload, croix de suppression sur chaque vignette, dropzone disparaît à 5/5
+- [ ] **Sur quoi regarder le live** : champ texte « Sur quoi allez-vous regarder le live ? » en fin de section photos, **sans légende**, obligatoire (plafond 200 caractères) ; vide → listé dans « Il manque : … » ; la valeur apparaît dans le panneau admin sous « Téléphone » (« Regardera le live sur »), et reste vide/absente pour les profils antérieurs sans les bloquer
+- [ ] Bouton « Envoyer ma présentation à David » toujours cliquable : s'il manque une réponse obligatoire ou une photo, il ouvre les sections concernées et affiche « Il manque : … » ; la vidéo, la liste formations/livres et le parcours écrit ne bloquent pas
+- [ ] Même contrôle côté serveur : `PATCH /api/ambassadeur/enrichissement` (hors brouillon) renvoie 400 « Il manque : … » si une réponse obligatoire manque
 - [ ] Upload room → `POST /api/upload/ambassador-photo` `type=room` → vignette apparaît + compteur passe à 1/5
 - [ ] Suppression room → `DELETE /api/upload/ambassador-photo` → vignette disparaît + DB `room_photo_urls` synchronisée (vérifier via SELECT)
 - [ ] Tentative d'upload d'une 6e photo room → 400 "Maximum 5 photos de salle atteint"

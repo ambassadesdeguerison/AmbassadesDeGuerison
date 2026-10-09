@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useSyncExternalStore } from 'react';
 import { Search } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import type * as Leaflet from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
 import { useBrowserTimezone } from '@/lib/hooks/use-browser-timezone';
+
+// Marqueur Leaflet portant l'hôte qu'il représente (relu par le handler 'clusterclick').
+type HostMarker = Leaflet.Marker & { hostData: HostPin };
 
 interface EventInfo {
   id: string;
@@ -148,7 +152,7 @@ function readSavedMapView(): { lat: number; lng: number; zoom: number } | null {
   }
 }
 
-function saveMapView(map: any) {
+function saveMapView(map: LeafletMap) {
   try {
     const center = map.getCenter();
     localStorage.setItem(
@@ -160,7 +164,7 @@ function saveMapView(map: any) {
   }
 }
 
-function makeClusterIcon(L: any, count: number) {
+function makeClusterIcon(L: typeof Leaflet, count: number) {
   return L.divIcon({
     html: `<div style="width:36px;height:36px;border-radius:50%;background:#4f46e5;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.35);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:14px;line-height:1;">${count}</div>`,
     className: '',
@@ -170,7 +174,7 @@ function makeClusterIcon(L: any, count: number) {
   });
 }
 
-function makeIcon(L: any, hostType: string, isFull: boolean, isActive: boolean, isWomenOnly: boolean) {
+function makeIcon(L: typeof Leaflet, hostType: string, isFull: boolean, isActive: boolean, isWomenOnly: boolean) {
   const isChurch = hostType === 'eglise' || hostType === 'church';
   // Précédence de couleur :
   // 1. Inactif (grisé) — prime sur tout (full ignoré, women-only en pastel rose pâle)
@@ -374,8 +378,10 @@ function StatsLine({ totalAmbassadors, totalCountries }: { totalAmbassadors: num
 
 function EmptyMapContent({ nextEvent, lastEvent, liveInProgress, totalAmbassadors, totalCountries, soonThresholdDays, dbError }: Props) {
   const tzLabel = useBrowserTimezone();
+  // Instant du montage : la carte se repollera bien avant que « dans N jours » change.
+  const [mountedAt] = useState(() => Date.now());
   const daysUntilNext = nextEvent
-    ? Math.ceil((new Date(nextEvent.event_date).getTime() - Date.now()) / 86_400_000)
+    ? Math.ceil((new Date(nextEvent.event_date).getTime() - mountedAt) / 86_400_000)
     : null;
 
   // Panne de chargement (pas un vrai calme plat) — priorité sur tous les
@@ -481,7 +487,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
   const containerRef = useRef<HTMLDivElement>(null);
   // Groupe leaflet.markercluster — créé une fois dans initMap, alimenté à
   // chaque changement de `hosts` (voir l'effet updatePins plus bas).
-  const clusterGroupRef = useRef<any>(null);
+  const clusterGroupRef = useRef<Leaflet.MarkerClusterGroup | null>(null);
   const [hosts, setHosts] = useState<HostPin[]>([]);
   const hostsRef = useRef<HostPin[]>([]);
   // Lu (pas fermé sur une valeur figée) par le handler 'clusterclick', bindé
@@ -502,24 +508,33 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
   const [searchResults, setSearchResults] = useState<{ lat: number; lng: number; city: string; country: string; label: string }[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Exposé par initMap() une fois la carte prête ; déclenché par le bouton
+  // "Me localiser" rendu en React à côté de la barre de recherche (le contrôle
+  // Leaflet natif était en bas à droite, peu visible — voir retour David 2026-09-27).
+  const locateHandlerRef = useRef<(() => void) | null>(null);
+  const [locating, setLocating] = useState(false);
   // CTA "première fois" (Phase 4) — masquable, mémorisé en localStorage
   // (même pattern que tz-city) pour ne pas fatiguer les visiteurs récurrents.
-  const [discoverDismissed, setDiscoverDismissed] = useState(false);
-  // Hint "Pas d'ambassade dans ta ville ?" — fermable, non mémorisé (dépend du
+  const discoverStored = useSyncExternalStore(
+    () => () => {},
+    () => {
+      try {
+        return localStorage.getItem('discover-cta-dismissed') === '1';
+      } catch {
+        return false; // Safari mode privé — pas de crash, bandeau visible par défaut
+      }
+    },
+    () => false
+  );
+  const [discoverClosedNow, setDiscoverClosedNow] = useState(false);
+  const discoverDismissed = discoverStored || discoverClosedNow;
+  // Hint "Pas d'ambassade dans votre ville ?" — fermable, non mémorisé (dépend du
   // viewport courant, contrairement au CTA "première fois" qui est global).
   const [noAmbassadorHintDismissed, setNoAmbassadorHintDismissed] = useState(false);
   const wasHintVisibleRef = useRef(false);
 
-  useEffect(() => {
-    try {
-      if (localStorage.getItem('discover-cta-dismissed') === '1') setDiscoverDismissed(true);
-    } catch {
-      // Safari mode privé — pas de crash, bandeau visible par défaut
-    }
-  }, []);
-
   function dismissDiscoverCta() {
-    setDiscoverDismissed(true);
+    setDiscoverClosedNow(true);
     try { localStorage.setItem('discover-cta-dismissed', '1'); } catch { /* ignore */ }
   }
 
@@ -564,7 +579,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
       await import('leaflet.markercluster');
 
       if (cancelled || !containerRef.current) return;
-      if ((containerRef.current as any)._leaflet_id) return;
+      if ((containerRef.current as HTMLDivElement & { _leaflet_id?: number })._leaflet_id) return;
 
       const savedView = readSavedMapView();
       const map = L.map(containerRef.current, { zoomControl: false }).setView(
@@ -586,17 +601,18 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
       // propre popup de cluster (liste + tri par distance) au lieu du
       // comportement par défaut du plugin (zoom automatique / éclatement en
       // étoile), pour ne pas changer l'UX existante en plus de corriger le bug.
-      const clusterGroup = (L as any).markerClusterGroup({
+      const clusterGroup = L.markerClusterGroup({
         maxClusterRadius: 60,
         zoomToBoundsOnClick: false,
         spiderfyOnMaxZoom: false,
         showCoverageOnHover: false,
-        iconCreateFunction: (cluster: any) => makeClusterIcon(L, cluster.getChildCount()),
+        iconCreateFunction: (cluster: Leaflet.MarkerCluster) => makeClusterIcon(L, cluster.getChildCount()),
       });
-      clusterGroup.on('clusterclick', (e: any) => {
-        const clusterLayer = e.layer;
-        const group: HostPin[] = clusterLayer.getAllChildMarkers().map((m: any) => m.hostData);
-        const idSafe = clusterLayer._leaflet_id != null ? String(clusterLayer._leaflet_id) : Math.random().toString(36).slice(2);
+      clusterGroup.on('clusterclick', (e: Leaflet.LeafletEvent) => {
+        const clusterLayer = (e as Leaflet.LeafletEvent & { layer: Leaflet.MarkerCluster }).layer;
+        const group: HostPin[] = clusterLayer.getAllChildMarkers().map((m: Leaflet.Marker) => (m as HostMarker).hostData);
+        const leafletId = (clusterLayer as unknown as { _leaflet_id?: number })._leaflet_id;
+        const idSafe = leafletId != null ? String(leafletId) : Math.random().toString(36).slice(2);
         const { html, rowsContainerId, sortButtonId, sortHintId, activeGroup } = renderClusterPopup(
           group,
           liveInProgressRef.current,
@@ -617,28 +633,26 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
       clusterGroupRef.current = clusterGroup;
 
       // Cible de zoom pour le prochain `locationfound` — diffère entre l'auto-locate
-      // au chargement (vue métropole) et le bouton manuel (vue régionale).
+      // au chargement (vue métropole, discret) et le bouton manuel (vue ville, plus
+      // proche : un clic explicite sur "Trouvez-moi" doit zoomer près, pas l'inverse —
+      // corrigé 2026-09-27, le zoom manuel était réglé plus large que l'auto-locate).
       let nextLocateZoom = 9;
 
-      const LocateControl = L.Control.extend({
-        onAdd() {
-          const btn = L.DomUtil.create('button') as HTMLButtonElement;
-          btn.title = 'Me localiser';
-          btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-opacity=".3"/></svg>`;
-          btn.style.cssText = 'background:white;border:none;border-radius:8px;padding:8px;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;';
-          L.DomEvent.on(btn, 'click', () => {
-            nextLocateZoom = 7;
-            map.locate({ enableHighAccuracy: false });
-          });
-          return btn;
-        },
-      });
-      new LocateControl({ position: 'bottomright' }).addTo(map);
-      map.on('locationerror', () => { /* permission refusée — silencieux */ });
-      map.on('locationfound', (e: any) => {
+      // Bouton "Me localiser" rendu en React (voir JSX) plutôt qu'en contrôle
+      // Leaflet natif — celui-ci était en bas à droite de la carte, peu visible
+      // (retour David 2026-09-27). La fonction de déclenchement reste ici car
+      // elle capture `map` et `nextLocateZoom` par closure.
+      locateHandlerRef.current = () => {
+        setLocating(true);
+        nextLocateZoom = 12;
+        map.locate({ enableHighAccuracy: false });
+      };
+      map.on('locationerror', () => setLocating(false));
+      map.on('locationfound', (e: Leaflet.LocationEvent) => {
         // flyTo anime le pan + zoom au lieu du saut sec de setView.
         map.flyTo(e.latlng, nextLocateZoom, { duration: 1.4 });
         nextLocateZoom = 9; // reset pour le prochain auto-trigger éventuel
+        setLocating(false);
       });
 
       // Géolocalisation automatique au premier chargement : zoome sur la zone
@@ -709,7 +723,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
           });
           // Porté par le marqueur pour que le handler 'clusterclick' (bindé une
           // fois dans initMap) puisse reconstruire la liste des hôtes du cluster.
-          (marker as any).hostData = host;
+          (marker as HostMarker).hostData = host;
           marker.bindPopup(renderSinglePopup(host, effectiveIsFull, liveInProgress), { maxWidth: 280 });
           return marker;
         });
@@ -764,9 +778,11 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full z-0" />
-      {/* Barre de recherche par ville */}
-      <div className="absolute top-3 left-3 z-[1000] w-56 sm:w-64 lg:w-80 pointer-events-auto">
-        <div className="relative">
+      {/* Barre de recherche par ville + bouton de géolocalisation juste à côté
+          (avant : contrôle Leaflet natif en bas à droite, peu visible — retour
+          David 2026-09-27). */}
+      <div className="absolute top-3 left-3 right-3 sm:right-auto z-[1000] flex items-start gap-2 pointer-events-auto">
+        <div className="relative w-full sm:w-64 lg:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none z-10" />
           <input
             type="text"
@@ -782,25 +798,39 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
             placeholder="Rechercher une ville…"
             className="w-full bg-white/95 backdrop-blur-sm border border-slate-100 rounded-xl shadow-md pl-8 pr-3 py-2 text-sm text-slate-700 placeholder-slate-400 outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow"
           />
+          {searchOpen && searchResults.length > 0 && (
+            <ul className="absolute top-full mt-1 w-full bg-white border border-slate-100 rounded-xl shadow-lg overflow-hidden">
+              {searchResults.map((r, i) => {
+                return (
+                  <li key={i}>
+                    <button
+                      type="button"
+                      onMouseDown={() => handleResultClick(r.lat, r.lng)}
+                      className="w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 transition-colors"
+                    >
+                      <span className="font-medium text-slate-800">{r.city}</span>
+                      {r.country && r.country !== r.city && <span className="text-slate-400 text-xs ml-1.5">{r.country}</span>}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
-        {searchOpen && searchResults.length > 0 && (
-          <ul className="absolute top-full mt-1 w-full bg-white border border-slate-100 rounded-xl shadow-lg overflow-hidden">
-            {searchResults.map((r, i) => {
-              return (
-                <li key={i}>
-                  <button
-                    type="button"
-                    onMouseDown={() => handleResultClick(r.lat, r.lng)}
-                    className="w-full text-left px-3 py-2 text-sm cursor-pointer hover:bg-slate-100 transition-colors"
-                  >
-                    <span className="font-medium text-slate-800">{r.city}</span>
-                    {r.country && r.country !== r.city && <span className="text-slate-400 text-xs ml-1.5">{r.country}</span>}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <button
+          type="button"
+          title="Me géolocaliser sur la carte"
+          onClick={() => locateHandlerRef.current?.()}
+          disabled={locating}
+          className="shrink-0 flex items-center gap-1.5 bg-white/95 backdrop-blur-sm border border-slate-100 rounded-xl shadow-md pl-2.5 pr-3 py-2 text-sm font-medium text-indigo-600 whitespace-nowrap outline-none focus:ring-2 focus:ring-indigo-500/30 transition-shadow disabled:opacity-60 disabled:cursor-wait"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={locating ? 'animate-pulse' : ''}>
+            <circle cx="12" cy="12" r="3" />
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+            <circle cx="12" cy="12" r="8" strokeOpacity=".3" />
+          </svg>
+          <span className="hidden sm:inline">Trouvez-moi</span>
+        </button>
       </div>
       {/* Carte vide — overlay contextuel selon l'état de l'app */}
       {/* D7 : conditionné sur le nombre de pins ACTIFS (les grisés ne comptent pas */}
@@ -833,7 +863,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
             >
               ×
             </button>
-            <p className="text-slate-600 text-xs">Pas d&apos;ambassade dans ta ville&nbsp;?</p>
+            <p className="text-slate-600 text-xs">Pas d&apos;ambassade dans votre ville&nbsp;?</p>
             <a
               href="/inscription"
               className="mt-1.5 inline-flex items-center gap-1 text-indigo-600 text-xs font-medium hover:text-indigo-800 transition-colors"
@@ -847,7 +877,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
           le hint "pas d'ambassade" (centré) ni la recherche (haut-gauche) */}
       {!discoverDismissed && (
         <div className="absolute bottom-6 right-3 z-[500] max-w-[220px]">
-          <div className="bg-white/95 backdrop-blur-sm rounded-xl border border-slate-100 shadow-md px-4 py-3 relative">
+          <div className="discover-cta bg-white/95 backdrop-blur-sm rounded-xl border border-indigo-100 shadow-md px-4 py-3 relative">
             <button
               type="button"
               onClick={dismissDiscoverCta}
@@ -856,7 +886,7 @@ export default function MapPublique({ nextEvent, lastEvent, liveInProgress, tota
             >
               ×
             </button>
-            <p className="text-slate-600 text-xs pr-4">C&apos;est votre première fois&nbsp;?</p>
+            <p className="text-slate-800 text-sm font-medium pr-4">C&apos;est votre première fois&nbsp;?</p>
             <a
               href="/decouvrir"
               className="mt-1.5 inline-flex items-center gap-1 text-indigo-600 text-xs font-medium hover:text-indigo-800 transition-colors"

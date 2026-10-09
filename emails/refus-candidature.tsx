@@ -19,6 +19,6 @@ export default function RefusCandidature({ firstName, reason }: Props) {
   );
 }
 
-const p: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
-const muted: React.CSSProperties = { fontSize: '13px', color: '#64748b', marginTop: '24px' };
-const signature: React.CSSProperties = { fontSize: '15px', color: '#334155', fontStyle: 'italic', marginTop: '8px' };
+const p: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
+const muted: React.CSSProperties = { fontSize: '14px', color: '#64748b', marginTop: '24px' };
+const signature: React.CSSProperties = { fontSize: '16px', color: '#334155', fontStyle: 'italic', marginTop: '8px' };

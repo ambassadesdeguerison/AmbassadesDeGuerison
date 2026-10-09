@@ -130,7 +130,7 @@ describe('fn_contact_request_count_update', () => {
       .single();
 
     // La création de la demande (status=pending) ne doit pas incrémenter le compteur
-    let { data: afterInsert } = await supabase
+    const { data: afterInsert } = await supabase
       .from('host_activations')
       .select('accepted_count')
       .eq('id', activation!.id)
@@ -139,7 +139,7 @@ describe('fn_contact_request_count_update', () => {
 
     // L'acceptation incrémente le compteur
     await supabase.from('contact_requests').update({ status: 'accepted' }).eq('id', request!.id);
-    let { data: afterAccept } = await supabase
+    const { data: afterAccept } = await supabase
       .from('host_activations')
       .select('accepted_count')
       .eq('id', activation!.id)
@@ -148,7 +148,7 @@ describe('fn_contact_request_count_update', () => {
 
     // Un refus après acceptation décrémente le compteur
     await supabase.from('contact_requests').update({ status: 'declined' }).eq('id', request!.id);
-    let { data: afterDecline } = await supabase
+    const { data: afterDecline } = await supabase
       .from('host_activations')
       .select('accepted_count')
       .eq('id', activation!.id)

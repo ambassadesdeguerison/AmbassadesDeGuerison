@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { sendContactRequestDeclined } from '@/lib/email/templates';
 import { FEATURES } from '@/config/features';
+import { firstRow } from '@/lib/supabase/relation';
 
 const TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -33,7 +34,7 @@ export async function GET(
     return NextResponse.json({ already_declined: true }, { status: 200 });
   }
 
-  const hp = (data.host_activations as any)?.host_profiles;
+  const hp = firstRow(firstRow(data.host_activations)?.host_profiles);
   return NextResponse.json({
     visitor_first_name: data.visitor_first_name,
     host_first_name: hp?.first_name ?? null,
@@ -42,10 +43,12 @@ export async function GET(
 
 // POST — effectue le refus
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
+  // « Ne plus accueillir cette personne » (true) ou « pas disponible cette fois » (absent/false).
+  const permanent = (await req.json().catch(() => null))?.permanent === true;
   const supabase = createServiceClient();
   const expiresAt = new Date(Date.now() - TOKEN_TTL_MS).toISOString();
 
@@ -70,19 +73,20 @@ export async function POST(
 
   const { error: updateError } = await supabase
     .from('contact_requests')
-    .update({ status: 'declined' })
+    .update({ status: 'declined', declined_permanently: permanent })
     .eq('id', data.id);
 
   if (updateError) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
-  const hp = (data.host_activations as any)?.host_profiles;
+  const hp = firstRow(firstRow(data.host_activations)?.host_profiles);
   if (hp && FEATURES.EMAIL_NOTIFICATIONS) {
     sendContactRequestDeclined(
       data.visitor_email,
       data.visitor_first_name,
-      hp.first_name
+      hp.first_name,
+      permanent,
     ).catch(() => {});
   }
 

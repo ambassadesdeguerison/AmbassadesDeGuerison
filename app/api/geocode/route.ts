@@ -10,6 +10,32 @@ function extractQuartier(addr: Record<string, string | undefined>): string | und
   return addr.city_district ?? addr.suburb ?? addr.neighbourhood ?? addr.quarter;
 }
 
+// Adresse lisible : « 19, Boulevard Mendès France, 44700 Orvault, France ».
+// `display_name` de Nominatim est la hiérarchie OSM complète (lieux-dits,
+// département, région, « France métropolitaine »…), trop longue pour un
+// humain. On reconstruit depuis les champs structurés, avec repli sur un
+// lieu-dit quand il n'y a pas de rue, puis sur `display_name` en dernier recours.
+function formatAddress(addr: Record<string, string | undefined>, displayName: string): string {
+  const city = addr.city ?? addr.town ?? addr.village ?? addr.municipality;
+  const street = addr.road ?? addr.pedestrian ?? addr.footway ?? addr.path;
+  const locality = street ? undefined : (addr.hamlet ?? addr.isolated_dwelling ?? addr.neighbourhood ?? addr.suburb);
+  const line1 = [addr.house_number, street ?? locality].filter(Boolean).join(', ');
+  const line2 = [addr.postcode, city].filter(Boolean).join(' ');
+  const parts = [line1, line2, addr.country].filter(Boolean);
+  // Sans rue ni lieu-dit ni ville, on n'a rien d'exploitable : garder l'original.
+  if (!street && !locality && !city) return displayName;
+  return parts.join(', ');
+}
+
+// Champs de la réponse Nominatim (format=json&addressdetails=1) que cette route lit.
+interface NominatimResult {
+  lat?: string;
+  lon?: string;
+  display_name: string;
+  addresstype?: string;
+  address?: Record<string, string | undefined>;
+}
+
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams.get('q')?.trim();
   const mode = req.nextUrl.searchParams.get('mode'); // 'address' — Phase 2 (adresse précise ambassadeur)
@@ -37,7 +63,7 @@ export async function GET(req: NextRequest) {
 
   if (!res?.ok) return NextResponse.json([]);
 
-  const raw: any[] = await res.json();
+  const raw: NominatimResult[] = await res.json();
 
   if (mode === 'address') {
     const results = raw
@@ -46,16 +72,19 @@ export async function GET(req: NextRequest) {
         const addr = r.address ?? {};
         const city = addr.city ?? addr.town ?? addr.village ?? addr.municipality ?? '';
         const country = addr.country ?? '';
+        const address = formatAddress(addr, r.display_name);
         return {
-          label: r.display_name as string,
-          address: r.display_name as string,
+          label: address,
+          address,
           city,
           country,
           quartier: extractQuartier(addr) ?? null,
-          lat_precise: parseFloat(r.lat),
-          lng_precise: parseFloat(r.lon),
+          lat_precise: parseFloat(r.lat!),
+          lng_precise: parseFloat(r.lon!),
         };
-      });
+      })
+      // Des résultats distincts peuvent donner la même adresse courte.
+      .filter((r, i, all) => all.findIndex((o) => o.label === r.label) === i);
     return NextResponse.json(results);
   }
 
@@ -73,8 +102,8 @@ export async function GET(req: NextRequest) {
   // afin qu'une même recherche renvoie toujours le même point.
   const ADDRESSTYPE_PRIORITY = ['city', 'town', 'village', 'hamlet'];
   const sorted = [...raw].sort((a, b) => {
-    const rankOf = (r: any) => {
-      const idx = ADDRESSTYPE_PRIORITY.indexOf(r.addresstype);
+    const rankOf = (r: NominatimResult) => {
+      const idx = ADDRESSTYPE_PRIORITY.indexOf(r.addresstype ?? '');
       return idx === -1 ? ADDRESSTYPE_PRIORITY.length : idx;
     };
     return rankOf(a) - rankOf(b);
@@ -91,8 +120,8 @@ export async function GET(req: NextRequest) {
         label: [city, country].filter(Boolean).join(', '),
         city,
         country,
-        lat: parseFloat(r.lat),
-        lng: parseFloat(r.lon),
+        lat: parseFloat(r.lat!),
+        lng: parseFloat(r.lon!),
       };
     })
     .filter((r) => {

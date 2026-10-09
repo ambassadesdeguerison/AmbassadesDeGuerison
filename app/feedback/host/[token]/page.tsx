@@ -54,7 +54,7 @@ export default async function HostFeedbackPage({ params }: Props) {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
             <p className="text-xs text-slate-400 uppercase tracking-wide mb-0.5">Votre avis</p>
             <h1 className="text-lg font-semibold text-slate-800 mb-0.5">{event?.title}</h1>
-            <p className="text-slate-500 text-sm">Bonjour {host?.first_name}, comment s'est passé votre accueil ?</p>
+            <p className="text-slate-500 text-sm">Bonjour {host?.first_name}, comment s&apos;est passé votre accueil ?</p>
           </div>
 
           {pending.length === 0 ? (

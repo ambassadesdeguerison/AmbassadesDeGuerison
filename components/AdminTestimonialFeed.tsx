@@ -60,9 +60,13 @@ export default function AdminTestimonialFeed({ eventId }: { eventId: string | nu
   }, [eventId]);
 
   useEffect(() => {
-    fetchTestimonials();
+    // Premier appel différé d'un tick : `fetchTestimonials` met à jour l'état, ce qu'un effet ne doit pas faire de façon synchrone.
+    const first = setTimeout(fetchTestimonials, 0);
     const interval = setInterval(fetchTestimonials, 5_000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(first);
+      clearInterval(interval);
+    };
   }, [fetchTestimonials]);
 
   async function handleAction(id: string, action: 'approve' | 'decline') {
@@ -125,7 +129,7 @@ export default function AdminTestimonialFeed({ eventId }: { eventId: string | nu
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-semibold text-slate-800 text-sm">{author}</span>
                   </div>
-                  <blockquote className="text-slate-700 text-sm italic">"{t.content}"</blockquote>
+                  <blockquote className="text-slate-700 text-sm italic">&quot;{t.content}&quot;</blockquote>
                   <p className="text-xs text-slate-400 mt-1">
                     {new Date(t.created_at).toLocaleTimeString('fr-FR')}
                   </p>

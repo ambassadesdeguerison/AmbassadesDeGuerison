@@ -66,7 +66,7 @@ export default function FaqPage() {
         <div className="max-w-2xl mx-auto">
           <h1 className="text-2xl font-semibold text-slate-800 mb-2">Questions fréquentes</h1>
           <p className="text-slate-500 text-sm mb-8">
-            Tout ce que vous voulez savoir avant de rejoindre ou d'ouvrir une ambassade.
+            Tout ce que vous voulez savoir avant de rejoindre ou d&apos;ouvrir une ambassade.
           </p>
 
           <div className="space-y-2">
@@ -81,7 +81,7 @@ export default function FaqPage() {
               href="/contact-equipe"
               className="inline-block bg-indigo-600 text-white text-sm font-medium px-5 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors"
             >
-              Contacter l'équipe
+              Contacter l&apos;équipe
             </Link>
           </div>
         </div>

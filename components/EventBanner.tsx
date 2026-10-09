@@ -30,7 +30,7 @@ function formatCountdown(ms: number) {
 
 export default function EventBanner({ nextEvent, lastEvent, liveInProgress }: Props) {
   const [countdown, setCountdown] = useState<string | null>(null);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const tzLabel = useBrowserTimezone();
 
   useEffect(() => {
@@ -93,7 +93,7 @@ export default function EventBanner({ nextEvent, lastEvent, liveInProgress }: Pr
     }
   } else if (lastEvent) {
     const daysAgo = Math.floor(
-      (Date.now() - new Date(lastEvent.event_date).getTime()) / (1000 * 60 * 60 * 24)
+      (now - new Date(lastEvent.event_date).getTime()) / (1000 * 60 * 60 * 24)
     );
     messageShort = 'Prochainement';
     messageFull = `Dernier live il y a ${daysAgo} jour${daysAgo > 1 ? 's' : ''} — prochainement`;

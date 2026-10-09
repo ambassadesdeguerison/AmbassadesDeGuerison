@@ -8,6 +8,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // de regarder s'il existe un host_profile).
 // Found by /qa on 2026-07-29
 // Report: .gstack/qa-reports/qa-report-localhost-2026-07-29.md
+import { createEmailProof } from '@/lib/auth/email-proof';
+
 vi.mock('@/lib/email/templates', () => ({
   sendRegistrationConfirmation: vi.fn().mockResolvedValue(undefined),
   sendNouvelleInscriptionAdmin: vi.fn().mockResolvedValue(undefined),
@@ -46,8 +48,11 @@ function buildSupabaseMock(existingUser: typeof EXISTING_VISITOR | typeof EXISTI
   };
 }
 
+process.env.EMAIL_PROOF_SECRET = 'test-secret';
+
 const basePayload = {
   email: 'visiteur@example.com',
+  email_proof: createEmailProof('visiteur@example.com', 'inscription'),
   first_name: 'Jean',
   last_name: 'Dupont',
   phone: '+33612345678',
@@ -91,7 +96,7 @@ describe('POST /api/inscriptions — visiteur devenant ambassadeur', () => {
     const req = new Request('http://localhost/api/inscriptions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...basePayload, email: 'admin@example.com' }),
+      body: JSON.stringify({ ...basePayload, email: 'admin@example.com', email_proof: createEmailProof('admin@example.com', 'inscription') }),
     });
 
     const res = await POST(req as unknown as import('next/server').NextRequest);

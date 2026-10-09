@@ -12,8 +12,13 @@ import Dropzone from '@/components/ui/Dropzone';
 import Avatar from '@/components/ui/Avatar';
 import StatusTimeline from '@/components/dashboard/StatusTimeline';
 import MissionDuMoment from '@/components/dashboard/MissionDuMoment';
-import DashboardTabs, { type DashboardTab } from '@/components/dashboard/DashboardTabs';
+import { participationLabels } from '@/lib/dashboard/participation-labels';
+import DashboardTabs, { DASHBOARD_TABS_ID, type DashboardTab } from '@/components/dashboard/DashboardTabs';
+import { tabButtonId, tabPanelId } from '@/components/ui/TabNav';
 import MesInfosSection from '@/app/dashboard/MesInfosSection';
+import DeclineChoice from '@/components/DeclineChoice';
+import { useToast } from '@/components/ui/Toast';
+import { requestActionFeedback } from '@/lib/dashboard/request-action-feedback';
 import { useBrowserTimezone } from '@/lib/hooks/use-browser-timezone';
 
 const LIVE_WINDOW_HOURS = parseInt(process.env.NEXT_PUBLIC_LIVE_SIGNAL_WINDOW_HOURS ?? '4');
@@ -34,6 +39,7 @@ interface HostProfile {
   address_private: string | null;
   consignes: string | null;
   phone: string | null;
+  host_type?: string | null;
 }
 
 interface Activation {
@@ -60,6 +66,7 @@ interface ContactRequest {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const toast = useToast();
   const tzLabel = useBrowserTimezone();
   const [profile, setProfile] = useState<HostProfile | null>(null);
   const [activations, setActivations] = useState<Activation[]>([]);
@@ -87,11 +94,16 @@ export default function DashboardPage() {
   const [testimonialError, setTestimonialError] = useState('');
 
   // Accept/decline loading state
-  const [requestActionLoading, setRequestActionLoading] = useState<{ token: string; action: 'accept' | 'decline' } | null>(null);
+  const [requestActionLoading, setRequestActionLoading] = useState<{ token: string; action: 'accept' | 'decline'; permanent?: boolean } | null>(null);
+  // Demande dont le panneau « Refuser » est ouvert (une seule à la fois).
+  const [decliningToken, setDecliningToken] = useState<string | null>(null);
 
   // Photos visiteur (Phase 3 PR3) — signed URLs récupérées via une route
   // dédiée (ownership vérifié serveur), et signalements en cours (optimiste).
   const [visitorPhotoUrls, setVisitorPhotoUrls] = useState<Record<string, string>>({});
+  // « Sans photo » n'est affiché qu'une fois la réponse reçue : jamais pendant le
+  // chargement ni après un échec réseau, pour ne pas affirmer à tort qu'il n'y en a pas.
+  const [visitorPhotosLoaded, setVisitorPhotosLoaded] = useState(false);
   const [reportedPhotoIds, setReportedPhotoIds] = useState<Set<string>>(new Set());
 
   // Photos upload
@@ -127,8 +139,9 @@ export default function DashboardPage() {
       .from('host_profiles')
       .select('id, first_name, city, country, status, email, profile_photo_url, room_photo_urls, address_private, consignes, phone, quartier, presentation_message, host_type, is_women_only')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
+    // Connecté sans profil ambassadeur : /auth l'explique et propose de s'inscrire.
     if (!prof) { router.replace('/auth'); return; }
 
     const { data: acts } = await supabase
@@ -155,9 +168,14 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ contact_request_ids: idsWithPhoto }),
       })
-        .then((r) => (r.ok ? r.json() : {}))
-        .then((urls) => setVisitorPhotoUrls(urls))
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+        .then((urls) => {
+          setVisitorPhotoUrls(urls);
+          setVisitorPhotosLoaded(true);
+        })
         .catch(() => {});
+    } else {
+      setVisitorPhotosLoaded(true);
     }
 
     const windowMs = LIVE_WINDOW_HOURS * 60 * 60 * 1000;
@@ -205,7 +223,11 @@ export default function DashboardPage() {
     setLoading(false);
   }, [router, supabase]);
 
-  useEffect(() => { load(); }, [load]);
+  // Différé d'un tick : `load` met à jour l'état, ce qu'un effet ne doit pas faire de façon synchrone.
+  useEffect(() => {
+    const timer = setTimeout(load, 0);
+    return () => clearTimeout(timer);
+  }, [load]);
 
   // Poll toutes les 5s pour détecter l'approbation de David quand un signal est en attente
   useEffect(() => {
@@ -268,31 +290,64 @@ export default function DashboardPage() {
   }
 
   async function toggleActivation(id: string, currentValue: boolean) {
-    await fetch(`/api/host-activations/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_active: !currentValue }),
-    });
-    setActivations((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, is_active: !currentValue } : a))
-    );
+    const labels = participationLabels(profile?.host_type);
+    try {
+      const res = await fetch(`/api/host-activations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !currentValue }),
+      });
+      if (!res.ok) {
+        // L'état local basculait même si l'enregistrement avait échoué : la carte
+        // publique ne suivait pas, et rien ne le disait à l'ambassadeur.
+        toast.error("Votre choix n'a pas été enregistré", { description: 'Réessayez dans un instant.' });
+        return;
+      }
+      setActivations((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, is_active: !currentValue } : a))
+      );
+      if (currentValue) {
+        toast.success("C'est noté", {
+          description: "Vous n'accueillez pas pour ce live. Vous n'apparaissez plus sur la carte.",
+        });
+      } else {
+        toast.success(labels.joined, { description: 'Vous apparaissez maintenant sur la carte pour ce live.' });
+      }
+    } catch {
+      toast.error('Connexion impossible', { description: 'Vérifiez votre connexion Internet, puis réessayez.' });
+    }
   }
 
   async function sendLiveSignal() {
     if (!signalDescription.trim() || !profile || !currentEvent) return;
     setSignalLoading(true);
-    await fetch('/api/live-signals', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        host_profile_id: profile.id,
-        event_id: currentEvent.id,
-        description: signalDescription.trim(),
-      }),
-    });
-    setSignalSent(true);
-    setSignalDescription('');
-    setSignalLoading(false);
+    try {
+      const res = await fetch('/api/live-signals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host_profile_id: profile.id,
+          event_id: currentEvent.id,
+          description: signalDescription.trim(),
+        }),
+      });
+      if (!res.ok) {
+        // Le signal était affiché « envoyé » même quand l'API l'avait refusé :
+        // l'ambassadeur attendait une réponse de David qui ne viendrait jamais.
+        const data = await res.json().catch(() => ({}));
+        toast.error("Votre témoignage n'a pas été envoyé", {
+          description: data.error ?? 'Votre texte est conservé. Réessayez dans un instant.',
+        });
+        return;
+      }
+      setSignalSent(true);
+      setSignalDescription('');
+      toast.success('Témoignage envoyé', { description: 'David le reçoit tout de suite et vous répond bientôt.' });
+    } catch {
+      toast.error('Connexion impossible', { description: 'Votre texte est conservé. Réessayez dans un instant.' });
+    } finally {
+      setSignalLoading(false);
+    }
   }
 
   async function copyAmbassadeLink() {
@@ -381,16 +436,53 @@ export default function DashboardPage() {
     }).catch(() => {});
   }
 
-  async function handleContactAction(token: string, action: 'accept' | 'decline') {
-    setRequestActionLoading({ token, action });
-    const res = await fetch(`/api/visit-requests/${token}/${action}`, { method: 'POST' });
-    if (res.ok) {
+  async function handleContactAction(token: string, action: 'accept' | 'decline', permanent = false) {
+    setRequestActionLoading({ token, action, permanent });
+    const request = contactRequests.find((r) => r.action_token === token);
+    try {
+      const res = await fetch(`/api/visit-requests/${token}/${action}`, {
+        method: 'POST',
+        ...(action === 'decline' && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ permanent }) }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        // Avant, l'échec ne laissait aucune trace : le bouton se rouvrait et
+        // l'ambassadeur ne savait pas si sa réponse avait été prise en compte.
+        toast.error("Votre réponse n'a pas été enregistrée", {
+          description: data.error ?? 'Réessayez dans un instant.',
+        });
+        return;
+      }
+
+      // L'API répond 200 « déjà traitée » (autre appareil, lien de l'e-mail) :
+      // afficher le vrai statut plutôt que celui du bouton cliqué.
+      if (data.message) {
+        setContactRequests((prev) =>
+          prev.map((r) => (r.action_token === token ? { ...r, status: data.status ?? r.status } : r))
+        );
+        toast.info('Cette demande avait déjà reçu une réponse', {
+          description: "Rien n'a été modifié.",
+        });
+        return;
+      }
+
       const newStatus = action === 'accept' ? 'accepted' : 'declined';
       setContactRequests((prev) =>
         prev.map((r) => (r.action_token === token ? { ...r, status: newStatus } : r))
       );
+      const { tone, title, description } = requestActionFeedback({
+        action,
+        permanent,
+        emailSent: data.emailSent,
+        visitorFirstName: request?.visitor_first_name ?? '',
+      });
+      toast[tone](title, { description });
+    } catch {
+      toast.error('Connexion impossible', { description: 'Vérifiez votre connexion Internet, puis réessayez.' });
+    } finally {
+      setRequestActionLoading(null);
     }
-    setRequestActionLoading(null);
   }
 
   async function handleSignOut() {
@@ -417,7 +509,7 @@ export default function DashboardPage() {
 
   const statusLabels: Record<string, string> = {
     pending_review:     'Candidature en cours',
-    pre_approved:       'Conditions acceptées',
+    pre_approved:       'Engagement pris',
     enrichment_pending: 'En attente de validation',
     validated:          'Actif',
     suspended:          'Suspendu',
@@ -491,7 +583,7 @@ export default function DashboardPage() {
                 <UserX className="w-4 h-4 text-red-600" />
               </div>
               <div>
-                <p className="font-semibold text-slate-800 text-sm">Votre compte est suspendu</p>
+                <p className="font-semibold text-slate-800 text-sm">Votre ambassade est en pause</p>
                 <p className="text-sm text-slate-600 mt-0.5">
                   Votre ambassade n&apos;est plus visible sur la carte publique et vous ne pouvez plus recevoir de nouvelles demandes.
                   Contactez l&apos;équipe si vous pensez qu&apos;il s&apos;agit d&apos;une erreur.
@@ -537,8 +629,8 @@ export default function DashboardPage() {
                   <div>
                     <p className="font-semibold text-slate-800 text-sm">Bienvenue, {profile.first_name} !</p>
                     <p className="text-sm text-slate-600 mt-0.5">
-                      Pour rejoindre les Ambassades de Guérison, regarde la vidéo de formation ci-dessous,
-                      télécharge le guide pratique, puis valide ton engagement pour débloquer le questionnaire.
+                      Pour rejoindre les Ambassades de Guérison, regardez la vidéo de formation ci-dessous,
+                      téléchargez le guide pratique, puis validez votre engagement pour accéder à votre présentation.
                     </p>
                   </div>
                 </div>
@@ -553,10 +645,10 @@ export default function DashboardPage() {
                     <UserCheck className="w-4 h-4 text-indigo-600" />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-800 text-sm">Conditions acceptées</p>
+                    <p className="font-semibold text-slate-800 text-sm">Engagement pris</p>
                     <p className="text-sm text-slate-600 mt-0.5">
                       Il reste une dernière étape avant de rejoindre la carte des ambassadeurs :
-                      compléter ton profil enrichi pour que David puisse mieux te connaître.
+                      vous présenter pour que David puisse mieux vous connaître.
                     </p>
                   </div>
                 </div>
@@ -564,7 +656,7 @@ export default function DashboardPage() {
                   href="/dashboard/questionnaire"
                   className="inline-flex items-center gap-2 bg-indigo-600 text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-indigo-700 transition-colors"
                 >
-                  Compléter mon profil →
+                  Me présenter →
                 </Link>
               </div>
             )}
@@ -580,9 +672,9 @@ export default function DashboardPage() {
                     <CheckCircle2 className="w-4 h-4 text-purple-600" />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-800 text-sm">Ton dossier est en cours d&apos;examen</p>
+                    <p className="font-semibold text-slate-800 text-sm">David regarde votre dossier</p>
                     <p className="text-sm text-slate-600 mt-0.5">
-                      Merci d&apos;avoir complété ton profil. L&apos;équipe te contactera prochainement pour la validation finale.
+                      Merci d&apos;avoir complété votre présentation. L&apos;équipe vous contactera prochainement pour vous donner la réponse de David.
                     </p>
                   </div>
                 </div>
@@ -663,7 +755,7 @@ export default function DashboardPage() {
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4" />
-                        Activer mon onboarding
+                        Je m&apos;engage et je continue
                       </>
                     )}
                   </button>
@@ -678,9 +770,10 @@ export default function DashboardPage() {
           <>
             {/* ── Onglet Accueil ── */}
             {activeTab === 'accueil' && (
-              <>
+              <div role="tabpanel" id={tabPanelId(DASHBOARD_TABS_ID, 'accueil')} aria-labelledby={tabButtonId(DASHBOARD_TABS_ID, 'accueil')} className="space-y-6">
                 {/* Mission du moment — carte contextuelle (priorité décroissante) */}
                 <MissionDuMoment
+                  hostType={profile.host_type}
                   currentEvent={currentEvent}
                   approvedLiveLink={approvedLiveLink}
                   signalSent={signalSent}
@@ -731,7 +824,7 @@ export default function DashboardPage() {
                     <button
                       onClick={submitTestimonial}
                       disabled={testimonialSubmitting || !testimonialContent.trim()}
-                      className="w-full bg-emerald-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-emerald-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                      className="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                     >
                       <Send className="w-4 h-4" />
                       {testimonialSubmitting ? 'Envoi…' : 'Envoyer le témoignage'}
@@ -783,13 +876,13 @@ export default function DashboardPage() {
                               <div className="flex items-center justify-between gap-3">
                                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg">
                                   <CheckCircle2 className="w-3.5 h-3.5" />
-                                  Vous participez à ce live
+                                  {participationLabels(profile.host_type).joined}
                                 </span>
                                 <button
                                   onClick={() => toggleActivation(a.id, a.is_active)}
                                   className="text-xs text-slate-400 hover:text-red-500 transition-colors underline-offset-2 hover:underline"
                                 >
-                                  Annuler ma participation
+                                  {participationLabels(profile.host_type).leave}
                                 </button>
                               </div>
                             ) : (
@@ -797,7 +890,7 @@ export default function DashboardPage() {
                                 onClick={() => toggleActivation(a.id, a.is_active)}
                                 className="w-full bg-indigo-600 text-white text-sm font-medium py-2.5 rounded-xl hover:bg-indigo-700 transition-colors"
                               >
-                                Je participe à ce live
+                                {participationLabels(profile.host_type).join}
                               </button>
                             )}
                           </div>
@@ -806,13 +899,19 @@ export default function DashboardPage() {
                     </div>
                   </section>
                 )}
-              </>
+              </div>
             )}
 
             {/* ── Onglet Demandes ── */}
             {activeTab === 'demandes' && (
+              <div role="tabpanel" id={tabPanelId(DASHBOARD_TABS_ID, 'demandes')} aria-labelledby={tabButtonId(DASHBOARD_TABS_ID, 'demandes')}>
               <section>
                 <h2 className="font-semibold text-slate-800 mb-3 text-sm uppercase tracking-wide">Mes demandes</h2>
+                {pendingCount > 0 && (
+                  <p className="text-slate-500 text-sm leading-relaxed bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 mb-4">
+                    Vous pouvez refuser quelle qu&apos;en soit la raison, par exemple le nombre de places. La personne ne saura pas pourquoi vous avez refusé.
+                  </p>
+                )}
                 {contactRequests.length === 0 ? (
                   <p className="text-slate-400 text-sm">Aucune demande pour l&apos;instant.</p>
                 ) : (
@@ -839,6 +938,9 @@ export default function DashboardPage() {
                               )}
                               <div className="min-w-0">
                                 <p className="font-medium text-slate-900 text-sm">{r.visitor_first_name}</p>
+                                {visitorPhotosLoaded && !visitorPhotoUrls[r.id] && (
+                                  <p className="text-slate-400 text-xs mt-0.5">Sans photo</p>
+                                )}
                                 {liveTitle && (
                                   <p className="text-indigo-600 text-xs mt-0.5">Pour le live : {liveTitle}</p>
                                 )}
@@ -856,7 +958,8 @@ export default function DashboardPage() {
 
                           <div className="space-y-0.5 mb-2">
                             <p className="text-slate-500 text-xs">{r.visitor_email}</p>
-                            {r.visitor_phone && (
+                            {/* Le téléphone n'est montré qu'après acceptation (cf. légende de /mon-espace/creer). */}
+                            {r.status === 'accepted' && r.visitor_phone && (
                               <p className="text-slate-500 text-xs">Tél : {r.visitor_phone}</p>
                             )}
                             {r.nb_personnes && (
@@ -881,13 +984,23 @@ export default function DashboardPage() {
                                 Accepter
                               </button>
                               <button
-                                onClick={() => handleContactAction(r.action_token, 'decline')}
+                                onClick={() => setDecliningToken(decliningToken === r.action_token ? null : r.action_token)}
                                 disabled={isActioning}
-                                className="flex-1 flex items-center justify-center gap-1.5 text-sm px-3 py-2 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-100 disabled:opacity-50 transition-colors font-medium"
+                                className="flex-1 flex items-center justify-center gap-1.5 text-sm px-3 py-2 bg-red-50 text-red-700 rounded-xl hover:bg-red-100 disabled:opacity-50 transition-colors font-medium"
                               >
-                                {isDeclining ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
+                                <UserX className="w-4 h-4" />
                                 Refuser
                               </button>
+                            </div>
+                          )}
+                          {isPending && decliningToken === r.action_token && (
+                            <div className="mt-3 pt-3 border-t border-slate-100">
+                              <p className="text-sm font-medium text-slate-700 mb-3">Que répondez-vous à {r.visitor_first_name} ?</p>
+                              <DeclineChoice
+                                visitorName={r.visitor_first_name}
+                                loading={isDeclining ? { permanent: !!requestActionLoading?.permanent } : false}
+                                onDecline={(permanent) => handleContactAction(r.action_token, 'decline', permanent)}
+                              />
                             </div>
                           )}
                         </div>
@@ -896,11 +1009,12 @@ export default function DashboardPage() {
                   </div>
                 )}
               </section>
+              </div>
             )}
 
             {/* ── Onglet Profil ── */}
             {activeTab === 'profil' && (
-              <>
+              <div role="tabpanel" id={tabPanelId(DASHBOARD_TABS_ID, 'profil')} aria-labelledby={tabButtonId(DASHBOARD_TABS_ID, 'profil')} className="space-y-6">
                 {/* Mon ambassade — partage */}
                 <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4">
                   <div className="flex items-center gap-2">
@@ -937,7 +1051,7 @@ export default function DashboardPage() {
                     className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-indigo-600 transition-colors"
                   >
                     <ExternalLink className="w-3 h-3" />
-                    Voir mon badge ambassade
+                    Mon image à partager
                   </a>
                 </div>
 
@@ -964,7 +1078,7 @@ export default function DashboardPage() {
                           onFile={(f) => uploadPhoto(f, 'profile')}
                           preview={profile.profile_photo_url ? (photoSignedUrls[profile.profile_photo_url] ?? null) : null}
                           onRemove={profile.profile_photo_url ? () => setProfile((p) => p ? { ...p, profile_photo_url: null } : p) : undefined}
-                          label="Photo de profil — privée, vue uniquement par David pour valider votre ambassade"
+                          label="Ajouter ma photo de profil"
                         />
                       )}
                     </div>
@@ -1019,12 +1133,12 @@ export default function DashboardPage() {
 
                 {/* Mes informations */}
                 <MesInfosSection profile={profile} />
-              </>
+              </div>
             )}
 
             {/* ── Onglet Formation ── */}
             {activeTab === 'formation' && (
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div role="tabpanel" id={tabPanelId(DASHBOARD_TABS_ID, 'formation')} aria-labelledby={tabButtonId(DASHBOARD_TABS_ID, 'formation')} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="flex items-center gap-2 px-5 pt-5 pb-3">
                   <Play className="w-4 h-4 text-indigo-500" />
                   <h2 className="font-semibold text-slate-800 text-sm">Formation ambassadeur</h2>

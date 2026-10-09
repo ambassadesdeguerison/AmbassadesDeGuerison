@@ -36,7 +36,7 @@ export default function UnsubscribePage() {
               </div>
               <h1 className="text-lg font-semibold text-slate-800 mb-2">Désinscription confirmée</h1>
               <p className="text-sm text-slate-500 mb-6">
-                Tu ne recevras plus d'emails de ce type. Si tu changes d'avis, tu peux toujours
+                Vous ne recevrez plus d&apos;e-mails de ce type. Si vous changez d&apos;avis, vous pouvez toujours
                 nous contacter directement.
               </p>
               <Link href="/" className="text-indigo-600 text-sm hover:underline">

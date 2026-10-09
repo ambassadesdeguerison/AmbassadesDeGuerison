@@ -36,6 +36,6 @@ describe('logPageView', () => {
 
   it('ne throw jamais sur input dégénéré', () => {
     expect(() => logPageView('', '')).not.toThrow();
-    expect(() => logPageView(null as any, undefined as any)).not.toThrow();
+    expect(() => logPageView(null as unknown as string, undefined as unknown as string)).not.toThrow();
   });
 });

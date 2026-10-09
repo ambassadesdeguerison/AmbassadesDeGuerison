@@ -34,7 +34,7 @@ export default async function AdminCalendrierPage() {
       <AdminPage>
         <AdminPageHeader
           title="Calendrier"
-          subtitle="Les lives à venir, et les campagnes e-mail qui les annoncent."
+          subtitle="Les lives à venir, et les e-mails groupés qui les annoncent."
         />
 
         <div className="space-y-10">
@@ -44,7 +44,7 @@ export default async function AdminCalendrierPage() {
           </section>
 
           <section>
-            <h2 className="text-sm font-semibold text-slate-700 mb-4">Campagnes e-mail</h2>
+            <h2 className="text-sm font-semibold text-slate-700 mb-4">Envois groupés par e-mail</h2>
             <CalendrierCampaignSection
               futureEvents={futureEvents}
               // Tous les events, pour résoudre le titre des campagnes rattachées

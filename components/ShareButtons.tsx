@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import { Copy, Check } from 'lucide-react';
 
 interface Props {
@@ -10,12 +10,14 @@ interface Props {
 
 export default function ShareButtons({ url, text }: Props) {
   const [copied, setCopied] = useState(false);
-  const [fullUrl, setFullUrl] = useState(url);
-
-  useEffect(() => {
-    const normalized = url.startsWith('/') ? url : `/${url}`;
-    setFullUrl(`${window.location.origin}${normalized}`);
-  }, [url]);
+  // Origine du site : inconnue au rendu serveur, on garde alors `url` tel quel.
+  const origin = useSyncExternalStore(
+    () => () => {},
+    () => window.location.origin,
+    () => ''
+  );
+  const normalized = url.startsWith('/') ? url : `/${url}`;
+  const fullUrl = origin ? `${origin}${normalized}` : url;
 
   async function copyLink() {
     try {

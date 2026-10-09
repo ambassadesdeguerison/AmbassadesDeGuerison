@@ -8,6 +8,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminNotice from '@/components/admin/AdminNotice';
 import ErrorMessage from '@/components/admin/ErrorMessage';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/admin/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 
 type Entry = {
   id: string;
@@ -23,6 +24,7 @@ type Entry = {
 interface Props { entries: Entry[] }
 
 export default function BlacklistClient({ entries: initial }: Props) {
+  const toast = useToast();
   const [entries, setEntries] = useState(initial);
   const [form, setForm] = useState({ email: '', phone: '', reason: '' });
   const [adding, setAdding] = useState(false);
@@ -54,6 +56,9 @@ export default function BlacklistClient({ entries: initial }: Props) {
         ...list,
       ]);
       setForm({ email: '', phone: '', reason: '' });
+      toast.success('Personne bloquée', {
+        description: `${form.email.trim() || form.phone.trim()} ne peut plus envoyer de demande de visite. Elle reçoit un message neutre l'invitant à contacter l'équipe.`,
+      });
     } else {
       setAddError(res.error);
     }
@@ -75,8 +80,12 @@ export default function BlacklistClient({ entries: initial }: Props) {
         const res = await apiCall('/api/admin/blacklist', { method: 'DELETE', body: { id: entry.id } });
         setBusy(false);
         setConfirm(null);
-        if (res.ok) setEntries((list) => list.filter((x) => x.id !== entry.id));
-        else setRemoveError(res.error);
+        if (res.ok) {
+          setEntries((list) => list.filter((x) => x.id !== entry.id));
+          toast.success('Personne débloquée', { description: `${who} peut de nouveau envoyer des demandes de visite.` });
+        } else {
+          setRemoveError(res.error);
+        }
       },
     });
   }
@@ -107,8 +116,8 @@ export default function BlacklistClient({ entries: initial }: Props) {
               choix éthique assumé du projet — refus honnête plutôt que
               shadow-ban — mais l'admin pouvait croire à un blocage silencieux. */}
           <AdminNotice tone="info">
-            La personne bloquée reçoit un message neutre l'invitant à contacter l'équipe si elle pense qu'il s'agit
-            d'une erreur. Ce n'est pas un blocage silencieux : elle sait que sa demande n'a pas été prise en compte.
+            La personne bloquée reçoit un message neutre l&apos;invitant à contacter l&apos;équipe si elle pense qu&apos;il s&apos;agit
+            d&apos;une erreur. Ce n&apos;est pas un blocage silencieux : elle sait que sa demande n&apos;a pas été prise en compte.
           </AdminNotice>
 
           <div className="grid sm:grid-cols-2 gap-3">
@@ -153,7 +162,7 @@ export default function BlacklistClient({ entries: initial }: Props) {
               className={inputCls}
               placeholder="Spam, harcèlement, fausses demandes…"
             />
-            <p className="text-xs text-slate-400 mt-1">Visible uniquement par l'équipe — jamais communiqué à la personne.</p>
+            <p className="text-xs text-slate-400 mt-1">Visible uniquement par l&apos;équipe — jamais communiqué à la personne.</p>
           </div>
 
           {addError && <ErrorMessage>{addError}</ErrorMessage>}

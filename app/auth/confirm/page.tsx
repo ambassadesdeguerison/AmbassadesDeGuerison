@@ -5,29 +5,33 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import AppHeader from '@/components/AppHeader';
+import type { EmailOtpType } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/browser';
 
 function ConfirmContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [errorMsg, setErrorMsg] = useState('');
+  const [verifyStatus, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [verifyError, setErrorMsg] = useState('');
+  // Lien sans token ou sans type : erreur d'emblée, dérivée au rendu plutôt que posée par un effet.
+  const incomplete = !searchParams.get('token_hash') || !searchParams.get('type');
+  const status = incomplete ? 'error' : verifyStatus;
+  const errorMsg = incomplete
+    ? 'Ce lien est incomplet. Revenez à votre e-mail et appuyez sur le bouton.'
+    : verifyError;
 
   useEffect(() => {
     const token_hash = searchParams.get('token_hash');
-    const type = searchParams.get('type') as 'magiclink' | 'email' | null;
+    // Le type vient du jeton lui-même (`signup`, `magiclink`…), cf lib/auth/confirm-url.ts.
+    const type = searchParams.get('type') as EmailOtpType | null;
 
-    if (!token_hash || !type) {
-      setStatus('error');
-      setErrorMsg('Lien invalide ou incomplet.');
-      return;
-    }
+    if (!token_hash || !type) return;
 
     const supabase = createClient();
     supabase.auth.verifyOtp({ token_hash, type }).then(({ data, error }) => {
       if (error) {
         setStatus('error');
-        setErrorMsg(error.message);
+        setErrorMsg("Ce bouton a déjà servi ou n'est plus valable.");
       } else {
         setStatus('success');
         // Redirection vers la page d'origine (ex : reprendre une demande de
@@ -73,11 +77,11 @@ function ConfirmContent() {
             <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <AlertTriangle className="w-6 h-6 text-amber-500" />
             </div>
-            <h1 className="text-lg font-semibold text-slate-800 mb-2">Lien invalide ou expiré</h1>
+            <h1 className="text-lg font-semibold text-slate-800 mb-2">Ce bouton ne fonctionne plus</h1>
             <p className="text-slate-500 text-sm mb-1">{errorMsg}</p>
-            <p className="text-slate-400 text-xs mt-2">Les liens de connexion sont valables 1 heure.</p>
+            <p className="text-slate-400 text-xs mt-2">Ces boutons fonctionnent pendant 1 heure.</p>
             <Link href="/auth" className="mt-5 inline-block text-indigo-600 text-sm hover:underline">
-              Demander un nouveau lien
+              Recevoir un nouvel e-mail
             </Link>
           </div>
         </main>
@@ -91,7 +95,7 @@ function ConfirmContent() {
       <main className="flex-1 flex items-center justify-center bg-slate-50">
         <div className="flex items-center gap-2 text-emerald-600 text-sm">
           <CheckCircle2 className="w-5 h-5" />
-          Connexion réussie, redirection…
+          C&apos;est bon, vous êtes connecté…
         </div>
       </main>
     </>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getAuthUsersByEmail } from '@/lib/auth/list-all-users';
+import { normalizeEmail, verifyEmailProof } from '@/lib/auth/email-proof';
 import { sendRegistrationConfirmation, sendNouvelleInscriptionAdmin } from '@/lib/email/templates';
 import { FEATURES } from '@/config/features';
 
@@ -17,8 +18,17 @@ export async function POST(req: NextRequest) {
   // Honeypot
   if (body.website) return NextResponse.json({}, { status: 200 });
 
+  // L'adresse doit avoir été confirmée par e-mail AVANT toute création (compte, profil, rôle,
+  // notification à l'équipe) : la preuve signée est émise par /api/inscriptions/verify-email.
+  const email = verifyEmailProof(body.email_proof, 'inscription');
+  if (!email || email !== normalizeEmail(String(body.email ?? ''))) {
+    return NextResponse.json(
+      { error: "Votre adresse e-mail n'est pas confirmée. Reprenez l'inscription depuis le début.", code: 'email_not_verified' },
+      { status: 403 },
+    );
+  }
+
   const {
-    email,
     first_name,
     last_name,
     phone,
@@ -151,6 +161,28 @@ export async function POST(req: NextRequest) {
 
   const profileId = profileData?.id;
 
+  // EXCEPTION documentée à « ne jamais renvoyer un token_hash » (CLAUDE.md § Formulaire
+  // d'inscription) : l'adresse a été prouvée à l'étape 0 (`email_proof` vérifié plus haut), donc
+  // le droit de se connecter avec est le même que celui d'un lien magique reçu par e-mail. Le
+  // navigateur échange ce jeton à usage unique contre une session et enchaîne sur /dashboard.
+  // Un seul OTP magiclink est actif par utilisateur : ce jeton est consommé côté navigateur, donc
+  // l'e-mail n'en porte pas (repli /dashboard, puis /auth depuis un autre appareil).
+  // Best-effort : sans jeton, l'écran de succès propose « Me connecter pour continuer ».
+  let login: { token_hash: string; type: string } | undefined;
+  try {
+    const { data: link, error: linkError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email,
+    });
+    if (linkError || !link?.properties) throw linkError ?? new Error('lien absent');
+    login = {
+      token_hash: link.properties.hashed_token,
+      type: link.properties.verification_type ?? 'magiclink',
+    };
+  } catch (e) {
+    console.error('[inscriptions] Lien de connexion non généré, repli sur /dashboard:', e);
+  }
+
   if (FEATURES.EMAIL_NOTIFICATIONS) {
     await sendRegistrationConfirmation(email, first_name).catch((e) => {
       console.error('[inscriptions] Échec envoi confirmation candidat:', e);
@@ -160,5 +192,5 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ success: true, id: profileId }, { status: 201 });
+  return NextResponse.json({ success: true, id: profileId, login }, { status: 201 });
 }

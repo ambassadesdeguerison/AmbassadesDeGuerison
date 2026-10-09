@@ -1,15 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
+import { getAuthUsersByEmail } from '@/lib/auth/list-all-users';
+import { buildConfirmUrl } from '@/lib/auth/confirm-url';
+import { safeRedirect } from '@/lib/auth/safe-redirect';
 import { sendMagicLink } from '@/lib/email/templates';
 
 export async function POST(req: NextRequest) {
-  const { email } = await req.json();
+  const body = await req.json().catch(() => ({}));
+  const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
 
-  if (!email || typeof email !== 'string') {
+  if (!email) {
     return NextResponse.json({ error: 'E-mail requis.' }, { status: 400 });
   }
 
   const supabase = createServiceClient();
+
+  // `generateLink` CRÉE le compte quand l'adresse est inconnue : la page de connexion
+  // fabriquait ainsi des comptes vides (ni profil ambassadeur, ni profil visiteur) pour
+  // n'importe quelle saisie, avec un lien qui de surcroît échouait (jeton de type
+  // `signup`, voir lib/auth/confirm-url.ts). On ne connecte donc que des comptes
+  // existants ; un nouveau venu est guidé vers l'inscription (retour 404 `no_account`).
+  const accounts = await getAuthUsersByEmail(supabase);
+  if (!accounts.has(email)) {
+    return NextResponse.json(
+      { error: 'no_account', message: 'Aucun compte n’est associé à cette adresse.' },
+      { status: 404 }
+    );
+  }
+
   const { data, error } = await supabase.auth.admin.generateLink({
     type: 'magiclink',
     email,
@@ -24,8 +42,7 @@ export async function POST(req: NextRequest) {
   // le token à usage unique avant que l'utilisateur clique.
   // Notre page /auth/confirm est un Client Component : les scanners voient du HTML,
   // n'exécutent pas le JS, et ne consomment pas le token.
-  const confirmUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/confirm?token_hash=${data.properties.hashed_token}&type=magiclink`;
-  await sendMagicLink(email, confirmUrl);
+  await sendMagicLink(email, buildConfirmUrl(data.properties, safeRedirect(body?.redirect)));
 
   return NextResponse.json({ success: true });
 }

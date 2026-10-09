@@ -12,7 +12,7 @@ interface Props {
 export default function NouvelleActivationAdmin({ firstName, city, country, adminUrl }: Props) {
   return (
     <EmailLayout preview={`Nouvelle ambassade activée — ${firstName}, ${city}`}>
-      <Text style={p}>Une nouvelle ambassade vient d'être activée :</Text>
+      <Text style={p}>Une nouvelle ambassade vient d&apos;être activée :</Text>
       <Text style={list}>• <strong>Prénom :</strong> {firstName}</Text>
       <Text style={list}>• <strong>Ville :</strong> {city}</Text>
       <Text style={list}>• <strong>Pays :</strong> {country}</Text>
@@ -23,6 +23,6 @@ export default function NouvelleActivationAdmin({ firstName, city, country, admi
   );
 }
 
-const p: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 8px' };
-const list: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 4px', paddingLeft: '8px' };
+const p: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 8px' };
+const list: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 4px', paddingLeft: '8px' };
 const link: React.CSSProperties = { color: '#4F46E5' };

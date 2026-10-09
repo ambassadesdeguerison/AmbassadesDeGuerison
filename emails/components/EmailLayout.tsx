@@ -28,7 +28,7 @@ export function EmailLayout({ preview, children }: Props) {
   );
 }
 
-const header: React.CSSProperties = { fontSize: '13px', fontWeight: '600', color: '#4f46e5', letterSpacing: '0.02em', margin: '0 0 20px' };
+const header: React.CSSProperties = { fontSize: '14px', fontWeight: '600', color: '#4f46e5', letterSpacing: '0.02em', margin: '0 0 20px' };
 const hr: React.CSSProperties = { borderColor: '#f1f5f9', margin: '32px 0 16px' };
-const footer: React.CSSProperties = { fontSize: '12px', color: '#94a3b8', margin: 0 };
+const footer: React.CSSProperties = { fontSize: '13px', color: '#94a3b8', margin: 0 };
 const footerLink: React.CSSProperties = { color: '#94a3b8', textDecoration: 'underline' };

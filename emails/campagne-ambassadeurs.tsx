@@ -13,17 +13,17 @@ interface Props {
 
 export default function CampagneAmbassadeurs({ firstName, eventTitle, eventDate, activateUrl, customMessage }: Props) {
   return (
-    <EmailLayout preview="Le prochain live approche — allez-vous ouvrir votre ambassade ?">
+    <EmailLayout preview="Le prochain live approche — ouvrez-vous votre porte ?">
       <Text style={p}>Bonjour {firstName},</Text>
       {customMessage && <Text style={{ ...p, fontStyle: 'italic' }}>{customMessage}</Text>}
-      <Text style={p}>Le prochain live de David Théry — <strong>{eventTitle}</strong> — a lieu le <strong>{eventDate}</strong>.</Text>
-      <Text style={p}>Allez-vous ouvrir votre ambassade pour accueillir des visiteurs ce soir-là ?</Text>
-      <Btn href={activateUrl}>Oui, j'ouvre mon ambassade</Btn>
-      <Text style={muted}>Vous pouvez aussi préciser le nombre de places disponibles depuis votre espace ambassadeur.</Text>
-      <Text style={muted}>Si vous ne pouvez pas cette fois, pas de problème — votre ambassade restera inactive pour ce live uniquement.</Text>
+      <Text style={p}>Le prochain live de David Théry, <strong>{eventTitle}</strong>, a lieu le <strong>{eventDate}</strong>.</Text>
+      <Text style={p}>Ouvrez-vous votre porte ce soir-là pour accueillir les personnes qui le souhaitent ?</Text>
+      <Btn href={activateUrl}>Oui, j&apos;ouvre ma porte</Btn>
+      <Text style={muted}>Depuis votre espace, vous pourrez aussi indiquer combien de personnes vous pouvez accueillir.</Text>
+      <Text style={muted}>Vous ne pouvez pas cette fois ? Aucun souci : ne faites rien. Votre ambassade ne sera simplement pas affichée sur la carte pour ce live.</Text>
     </EmailLayout>
   );
 }
 
-const p: React.CSSProperties = { fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
-const muted: React.CSSProperties = { fontSize: '13px', color: '#64748b', marginTop: '12px' };
+const p: React.CSSProperties = { fontSize: '16px', lineHeight: '1.6', color: '#1e293b', margin: '0 0 16px' };
+const muted: React.CSSProperties = { fontSize: '14px', color: '#64748b', marginTop: '12px' };

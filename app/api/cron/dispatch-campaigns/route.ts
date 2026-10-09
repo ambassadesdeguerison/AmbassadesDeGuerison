@@ -125,7 +125,7 @@ async function dispatchAmbassadeursBatch(
       .order('id')
       .limit(BATCH_SIZE);
 
-    if (lastId) query = (query as any).gt('id', lastId);
+    if (lastId) query = query.gt('id', lastId);
 
     const { data: recipients } = await query;
     if (!recipients?.length) break;
@@ -197,7 +197,7 @@ async function dispatchVisiteursBatch(
       .order('id')
       .limit(BATCH_SIZE);
 
-    if (lastId) query = (query as any).gt('id', lastId);
+    if (lastId) query = query.gt('id', lastId);
 
     const { data: recipients } = await query;
     if (!recipients?.length) break;

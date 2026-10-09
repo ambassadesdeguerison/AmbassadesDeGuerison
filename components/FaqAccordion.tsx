@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 interface FaqItem {
@@ -20,6 +20,8 @@ const FAQ_ITEMS: FaqItem[] = [
 // Abidjan" — touch target 44px minimum par question (cf /plan-design-review).
 export default function FaqAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  // Unique par instance : l'accordéon peut apparaître sur /decouvrir et dans /mon-espace.
+  const baseId = useId();
 
   return (
     <div className="space-y-2">
@@ -30,18 +32,16 @@ export default function FaqAccordion() {
             <button
               type="button"
               aria-expanded={isOpen}
-              aria-controls={`faq-answer-${i}`}
+              aria-controls={`${baseId}-answer-${i}`}
               onClick={() => setOpenIndex(isOpen ? null : i)}
               className="w-full flex items-center justify-between gap-3 px-4 py-3.5 min-h-[44px] text-left text-sm font-medium text-slate-800 hover:bg-slate-50 transition-colors"
             >
               {item.question}
               <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </button>
-            {isOpen && (
-              <p id={`faq-answer-${i}`} className="px-4 pb-4 text-sm text-slate-500 leading-relaxed">
-                {item.answer}
-              </p>
-            )}
+            <p id={`${baseId}-answer-${i}`} hidden={!isOpen} className="px-4 pb-4 text-sm text-slate-500 leading-relaxed">
+              {item.answer}
+            </p>
           </div>
         );
       })}

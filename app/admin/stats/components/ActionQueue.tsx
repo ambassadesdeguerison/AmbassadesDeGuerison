@@ -33,7 +33,7 @@ export default function ActionQueue({ queue }: Props) {
       <Clock className="w-3.5 h-3.5 mt-px shrink-0" />
       <span>
         {queue.awaitingCandidate} candidat{queue.awaitingCandidate > 1 ? 's n\'ont' : ' n\'a'} pas encore accepté les
-        conditions d'engagement.{' '}
+        conditions d&apos;engagement.{' '}
         <Link href="/admin/ambassadeurs?status=pending_review" className="underline underline-offset-2 hover:text-slate-600">
           Voir
         </Link>{' '}
@@ -65,7 +65,7 @@ export default function ActionQueue({ queue }: Props) {
       <ul className="space-y-1">
         {queue.questionnairesToReview > 0 && (
           <QueueRow href="/admin/ambassadeurs?status=enrichment_pending" count={queue.questionnairesToReview}>
-            questionnaire{queue.questionnairesToReview > 1 ? 's' : ''} à valider
+            dossier{queue.questionnairesToReview > 1 ? 's' : ''} à valider
           </QueueRow>
         )}
         {queue.testimonialsPending > 0 && (

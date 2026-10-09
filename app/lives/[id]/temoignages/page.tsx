@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import ShareButtons from '@/components/ShareButtons';
 import AppHeader from '@/components/AppHeader';
+import { firstRow } from '@/lib/supabase/relation';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,10 +63,11 @@ export default async function TemoignagesPage({ params }: Props) {
         ) : (
           <div className="space-y-4">
             {testimonials.map((t) => {
-              const hp = t.host_profiles as any;
+              const hp = firstRow(t.host_profiles);
+              if (!hp) return null; // `!inner` sur la requête : ne devrait jamais arriver
               return (
                 <div key={t.id} className="border border-gray-100 rounded-xl p-5 shadow-sm">
-                  <blockquote className="text-gray-800 italic mb-3">"{t.content}"</blockquote>
+                  <blockquote className="text-gray-800 italic mb-3">&quot;{t.content}&quot;</blockquote>
                   <footer className="text-sm text-gray-500">
                     <span className="font-medium text-gray-700">{hp.first_name}</span>
                     {' — '}

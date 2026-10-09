@@ -6,6 +6,7 @@ import { apiCall } from '@/lib/admin/api-call';
 import AdminNotice from '@/components/admin/AdminNotice';
 import ErrorMessage from '@/components/admin/ErrorMessage';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/admin/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 
 type Event = { id: string; title: string; event_date: string };
 type Campaign = {
@@ -64,6 +65,7 @@ const TYPE_HELP: Record<string, string> = {
 };
 
 export default function CalendrierCampaignSection({ futureEvents, allEvents, campaigns: initial, tzOffset }: Props) {
+  const toast = useToast();
   const [campaigns, setCampaigns] = useState(initial);
   const [form, setForm] = useState({
     event_id: futureEvents[0]?.id ?? '',
@@ -73,7 +75,6 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -81,7 +82,6 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
     e.preventDefault();
     setSaving(true);
     setError('');
-    setSuccess('');
 
     // Le champ `datetime-local` est interprété avec le même offset que la
     // création de live, pas celui du navigateur : un admin en métropole
@@ -97,11 +97,18 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
       // jamais affiché — l'admin ignorait à combien de personnes il venait de
       // programmer un envoi, et que la liste est figée à cet instant.
       const n = res.data.recipients;
-      setSuccess(
-        n === 0
-          ? 'Campagne planifiée, mais aucun destinataire ne correspond pour le moment.'
-          : `Campagne planifiée pour ${n} destinataire${n > 1 ? 's' : ''} — liste figée maintenant, les inscriptions ultérieures ne la rejoindront pas.`
-      );
+      // « Planifié » et non « envoyé » : rien ne part avant la date, et tant que
+      // les envois automatiques sont désactivés, rien ne part du tout (voir le
+      // bandeau en haut de la section).
+      if (n === 0) {
+        toast.warning('Envoi planifié, mais sans destinataire', {
+          description: 'Aucune personne ne correspond pour le moment. La liste est figée à cet instant.',
+        });
+      } else {
+        toast.success('Envoi planifié', {
+          description: `${n} destinataire${n > 1 ? 's' : ''}. La liste est figée maintenant : les inscriptions ultérieures ne la rejoindront pas.`,
+        });
+      }
       setCampaigns((c) => [
         ...c,
         { id: res.data.id, type: form.type, event_id: form.event_id, status: 'pending', scheduled_at: scheduledIso, sent_count: null, custom_message: form.custom_message || null },
@@ -117,16 +124,20 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
   function askDelete(c: Campaign) {
     const event = allEvents.find((e) => e.id === c.event_id);
     setConfirm({
-      title: 'Annuler cette campagne ?',
-      body: `Campagne ${TYPE_LABELS[c.type] ?? c.type}${event ? ` pour « ${event.title} »` : ''}. La liste de destinataires enregistrée sera supprimée.`,
-      confirmLabel: 'Annuler la campagne',
+      title: 'Annuler cet envoi ?',
+      body: `Envoi ${TYPE_LABELS[c.type] ?? c.type}${event ? ` pour « ${event.title} »` : ''}. La liste de destinataires enregistrée sera supprimée.`,
+      confirmLabel: "Annuler l'envoi",
       onConfirm: async () => {
         setBusy(true);
         const res = await apiCall('/api/admin/campaigns', { method: 'DELETE', body: { id: c.id } });
         setBusy(false);
         setConfirm(null);
-        if (res.ok) setCampaigns((list) => list.filter((x) => x.id !== c.id));
-        else setError(res.error);
+        if (res.ok) {
+          setCampaigns((list) => list.filter((x) => x.id !== c.id));
+          toast.success('Envoi annulé', { description: 'La liste de destinataires a été supprimée.' });
+        } else {
+          setError(res.error);
+        }
       },
     });
   }
@@ -137,8 +148,8 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
           « Campagne planifiée. » puis un badge « pending » indéfiniment, sans
           jamais dire qu'aucun envoi n'était déclenché. */}
       <AdminNotice tone="paused" title="Les envois automatiques sont désactivés">
-        Une campagne planifiée ici est enregistrée avec sa liste de destinataires, mais <strong>aucun e-mail ne partira
-        tant que les envois automatiques ne sont pas activés</strong>. Elle restera au statut « En attente ».
+        Un envoi planifié ici est enregistré avec sa liste de destinataires, mais <strong>aucun e-mail ne partira
+        tant que les envois automatiques ne sont pas activés</strong>. Il restera au statut « En attente ».
       </AdminNotice>
 
       {campaigns.length > 0 && (
@@ -173,8 +184,8 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
                     <button
                       onClick={() => askDelete(c)}
                       className="w-8 h-8 flex items-center justify-center text-slate-300 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors shrink-0"
-                      title="Annuler cette campagne"
-                      aria-label="Annuler cette campagne"
+                      title="Annuler cet envoi"
+                      aria-label="Annuler cet envoi"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -190,7 +201,7 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
         <form onSubmit={handleSchedule} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 space-y-4">
           <div className="flex items-center gap-2 mb-2">
             <Send className="w-4 h-4 text-indigo-500" />
-            <p className="text-sm font-medium text-slate-800">Programmer une campagne</p>
+            <p className="text-sm font-medium text-slate-800">Programmer un envoi groupé</p>
           </div>
 
           <div className="grid sm:grid-cols-2 gap-3">
@@ -225,7 +236,7 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
 
           <div>
             <label className="block text-xs text-slate-500 mb-1.5">
-              Date d'envoi <span className="text-slate-400">(heure La Réunion)</span>
+              Date d&apos;envoi <span className="text-slate-400">(heure La Réunion)</span>
             </label>
             <input
               type="datetime-local"
@@ -246,26 +257,25 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
                 className={inputCls}
                 placeholder="Bonjour à toutes et tous, le prochain live aura lieu…"
               />
-              <p className="text-xs text-slate-400 mt-1">Apparaîtra dans l'e-mail ambassadeur avant le bouton d'activation.</p>
+              <p className="text-xs text-slate-400 mt-1">Apparaîtra dans l&apos;e-mail ambassadeur avant le bouton d&apos;activation.</p>
             </div>
           )}
 
           {error && <ErrorMessage>{error}</ErrorMessage>}
-          {success && <p className="text-emerald-800 text-sm bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">{success}</p>}
 
           <button
             type="submit"
             disabled={saving}
             className="w-full bg-indigo-600 text-white py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
           >
-            {saving ? 'Planification…' : 'Planifier la campagne'}
+            {saving ? 'Planification…' : "Planifier l'envoi"}
           </button>
         </form>
       )}
 
       {futureEvents.length === 0 && (
         <p className="text-slate-400 text-sm text-center py-6">
-          Aucun live à venir — créez d'abord un live dans la section ci-dessus.
+          Aucun live à venir — créez d&apos;abord un live dans la section ci-dessus.
         </p>
       )}
 

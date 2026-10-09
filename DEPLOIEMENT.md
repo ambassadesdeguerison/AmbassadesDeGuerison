@@ -1,5 +1,7 @@
 # Déploiement Vercel — Ambassades de Guérison
 
+> **Changement de comptes (octobre 2026).** L'application passe des comptes de Théophile à ceux de David (Vercel Pro, Supabase Pro, Resend). La marche à suivre complète — Resend, Supabase, variables, premier déploiement, contrôles — est dans [`docs/mise-en-service.md`](docs/mise-en-service.md). Les identifiants ci-dessous sont ceux de l'**ancien** compte ; les remplacer (scope, Project ID, Team ID, URL, dépôt) une fois le nouveau projet créé.
+
 ## Identifiants du projet
 
 | Clé | Valeur |
@@ -110,5 +112,5 @@ git archive --format=tgz 5109a97 | vercel deploy --archive=tgz --yes --scope yoa
 # (Note : le projet a été renommé en 2026-05-05 — utiliser `--name ambassades-guerison` pour les nouvelles créations)
 ```
 
-Ensuite les 13 variables ont été ajoutées en Production via `printf | vercel env add`,  
+Ensuite les 13 variables (liste à jour : `docs/mise-en-service.md` § 3) ont été ajoutées en Production via `printf | vercel env add`,  
 puis en Preview via l'API REST (le CLI bloquait).

@@ -16,12 +16,14 @@ type State = 'loading' | 'invalid' | 'already_active' | 'ready' | 'confirmed';
 
 export default function ActivationPage() {
   const { token } = useParams<{ token: string }>();
-  const [state, setState] = useState<State>('loading');
+  const [rawState, setState] = useState<State>('loading');
   const [ctx, setCtx] = useState<CampaignContext | null>(null);
   const [activating, setActivating] = useState(false);
+  // Sans token, le lien est invalide d'emblée : dérivé au rendu plutôt que posé par un effet.
+  const state: State = token ? rawState : 'invalid';
 
   useEffect(() => {
-    if (!token) { setState('invalid'); return; }
+    if (!token) return;
 
     fetch(`/api/campaign-activations/context?token=${token}`)
       .then((r) => {
@@ -69,9 +71,9 @@ export default function ActivationPage() {
 
           {state === 'invalid' && (
             <div className="text-center">
-              <h1 className="text-lg font-semibold text-slate-800 mb-2">Lien invalide ou expiré</h1>
+              <h1 className="text-lg font-semibold text-slate-800 mb-2">Ce bouton ne fonctionne plus</h1>
               <p className="text-sm text-slate-500 mb-6">
-                Ce lien d'activation n'est plus valide. Consulte ton espace ambassadeur pour vérifier ton statut.
+                Vous pouvez confirmer directement sur votre espace que vous ouvrez votre porte pour ce live.
               </p>
               <Link href="/dashboard" className="text-indigo-600 text-sm hover:underline">
                 Accéder à mon espace
@@ -85,7 +87,7 @@ export default function ActivationPage() {
                 <div className="w-8 h-8 bg-indigo-50 rounded-lg flex items-center justify-center">
                   <Home className="w-4 h-4 text-indigo-600" />
                 </div>
-                <h1 className="text-base font-semibold text-slate-800">Activation ambassadeur</h1>
+                <h1 className="text-base font-semibold text-slate-800">J&apos;ouvre ma porte pour ce live</h1>
               </div>
               <p className="text-sm text-slate-600 mb-1 font-medium">{ctx.event_title}</p>
               <p className="text-sm text-slate-500 mb-6 capitalize">{eventDate}</p>
@@ -94,7 +96,7 @@ export default function ActivationPage() {
                 <div className="flex items-start gap-2 bg-emerald-50 rounded-xl p-4">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
                   <p className="text-sm text-emerald-700">
-                    Tu es déjà inscrit comme ambassadeur pour ce live. Merci !
+                    Votre porte est déjà ouverte pour ce live. Merci !
                   </p>
                 </div>
               ) : (
@@ -104,7 +106,7 @@ export default function ActivationPage() {
                   className="w-full bg-indigo-600 text-white py-3 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                 >
                   {activating && <Loader2 className="w-4 h-4 animate-spin" />}
-                  Je m'inscris comme ambassadeur
+                  Oui, j&apos;ouvre ma porte
                 </button>
               )}
             </div>
@@ -116,14 +118,14 @@ export default function ActivationPage() {
                 <CheckCircle2 className="w-6 h-6 text-emerald-600" />
               </div>
               <h1 className="text-lg font-semibold text-slate-800 mb-2">
-                Ton ambassade est activée !
+                C&apos;est noté, votre porte est ouverte !
               </h1>
               <p className="text-sm text-slate-500 mb-2">
                 {ctx?.event_title && <><strong>{ctx.event_title}</strong> — </>}
-                tu apparaîtras sur la carte pendant le live.
+                votre ambassade apparaîtra sur la carte pendant le live.
               </p>
               <p className="text-sm text-slate-400 mb-6">
-                Les visiteurs pourront te contacter directement depuis la carte.
+                Les personnes qui le souhaitent pourront vous écrire depuis la carte, et vous déciderez de les accueillir ou non.
               </p>
               <Link href="/dashboard" className="text-indigo-600 text-sm hover:underline">
                 Accéder à mon espace

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { firstRow } from '@/lib/supabase/relation';
 
 export type DevState = 'live' | 'live-zero' | 'soon' | 'soon-confirmed' | 'upcoming' | 'upcoming-confirmed' | 'past' | 'closed' | 'blank';
 
@@ -17,9 +18,10 @@ async function activateConfirmedSubset(
 
   if (!activations?.length) return;
 
-  const sorted = [...activations].sort((a: any, b: any) => {
-    const ahp = Array.isArray(a.host_profiles) ? a.host_profiles[0] : a.host_profiles;
-    const bhp = Array.isArray(b.host_profiles) ? b.host_profiles[0] : b.host_profiles;
+  const sorted = [...activations].sort((a, b) => {
+    const ahp = firstRow(a.host_profiles);
+    const bhp = firstRow(b.host_profiles);
+    if (!ahp || !bhp) return 0;
     if (ahp.is_women_only !== bhp.is_women_only) return ahp.is_women_only ? -1 : 1;
     return new Date(ahp.created_at).getTime() - new Date(bhp.created_at).getTime();
   });
@@ -30,10 +32,18 @@ async function activateConfirmedSubset(
   await supabase
     .from('host_activations')
     .update({ is_active: true })
-    .in('id', toActivate.map((a: any) => a.id));
+    .in('id', toActivate.map((a) => a.id));
 }
 
-export async function applyState(supabase: SupabaseClient, state: DevState) {
+/**
+ * Résout les deux events de référence utilisés par tous les états démo :
+ * `demoLiveEvent` (celui qu'on positionne comme "en cours"/"passé"/"clôturé"
+ * selon l'état choisi) et `demoFutureEvent` (le prochain live à venir, s'il
+ * existe). Extrait de `applyState` pour être réutilisé par les actions dev
+ * qui doivent cibler le même event sans changer son état (ex: déclenchement
+ * manuel des emails de feedback en démo).
+ */
+export async function resolveDemoEvents(supabase: SupabaseClient) {
   const { data: events, error } = await supabase
     .from('events')
     .select('id, title, event_date')
@@ -68,6 +78,13 @@ export async function applyState(supabase: SupabaseClient, state: DevState) {
   if (!demoLiveEvent) {
     throw new Error('Aucun événement passé trouvé. Relancez node scripts/seed.js d\'abord.');
   }
+
+  return { demoLiveEvent, demoFutureEvent };
+}
+
+export async function applyState(supabase: SupabaseClient, state: DevState) {
+  const { demoLiveEvent, demoFutureEvent } = await resolveDemoEvents(supabase);
+  const WINDOW_H = Number(process.env.NEXT_PUBLIC_LIVE_SIGNAL_WINDOW_HOURS ?? 4);
 
   const hoursFromNow = (h: number) => new Date(Date.now() + h * 3_600_000).toISOString();
   const daysFromNow = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();

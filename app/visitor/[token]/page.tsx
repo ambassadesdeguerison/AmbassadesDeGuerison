@@ -5,13 +5,16 @@ import AppHeader from '@/components/AppHeader';
 import { CheckCircle2, Clock, MapPin, AlertCircle } from 'lucide-react';
 import { formatEventDateDual } from '@/lib/format-event-date';
 import { de } from '@/lib/elision';
+import BackToRequests, { cameFromMonEspace } from '@/components/visitor/BackToRequests';
 
 interface Props {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ from?: string | string[] }>;
 }
 
-export default async function VisitorConfirmationPage({ params }: Props) {
+export default async function VisitorConfirmationPage({ params, searchParams }: Props) {
   const { token } = await params;
+  const { from } = await searchParams;
   const supabase = createServiceClient();
 
   const { data: contact } = await supabase
@@ -23,7 +26,7 @@ export default async function VisitorConfirmationPage({ params }: Props) {
         host_profiles!inner(first_name, city)
       )
     `)
-    .eq('action_token', token)
+    .eq('visitor_token', token)
     .maybeSingle();
 
   if (!contact) notFound();
@@ -53,6 +56,8 @@ export default async function VisitorConfirmationPage({ params }: Props) {
         ? 'Demande acceptée !'
         : status === 'declined'
         ? 'Demande non retenue cette fois.'
+        : status === 'cancelled_no_response'
+        ? "Pas de réponse à temps."
         : 'Dès que possible.',
     },
     {
@@ -62,7 +67,7 @@ export default async function VisitorConfirmationPage({ params }: Props) {
       done: status === 'accepted',
       current: status === 'accepted',
       detail: status === 'accepted'
-        ? `Vous recevrez les coordonnées de ${host?.first_name ?? "l'ambassadeur"} par e-mail.`
+        ? `Vous recevrez les coordonnées ${host?.first_name ? de(host.first_name) : "de l'ambassadeur"} par e-mail.`
         : 'Transmise par e-mail à la confirmation.',
     },
   ];
@@ -74,6 +79,8 @@ export default async function VisitorConfirmationPage({ params }: Props) {
       <AppHeader />
       <main className="bg-slate-50 px-4 py-5 flex-1">
         <div className="max-w-lg mx-auto space-y-4">
+          {cameFromMonEspace(from) && <BackToRequests />}
+
           {/* Event info */}
           {event && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
@@ -126,14 +133,14 @@ export default async function VisitorConfirmationPage({ params }: Props) {
             </nav>
           </div>
 
-          {/* Statut declined */}
-          {status === 'declined' && (
+          {/* Statuts sans suite : refus, ou ambassadeur sans réponse (même issue pour le visiteur) */}
+          {(status === 'declined' || status === 'cancelled_no_response') && (
             <div className="bg-amber-50 rounded-xl border border-amber-100 p-4 text-center">
               <p className="text-amber-800 text-sm font-medium mb-2">
-                Pas de place cette fois
+                {status === 'declined' ? 'Pas de place cette fois' : "L'ambassadeur n'a pas pu répondre à temps"}
               </p>
               <p className="text-amber-700 text-xs mb-4">
-                D'autres ambassades sont peut-être disponibles près de chez vous.
+                D&apos;autres ambassades sont peut-être disponibles près de chez vous.
               </p>
               <Link
                 href="/"

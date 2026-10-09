@@ -4,6 +4,7 @@ import ContactForm from './ContactForm';
 import AppHeader from '@/components/AppHeader';
 import { Home, Users, ExternalLink, Flower2 } from 'lucide-react';
 import { de } from '@/lib/elision';
+import { firstRow } from '@/lib/supabase/relation';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,15 +37,14 @@ export default async function AmbassadePage({ params }: Props) {
 
   // Priorité : inscriptions encore ouvertes (registration_closes_at >= now)
   const activation = activations?.find((a) => {
-    const ev = (a as any).events;
+    const ev = firstRow(a.events);
     const closes = ev?.registration_closes_at ?? ev?.event_date;
     return closes && closes >= now;
   }) ?? null;
 
   const activeEventId = activation?.event_id ?? null;
 
-  // Compatibilité : host_type (schéma DB) ou type (schéma migré)
-  const hostType = (host as any).type ?? (host as any).host_type ?? 'autre';
+  const hostType = host.host_type ?? 'autre';
 
   const typeLabels: Record<string, string> = {
     domicile: 'Lieu de prière à domicile',
@@ -81,7 +81,7 @@ export default async function AmbassadePage({ params }: Props) {
             <span className="inline-flex items-center gap-1.5 bg-slate-50 text-slate-600 text-xs px-3 py-1.5 rounded-lg border border-slate-100 font-medium">
               {typeLabels[hostType] ?? hostType}
             </span>
-            {(host as any).is_women_only && (
+            {host.is_women_only && (
               <span className="inline-flex items-center gap-1.5 bg-pink-50 text-pink-600 text-xs px-3 py-1.5 rounded-lg border border-pink-100 font-medium">
                 <Flower2 className="w-3.5 h-3.5" />
                 Groupe femmes
@@ -121,7 +121,7 @@ export default async function AmbassadePage({ params }: Props) {
             hostProfileId={host.id}
             hostName={host.first_name}
             eventId={activeEventId}
-            isWomenOnly={Boolean((host as any).is_women_only)}
+            isWomenOnly={Boolean(host.is_women_only)}
           />
         </div>
       </div>

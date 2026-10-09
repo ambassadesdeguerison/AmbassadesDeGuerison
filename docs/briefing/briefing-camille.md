@@ -48,9 +48,11 @@ Un candidat suit ce chemin, **seul, sans que tu aies besoin d'intervenir avant l
         │
 2. Il regarde la vidéo de présentation et accepte les conditions
         │
-3. Il remplit le questionnaire et ajoute :
+3. Il remplit le questionnaire (pratique ecclésiale, fonction de responsabilité, guérisons vues, sur quoi il regardera le live,
+   formations et livres) et ajoute :
    - une photo de lui (obligatoire)
    - au moins une photo du lieu d'accueil (obligatoire)
+   - une courte vidéo de présentation (il est invité à la faire)
         │
         ▼
    ── C'est à partir d'ici qu'il apparaît chez toi, dans "À valider" ──
@@ -76,7 +78,9 @@ Deux choses sont **obligatoires** et bloquent la validation si elles manquent :
 
 Le site te le signale déjà par un badge rouge si l'un des deux manque — tu n'as pas besoin de le deviner.
 
-Une information (le parcours spirituel du candidat) est **utile mais pas bloquante** : si elle manque, le badge est gris, pas rouge. C'est à ton jugement de décider si tu veux échanger avec la personne avant de valider, ou si le reste du dossier suffit à te rassurer.
+Deux informations sont **utiles mais pas bloquantes** : la vidéo de présentation et la liste des formations et livres. Le dossier dit toujours clairement ce qui manque : « Vidéo de présentation : Non fournie », « Aucune indiquée ». Si le candidat n'a donné ni vidéo ni parcours écrit, un badge gris « Sans vidéo ni parcours » apparaît, pas un badge rouge. (Le champ de parcours écrit ne s'affiche au candidat qu'en secours, quand la vidéo lui pose problème.) C'est à ton jugement de décider si tu veux échanger avec la personne avant de valider, ou si le reste du dossier suffit à te rassurer.
+
+Si le groupe est **réservé aux femmes**, une mention rose « Groupe réservé aux femmes » apparaît en haut de son dossier.
 
 ## Les actions possibles
 

@@ -10,7 +10,7 @@ interface MailPayload {
   react: React.ReactElement;
 }
 
-function useMailhog() {
+function isMailhogEnabled() {
   return process.env.USE_MAILHOG === 'true';
 }
 
@@ -26,6 +26,12 @@ function getMailhogTransport() {
     port: Number(process.env.MAILHOG_SMTP_PORT || 1025),
     ignoreTLS: true,
   });
+}
+
+// Adresse vers laquelle partent les réponses des destinataires (en-tête Reply-To). Facultative : absente,
+// une réponse à « ne-pas-repondre@… » n'arrive nulle part. Posée une seule fois ici pour tous les envois.
+function replyTo(): string | undefined {
+  return process.env.RESEND_REPLY_TO?.trim() || undefined;
 }
 
 let resendClient: Resend | null = null;
@@ -46,16 +52,16 @@ export function getMailer() {
   return {
     emails: {
       async send({ from, to, subject, react }: MailPayload) {
-        if (useMailhog()) {
+        if (isMailhogEnabled()) {
           const html = await render(react);
           try {
-            return await getMailhogTransport().sendMail({ from, to, subject, html });
+            return await getMailhogTransport().sendMail({ from, to, subject, html, replyTo: replyTo() });
           } catch (err) {
             console.error(`[email] Échec envoi Mailhog vers ${to} ("${subject}"):`, err);
             throw err;
           }
         }
-        const result = await getResendClient().emails.send({ from, to, subject, react });
+        const result = await getResendClient().emails.send({ from, to, subject, react, replyTo: replyTo() });
         if (result.error) {
           console.error(`[email] Échec envoi Resend vers ${to} ("${subject}"):`, result.error);
           throw new Error(result.error.message);

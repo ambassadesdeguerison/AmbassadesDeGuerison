@@ -216,8 +216,9 @@ ORDER BY ls.created_at DESC;
 
 | Template | Déclenché quand |
 |----------|----------------|
+| Confirmation d'adresse (inscription) | Première étape de « Devenir ambassadeur » : lien `/inscription?verify=…` qui ouvre le formulaire — aucun compte n'existe encore |
 | Magic link | Hôte ou visiteur se connecte |
-| Compte visiteur créé | Confirmation après `/mon-espace/creer` (`sendVisitorCompteCree`), en parallèle du bootstrap de session immédiat |
+| Compte visiteur créé | Après `/mon-espace/creer` (`sendVisitorCompteCree`) : « Confirmez votre adresse ». Ce lien est le seul moyen d'ouvrir la session visiteur |
 | Bienvenue ambassadeur | Admin valide définitivement → ambassade active |
 | Validation finale | Confirmation de l'activation finale |
 | Candidature refusée | Admin refuse une candidature (`action: 'rejected'`, n'importe quel statut de départ) → message sobre + raison optionnelle (champ `notes` du payload admin) |
@@ -256,18 +257,63 @@ Différence avec `/dev/emails` : `/dev/emails` affiche les templates avec des do
 
 ---
 
+## Vidéos de présentation — pCloud
+
+Les vidéos des candidats sont stockées dans un compte pCloud dédié (dossiers `/Presentations/année/mois`, fichiers `prenom-nom-date-heure-idcourt.ext`). Seule l'équipe les voit, depuis `/admin/ambassadeurs` ou directement dans pCloud. Tant que le jeton n'est pas configuré, l'app retombe sur le bucket Supabase `ambassador-videos` (50 Mo max) — rien ne casse.
+
+### Les 4 valeurs nécessaires
+
+| Variable | D'où elle vient | Rôle |
+|----------|-----------------|------|
+| `PCLOUD_CLIENT_ID` | « App key » de l'application pCloud | Identifie l'application (sert uniquement à obtenir le jeton) |
+| `PCLOUD_CLIENT_SECRET` | « App secret » de l'application pCloud | Idem — secret |
+| `PCLOUD_ACCESS_TOKEN` | Généré par `node scripts/pcloud-token.js` | Autorise le serveur à écrire dans le compte. **Secret, serveur uniquement**, n'expire pas |
+| `PCLOUD_API_HOST` | Généré par le même script | `eapi.pcloud.com` (compte Europe) ou `api.pcloud.com` (États-Unis). Le jeton n'est valable que sur le serveur de son compte |
+
+C'est la présence de `PCLOUD_ACCESS_TOKEN` + `PCLOUD_API_HOST` qui active pCloud.
+
+### Les obtenir (à faire une seule fois)
+
+1. **Créer le compte pCloud dédié** (pas le compte personnel de quelqu'un).
+2. **Déclarer une application** sur https://docs.pcloud.com/my_apps/ (« Request new application »). Valeurs : type « Other » ; accès aux dossiers **Private** (l'app n'accède qu'à son propre dossier) ; écriture **Yes** ; site `https://ambassades-guerison.vercel.app` ; utilisateurs attendus `1` ; raison : stockage privé de vidéos de présentation pour une petite équipe d'admins. pCloud valide à la main, sans délai annoncé. Une fois acceptée, l'**App key** et l'**App secret** apparaissent dans « My applications ».
+3. **Mettre l'App key et l'App secret** dans `.env.local` (`PCLOUD_CLIENT_ID`, `PCLOUD_CLIENT_SECRET`). Jamais dans le dépôt : `.env*` est ignoré par git.
+4. **Obtenir le jeton** :
+   ```bash
+   node scripts/pcloud-token.js              # affiche une adresse à ouvrir (connecté au compte dédié)
+   node scripts/pcloud-token.js "<code>"     # échange le code affiché contre le jeton
+   ```
+   Le code est à usage unique et expire vite. Le script détecte le serveur (Europe/États-Unis) et écrit `PCLOUD_ACCESS_TOKEN` et `PCLOUD_API_HOST` dans `.env.local`.
+5. **Copier ces deux valeurs dans Vercel** (sans quoi la production reste sur Supabase) :
+   ```bash
+   vercel env add PCLOUD_ACCESS_TOKEN production
+   vercel env add PCLOUD_API_HOST production
+   ```
+   puis redéployer (les variables ne sont lues qu'au déploiement).
+
+`PCLOUD_CLIENT_ID` / `PCLOUD_CLIENT_SECRET` ne servent qu'à l'étape 4 ; Vercel n'en a pas besoin en fonctionnement.
+
+### Comment l'envoi fonctionne (et pourquoi)
+
+Le navigateur envoie la vidéo **par morceaux de 3 Mo à nos routes** (`PUT /api/ambassadeur/video`), qui les transmettent à pCloud (`upload_create` → `upload_write` → `upload_save`, `lib/video/pcloud.ts`). Deux raisons, vérifiées : pCloud refuse les « liens d'envoi » (`createuploadlink`) avec un jeton OAuth (« Log in required »), et exposer le jeton au navigateur donnerait à tout candidat l'accès à toutes les vidéos. Le jeton ne doit donc **jamais** atteindre le client. En base, `intro_video_path` vaut `pcloud:<fileid>`.
+
+### Révoquer / remplacer le jeton
+
+Révoquer l'application dans https://docs.pcloud.com/my_apps/ (ou changer le mot de passe du compte) invalide le jeton. Pour en générer un nouveau : relancer l'étape 4, mettre à jour Vercel, redéployer. Les vidéos déjà stockées restent lisibles (elles sont référencées par leur `fileid`).
+
+### Si l'envoi échoue
+
+Chercher dans les logs serveur (terminal `npm run dev`, ou Vercel Logs) la ligne `[video] pCloud …` : elle donne le code d'erreur pCloud.
+- `result 1000` / « Log in required » : jeton absent, révoqué ou mauvais serveur (`PCLOUD_API_HOST`).
+- `result 2000` : jeton invalide. Relancer `pcloud-token.js`.
+- « La vidéo est arrivée incomplète » : un morceau s'est perdu, le candidat doit réessayer.
+
+---
+
 ## GitHub Actions (automatisations)
 
-### supabase-keepalive.yml
+### ~~supabase-keepalive.yml~~ — Supprimé
 
-Supabase met en pause les projets gratuits après 7 jours d'inactivité.
-Ce workflow ping la base de données toutes les 5 jours pour éviter la pause.
-
-```
-.github/workflows/supabase-keepalive.yml
-→ Cron : toutes les 5 jours
-→ Action : SELECT 1 sur la base de données
-```
+Le projet Supabase est en plan **Pro** (compte de David) : il n'est jamais mis en pause pour inactivité, le ping n'a plus d'objet. Workflow retiré en octobre 2026 (voir l'historique git).
 
 ### host-activations-check.yml
 
@@ -466,21 +512,20 @@ AND hp.id NOT IN (
 - Exposer `SUPABASE_SERVICE_ROLE_KEY` côté client
 - Bypasser RLS dans une route API publique
 - Stocker `action_token` (liens accept/decline) en clair dans les logs
-- Exposer `profile_photo_url` / `room_photo_urls` dans une réponse API publique ou sur la carte
+- Exposer `room_photo_urls` (photos du lieu) dans une réponse API publique ou sur la carte — la photo de profil est la seule exception assumée (avatar carte, hôtes actifs, via `getPublicMapPhotoUrls`)
 
 ---
 
-## Coûts et limites (Supabase gratuit)
+## Coûts et limites (Supabase Pro, compte de David)
 
-| Ressource | Limite gratuite | Usage attendu |
-|-----------|----------------|---------------|
-| Base de données | 500 MB | Très largement suffisant |
-| Connexions DB | 60 simultanées | Port 6543 (pooler) obligatoire |
-| Auth | 50 000 MAU | Suffisant pour v1 |
-| Storage | 1 GB | Non utilisé en v1 (FEATURES.PHOTOS=false) |
-| Pause inactivité | 7 jours | Géré par le keepalive GitHub Actions |
+Vercel et Supabase sont en plan **Pro**, sur les comptes de David. Détail des coûts et des seuils : [`estimation-couts.md`](./estimation-couts.md).
 
-Quand l'application dépasse 100 hôtes actifs réguliers → envisager Supabase Pro (€25/mois).
+| Ressource | À retenir |
+|-----------|-----------|
+| Connexions DB | Port 6543 (pooler) obligatoire côté serveur |
+| Sauvegardes | Quotidiennes, 7 jours (Pro seulement) |
+| Pause d'inactivité | N'existe pas en Pro |
+| Plafond de dépenses | À régler chez Vercel et chez Supabase (voir `estimation-couts.md`) |
 
 ---
 
