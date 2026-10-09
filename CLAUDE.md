@@ -22,7 +22,7 @@ L'URL `https://ambassades-guerison.vercel.app` est techniquement une "production
 **Ce qui change le jour où on quitte la phase de conception :**
 
 1. Camille reçoit un magic link et commence à valider de vrais profils → la DB a de vrais ambassadeurs
-2. Désactiver `NEXT_PUBLIC_DEV_OVERLAY` en prod (le DevOverlay disparaît)
+2. Désactiver `NEXT_PUBLIC_DEV_OVERLAY` en prod (le DevOverlay disparaît), puis activer le cache de la carte : `MAP_CACHE_SECONDS=30`
 3. Désactiver les routes `/dev/*` (déjà gated par secret, mais à durcir)
 4. Activer les crons dans `vercel.json` (campaigns + feedback + check-activations)
 5. À partir de là : zero-downtime obligatoire, migrations idempotentes obligatoires, rollback plan pour chaque release.
@@ -127,6 +127,8 @@ Carte Leaflet plein écran, voir `components/MapPublique.tsx` pour le détail d'
 
 - **Clustering par proximité en pixels** (`leaflet.markercluster`, pas par coordonnées exactes) — corrigé juillet 2026. L'ancien regroupement par clé `"${lat},${lng}"` ne fusionnait que les hôtes aux coordonnées strictement identiques : deux ambassadeurs proches mais géocodés à des points légèrement différents pouvaient se superposer silencieusement dans le DOM, l'un masquant totalement l'autre sans aucun badge. Le plugin recalcule la distance à l'écran à chaque zoom.
 - **Jitter décoratif des pins** (`lib/geo/jitter.ts`, ajouté 2026-09-27) — le geocodage se fait au niveau ville, donc plusieurs ambassadeurs d'une même ville ont des `lat`/`lng` identiques. `GET /api/host-activations` décale chaque pin d'un offset pseudo-aléatoire mais déterministe (haché sur `host_id`, rayon 250m) avant de le renvoyer, pour qu'ils ne s'empilent jamais littéralement au même pixel. **Ne jamais dériver ce jitter de `lat_precise`/`lng_precise`** (adresse réelle) — publier même un point flouté ancré sur la vraie adresse transformerait `/api/distance` en oracle de triangulation amplifié (zone de recherche réduite gratuitement au lieu d'une recherche à l'aveugle sur toute la ville), un risque identifié en `/office-hours` et particulièrement grave pour les hôtes en zone rurale à faible densité de bâti. Voir ARCHITECTURE.md § Jitter décoratif carte publique pour le détail complet de la décision écartée.
+
+**Cache CDN de la carte** (`MAP_CACHE_SECONDS`, 2026-10-09) : `GET /api/host-activations` pose `Cache-Control: public, s-maxage=N, stale-while-revalidate=2N` sur ses seules réponses réussies, sans `max-age` navigateur (`lib/map/cache-headers.ts`). **Désactivé par défaut (0 ou absent)** et à garder ainsi tant que le DevOverlay est actif en ligne : il modifie la base, et un cache de 30 s ferait voir la carte avec 30 à 60 s de retard. À mettre à `30` sur Vercel au lancement, en même temps que le DevOverlay est retiré (liste « Ce qui change le jour où on quitte la phase de conception »). Contrôle : `curl -I …/api/host-activations` deux fois, `x-vercel-cache: HIT`. Désactiver (variable absente) pour les tests de bout en bout.
 
 ## DevOverlay — simulation d'états (dev local + prod gated)
 
