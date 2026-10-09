@@ -6,12 +6,28 @@ import AdminLayout from '@/components/AdminLayout';
 import AdminPage from '@/components/admin/AdminPage';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AmbassadeursTable from '@/components/AmbassadeursTable';
+import {
+  SORT_COLUMNS,
+  parseSort,
+  parseParcours,
+  parcoursOrFilter,
+  type SortKey,
+  type SortDir,
+  type ParcoursValue,
+} from '@/lib/admin/ambassadeurs-query';
 
 export const dynamic = 'force-dynamic';
 
 const PAGE_SIZE = 20;
 
-async function getAmbassadeurs(page: number, q: string, status: string) {
+async function getAmbassadeurs(
+  page: number,
+  q: string,
+  status: string,
+  sort: SortKey,
+  dir: SortDir,
+  parcours: ParcoursValue[]
+) {
   const supabase = createServiceClient();
   const offset = (page - 1) * PAGE_SIZE;
 
@@ -24,9 +40,14 @@ async function getAmbassadeurs(page: number, q: string, status: string) {
 
   if (q) query = query.or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%,city.ilike.%${q}%`);
   if (status !== 'all') query = query.eq('status', status);
+  const parcoursFilter = parcoursOrFilter(parcours);
+  if (parcoursFilter) query = query.or(parcoursFilter);
 
+  // `id` en second critère : sans ordre total, deux pages successives peuvent
+  // se chevaucher quand beaucoup de lignes ont la même valeur (ex. même ville).
   const { data, count } = await query
-    .order('created_at', { ascending: false })
+    .order(SORT_COLUMNS[sort], { ascending: dir === 'asc' })
+    .order('id')
     .range(offset, offset + PAGE_SIZE - 1);
 
   // Convertir les chemins Storage privés en signed URLs (1h) pour affichage admin
@@ -55,7 +76,7 @@ async function getAmbassadeurs(page: number, q: string, status: string) {
 }
 
 interface PageProps {
-  searchParams: Promise<{ page?: string; q?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; status?: string; sort?: string; dir?: string; parcours?: string }>;
 }
 
 export default async function AdminAmbassadeursPage({ searchParams }: PageProps) {
@@ -64,7 +85,10 @@ export default async function AdminAmbassadeursPage({ searchParams }: PageProps)
   const q = sp.q ?? '';
   const filterStatus = sp.status ?? 'all';
 
-  const { ambassadeurs, total } = await getAmbassadeurs(page, q, filterStatus);
+  const { sort, dir } = parseSort(sp.sort, sp.dir);
+  const parcours = parseParcours(sp.parcours);
+
+  const { ambassadeurs, total } = await getAmbassadeurs(page, q, filterStatus, sort, dir, parcours);
 
   return (
     <AdminLayout>
@@ -80,6 +104,9 @@ export default async function AdminAmbassadeursPage({ searchParams }: PageProps)
           pageSize={PAGE_SIZE}
           searchQ={q}
           filterStatus={filterStatus}
+          sort={sort}
+          dir={dir}
+          parcours={parcours}
         />
       </AdminPage>
     </AdminLayout>

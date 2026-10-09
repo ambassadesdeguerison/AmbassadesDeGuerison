@@ -2,10 +2,11 @@
 
 import React, { useState, useTransition, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronDown, ChevronUp, User, Flower2, X, ChevronLeft, ChevronRight, AlertCircle, Info } from 'lucide-react';
+import { ChevronDown, ChevronUp, ChevronsUpDown, User, Flower2, X, ChevronLeft, ChevronRight, AlertCircle, Info } from 'lucide-react';
 import { apiCall } from '@/lib/admin/api-call';
 import { ambassadorActionFeedback, type CandidateEmail } from '@/lib/admin/ambassador-action-feedback';
 import { useToast } from '@/components/ui/Toast';
+import { PARCOURS_OPTIONS, nextSort, type SortKey, type SortDir, type ParcoursValue } from '@/lib/admin/ambassadeurs-query';
 import { questionnaireGaps, type QuestionnaireGaps } from '@/lib/admin/questionnaire-gaps';
 import { BOOKS, TRAININGS, labelsFor } from '@/lib/questionnaire/catalog';
 import ErrorMessage from '@/components/admin/ErrorMessage';
@@ -51,6 +52,9 @@ interface Props {
   pageSize: number;
   searchQ: string;
   filterStatus: string;
+  sort: SortKey;
+  dir: SortDir;
+  parcours: ParcoursValue[];
 }
 
 // Audit admin 2026-08-07 (2.6) : « Inscrit » et « Questionnaire » ne disaient
@@ -91,7 +95,7 @@ const CHURCH_ATTENDANCE_LABELS: Record<string, string> = {
 };
 
 const FILTERS = [
-  { value: 'all',                label: 'Tous'                  },
+  { value: 'all',                label: 'Tous les statuts'      },
   { value: 'enrichment_pending', label: 'À valider'             },
   { value: 'pending_review',     label: 'En attente du candidat' },
   { value: 'pre_approved',       label: 'Présentation en cours' },
@@ -534,6 +538,39 @@ function AmbassadeurCard({
   );
 }
 
+const SELECT_CLASS =
+  'border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent';
+
+// En-tête cliquable : un clic trie (puis inverse) via l'URL, la page serveur refait la requête.
+function SortHeader({
+  label, sortKey, sort, dir, onSort, className = '',
+}: {
+  label: string;
+  sortKey: SortKey;
+  sort: SortKey;
+  dir: SortDir;
+  onSort: (key: SortKey) => void;
+  className?: string;
+}) {
+  const active = sort === sortKey;
+  const Icon = !active ? ChevronsUpDown : dir === 'asc' ? ChevronUp : ChevronDown;
+  return (
+    <th
+      className={`text-left px-4 py-3 font-medium ${className}`}
+      aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`inline-flex items-center gap-1 uppercase tracking-wide hover:text-slate-700 transition-colors ${active ? 'text-slate-700' : ''}`}
+      >
+        {label}
+        <Icon className={`w-3 h-3 ${active ? '' : 'opacity-50'}`} />
+      </button>
+    </th>
+  );
+}
+
 export default function AmbassadeursTable({
   ambassadeurs: initial,
   total,
@@ -541,6 +578,9 @@ export default function AmbassadeursTable({
   pageSize,
   searchQ,
   filterStatus,
+  sort,
+  dir,
+  parcours,
 }: Props) {
   const router = useRouter();
   const toast = useToast();
@@ -566,6 +606,11 @@ export default function AmbassadeursTable({
     startTransition(() => {
       router.push(`/admin/ambassadeurs?${sp.toString()}`);
     });
+  }
+
+  function handleSort(key: SortKey) {
+    const next = nextSort({ sort, dir }, key);
+    navigate({ sort: next.sort, dir: next.dir, page: '1' });
   }
 
   function handleSearchSubmit(e: React.FormEvent) {
@@ -626,7 +671,7 @@ export default function AmbassadeursTable({
     if (action === 'rejected') {
       setConfirm({
         title: `Refuser la candidature de ${name} ?`,
-        body: 'Le dossier passera au statut « Refusé ». Vous pourrez le réintégrer plus tard depuis le filtre « Refusés ».',
+        body: 'Le dossier passera au statut « Refusé ». Vous pourrez le réintégrer plus tard en filtrant le statut « Refusé ».',
         emailNotice: `Un e-mail de refus sera envoyé à ${a.email}. Cet envoi est immédiat et irréversible.`,
         confirmLabel: 'Refuser la candidature',
         onConfirm: async () => {
@@ -695,35 +740,52 @@ export default function AmbassadeursTable({
         </button>
       </form>
 
-      <div className="flex gap-2 flex-wrap">
-        {FILTERS.map((f) => (
+      <div className="flex gap-2 flex-wrap items-center">
+        <select
+          aria-label="Filtrer par statut"
+          value={filterStatus}
+          onChange={(e) => navigate({ status: e.target.value, page: '1' })}
+          className={SELECT_CLASS}
+        >
+          {FILTERS.map((f) => (
+            <option key={f.value} value={f.value}>{f.label}</option>
+          ))}
+        </select>
+        <details className="relative group">
+          <summary className={`${SELECT_CLASS} list-none cursor-pointer select-none flex items-center gap-2 [&::-webkit-details-marker]:hidden`}>
+            Parcours de guérison{parcours.length > 0 ? ` (${parcours.length})` : ''}
+            <ChevronDown className="w-3.5 h-3.5 text-slate-500 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="absolute z-20 mt-1 w-72 bg-white border border-slate-200 rounded-lg shadow-lg p-3 space-y-2">
+            <p className="text-[11px] text-slate-400">Affiche ceux qui correspondent à au moins une case cochée.</p>
+            {PARCOURS_OPTIONS.map((o) => (
+              <label key={o.value} className="flex items-center gap-2 text-xs text-slate-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={parcours.includes(o.value)}
+                  onChange={(e) => {
+                    const next = e.target.checked ? [...parcours, o.value] : parcours.filter((v) => v !== o.value);
+                    navigate({ parcours: next.join(','), page: '1' });
+                  }}
+                />
+                {o.label}
+              </label>
+            ))}
+          </div>
+        </details>
+        {(filterStatus !== 'all' || parcours.length > 0 || searchQ) && (
           <button
-            key={f.value}
-            onClick={() => navigate({ status: f.value, page: '1' })}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              filterStatus === f.value
-                ? 'bg-slate-800 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            }`}
+            type="button"
+            onClick={() => { setSearch(''); navigate({ status: 'all', parcours: '', q: '', page: '1' }); }}
+            className="text-xs text-slate-500 hover:text-slate-800 underline underline-offset-2"
           >
-            {f.label}
+            Réinitialiser
           </button>
-        ))}
+        )}
         <span className="ml-auto text-xs text-slate-400 self-center">
           {total} ambassadeur{total !== 1 ? 's' : ''}
         </span>
       </div>
-
-      {/* Audit 2.6 : un nouvel admin ne pouvait pas deviner quelles étapes du
-          pipeline demandent une action de sa part et lesquelles avancent seules. */}
-      <p className="flex items-start gap-2 text-xs text-slate-500 bg-slate-100/70 px-3 py-2 rounded-lg">
-        <Info className="w-3.5 h-3.5 mt-px shrink-0 text-slate-400" />
-        <span>
-          Le candidat avance seul jusqu&apos;au statut <strong className="font-medium">« À valider »</strong> : il valide
-          son engagement, puis remplit sa présentation. C&apos;est à ce moment seulement que vous examinez son dossier et
-          décidez.
-        </span>
-      </p>
 
       {initial.length === 0 ? (
         <p className="text-sm text-slate-400 py-8 text-center">Aucun ambassadeur dans cette catégorie.</p>
@@ -756,9 +818,9 @@ export default function AmbassadeursTable({
               <thead>
                 <tr className="border-b border-slate-100 text-xs text-slate-400 uppercase tracking-wide">
                   <th className="text-left px-4 py-3 font-medium w-6"></th>
-                  <th className="text-left px-4 py-3 font-medium">Nom</th>
-                  <th className="text-left px-4 py-3 font-medium">E-mail</th>
-                  <th className="text-left px-4 py-3 font-medium">Ville / Pays</th>
+                  <SortHeader label="Nom" sortKey="nom" sort={sort} dir={dir} onSort={handleSort} />
+                  <SortHeader label="E-mail" sortKey="email" sort={sort} dir={dir} onSort={handleSort} />
+                  <SortHeader label="Ville / Pays" sortKey="ville" sort={sort} dir={dir} onSort={handleSort} />
                   {/* Type, capacité et date d'inscription restent lisibles dans
                       le panneau déplié — les masquer sous 1280px garde la
                       colonne « Action » à l'écran sans scroll horizontal
@@ -767,7 +829,7 @@ export default function AmbassadeursTable({
                   <th className="text-left px-4 py-3 font-medium hidden xl:table-cell">Type</th>
                   <th className="text-left px-4 py-3 font-medium hidden xl:table-cell">Cap.</th>
                   <th className="text-left px-4 py-3 font-medium">Statut</th>
-                  <th className="text-left px-4 py-3 font-medium hidden xl:table-cell">Inscription</th>
+                  <SortHeader label="Inscription" sortKey="inscription" sort={sort} dir={dir} onSort={handleSort} className="hidden xl:table-cell" />
                   <th className="text-left px-4 py-3 font-medium">Action</th>
                 </tr>
               </thead>
