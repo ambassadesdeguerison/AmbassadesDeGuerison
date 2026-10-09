@@ -20,7 +20,7 @@ Page HTML autonome, **hors du dépôt** : `C:\Users\tagne\Documents\estimation-c
 | Constat | Où | Conséquence |
 |---|---|---|
 | La carte redemande `/api/host-activations` **toutes les 30 s** par visiteur. `ARCHITECTURE.md` dit 5 s : c'est faux. | `components/MapPublique.tsx:567` | Premier poste de coût qui monte avec l'affluence. |
-| La route est en `revalidate = 0`, **sans en-tête de cache**. | `app/api/host-activations/route.ts:8` | Chaque rafraîchissement réveille le serveur et la base. |
+| *(Corrigé 2026-10-09 : en-tête ajouté, désactivé par défaut.)* La route est en `revalidate = 0` ; le cache se règle par `MAP_CACHE_SECONDS`. | `app/api/host-activations/route.ts:8` | Chaque rafraîchissement réveille le serveur et la base. |
 | La route renvoie **toutes** les ambassades de l'événement (ouvertes ou non), pas seulement les ouvertes. | même fichier | Le poids de la réponse croît avec le nombre total d'ambassades. |
 | Fond de carte : `tile.openstreetmap.fr` (gratuit). Adresses : Nominatim (gratuit). | `MapPublique.tsx:593`, `app/api/geocode/route.ts` | Pas de coût, mais un risque (§ 7). |
 | 20 fonctions `send…` dans `lib/email/templates.ts` ; **aucun e-mail de confirmation n'est envoyé au visiteur** quand il envoie sa demande. | `app/api/visit-requests/route.ts` | Seule l'ambassade est prévenue. |

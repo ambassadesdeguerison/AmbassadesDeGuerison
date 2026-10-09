@@ -3,8 +3,9 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { getPublicMapPhotoUrls } from '@/lib/storage/photo-url';
 import { jitterCoordinates } from '@/lib/geo/jitter';
 import { firstRow } from '@/lib/supabase/relation';
+import { mapCacheHeaders } from '@/lib/map/cache-headers';
 
-// Polling 30s depuis la carte publique
+// Polling 5 s depuis la carte publique. Cache CDN court et facultatif : MAP_CACHE_SECONDS (lib/map/cache-headers.ts).
 export const revalidate = 0;
 
 export async function GET() {
@@ -39,7 +40,7 @@ export async function GET() {
   }
 
   if (!referenceEvent) {
-    return NextResponse.json([]);
+    return NextResponse.json([], { headers: mapCacheHeaders() });
   }
 
   const lastEvent = referenceEvent;
@@ -103,5 +104,5 @@ export async function GET() {
     };
   });
 
-  return NextResponse.json(pins);
+  return NextResponse.json(pins, { headers: mapCacheHeaders() });
 }
