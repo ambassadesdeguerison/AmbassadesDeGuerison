@@ -8,6 +8,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminNotice from '@/components/admin/AdminNotice';
 import ErrorMessage from '@/components/admin/ErrorMessage';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/admin/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 
 type Entry = {
   id: string;
@@ -23,6 +24,7 @@ type Entry = {
 interface Props { entries: Entry[] }
 
 export default function BlacklistClient({ entries: initial }: Props) {
+  const toast = useToast();
   const [entries, setEntries] = useState(initial);
   const [form, setForm] = useState({ email: '', phone: '', reason: '' });
   const [adding, setAdding] = useState(false);
@@ -54,6 +56,9 @@ export default function BlacklistClient({ entries: initial }: Props) {
         ...list,
       ]);
       setForm({ email: '', phone: '', reason: '' });
+      toast.success('Personne bloquée', {
+        description: `${form.email.trim() || form.phone.trim()} ne peut plus envoyer de demande de visite. Elle reçoit un message neutre l'invitant à contacter l'équipe.`,
+      });
     } else {
       setAddError(res.error);
     }
@@ -75,8 +80,12 @@ export default function BlacklistClient({ entries: initial }: Props) {
         const res = await apiCall('/api/admin/blacklist', { method: 'DELETE', body: { id: entry.id } });
         setBusy(false);
         setConfirm(null);
-        if (res.ok) setEntries((list) => list.filter((x) => x.id !== entry.id));
-        else setRemoveError(res.error);
+        if (res.ok) {
+          setEntries((list) => list.filter((x) => x.id !== entry.id));
+          toast.success('Personne débloquée', { description: `${who} peut de nouveau envoyer des demandes de visite.` });
+        } else {
+          setRemoveError(res.error);
+        }
       },
     });
   }

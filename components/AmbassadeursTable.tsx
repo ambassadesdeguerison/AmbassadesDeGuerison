@@ -4,6 +4,8 @@ import React, { useState, useTransition, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronDown, ChevronUp, User, Flower2, X, ChevronLeft, ChevronRight, AlertCircle, Info } from 'lucide-react';
 import { apiCall } from '@/lib/admin/api-call';
+import { ambassadorActionFeedback, type CandidateEmail } from '@/lib/admin/ambassador-action-feedback';
+import { useToast } from '@/components/ui/Toast';
 import { questionnaireGaps, type QuestionnaireGaps } from '@/lib/admin/questionnaire-gaps';
 import { BOOKS, TRAININGS, labelsFor } from '@/lib/questionnaire/catalog';
 import ErrorMessage from '@/components/admin/ErrorMessage';
@@ -369,7 +371,6 @@ function AmbassadeurCard({
   onAction,
   onOpenLightbox,
   error,
-  notice,
 }: {
   a: Ambassadeur;
   displayStatus: string;
@@ -379,7 +380,6 @@ function AmbassadeurCard({
   onAction: (action: string) => void;
   onOpenLightbox: (photos: { url: string; label: string }[], index: number) => void;
   error?: string;
-  notice?: string;
 }) {
   const s = STATUS_LABELS[displayStatus] ?? { label: displayStatus, className: 'bg-slate-50 text-slate-600' };
   const gaps = questionnaireGaps(a);
@@ -528,9 +528,6 @@ function AmbassadeurCard({
           )}
 
           {error && <ErrorMessage>{error}</ErrorMessage>}
-          {notice && (
-            <p className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-3 py-2 rounded-lg">{notice}</p>
-          )}
         </div>
       )}
     </div>
@@ -546,6 +543,7 @@ export default function AmbassadeursTable({
   filterStatus,
 }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
@@ -554,7 +552,6 @@ export default function AmbassadeursTable({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lightbox, setLightbox] = useState<{ photos: { url: string; label: string }[]; index: number } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [notices, setNotices] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
@@ -579,11 +576,11 @@ export default function AmbassadeursTable({
   async function runAction(a: Ambassadeur, action: string) {
     setActionLoading(a.id);
     setErrors((e) => ({ ...e, [a.id]: '' }));
-    setNotices((n) => ({ ...n, [a.id]: '' }));
 
-    const res = await apiCall<{ status: string }>(`/api/admin/ambassadeurs/${a.id}/status`, {
-      body: { action },
-    });
+    const res = await apiCall<{ status: string; candidateEmail?: CandidateEmail }>(
+      `/api/admin/ambassadeurs/${a.id}/status`,
+      { body: { action } }
+    );
 
     if (res.ok) {
       setStatusOverrides((prev) => ({ ...prev, [a.id]: res.data.status }));
@@ -592,22 +589,29 @@ export default function AmbassadeursTable({
       // `router.refresh()` conserve l'URL — donc le filtre et la page.
       startTransition(() => router.refresh());
 
-      // Audit 2.4 : « Réactiver » a deux comportements silencieusement
-      // différents selon la complétude du dossier. L'admin s'attendait à
-      // remettre l'ambassadeur sur la carte et obtenait un statut « À valider »
-      // sans explication.
-      if (action === 'reactiver') {
-        setNotices((n) => ({
-          ...n,
-          [a.id]: res.data.status === 'validated'
-            ? `${a.first_name} est de nouveau visible sur la carte. Un e-mail de confirmation lui a été envoyé.`
-            : `Dossier incomplet : ${a.first_name} doit d'abord compléter son questionnaire (photos). Aucun e-mail envoyé.`,
-        }));
-      }
+      // La confirmation passe par une notification et non par un message collé à
+      // la ligne : après le rafraîchissement, une ligne validée quitte le filtre
+      // « À valider » et son message disparaissait avec elle. Elle dit aussi si
+      // l'e-mail est réellement parti, ce que la ligne ne montre pas.
+      //
+      // Audit 2.4 : « Réactiver » a deux comportements selon la complétude du
+      // dossier — l'admin s'attendait à remettre l'ambassadeur sur la carte et
+      // obtenait un statut « À valider » sans explication.
+      const { tone, title, description } = ambassadorActionFeedback({
+        action,
+        resultingStatus: res.data.status,
+        candidateEmail: res.data.candidateEmail ?? 'none',
+        firstName: a.first_name,
+        email: a.email,
+      });
+      toast[tone](title, { description });
     } else {
       // Audit 2.1 : l'échec était avalé. L'API refuse pourtant `validated` hors
       // `enrichment_pending` avec un message explicite qui n'était jamais montré.
+      // L'erreur reste près du bouton (elle ne disparaît pas d'elle-même) et une
+      // notification la signale aussi quand le panneau est replié.
       setErrors((e) => ({ ...e, [a.id]: res.error }));
+      toast.error("L'action n'a pas abouti", { description: res.error });
     }
     setActionLoading(null);
   }
@@ -740,7 +744,6 @@ export default function AmbassadeursTable({
                   onToggleExpand={() => setExpandedId(expandedId === a.id ? null : a.id)}
                   onAction={(action) => handleAction(a, action)}
                   error={errors[a.id]}
-                  notice={notices[a.id]}
                   onOpenLightbox={(photos, index) => setLightbox({ photos, index })}
                 />
               );
@@ -858,15 +861,10 @@ export default function AmbassadeursTable({
                       {/* Une action de ligne (Suspendre, Réintégrer) peut échouer
                           sans que le panneau soit déplié — l'erreur doit rester
                           visible dans ce cas aussi (audit 2.1). */}
-                      {!isExpanded && (errors[a.id] || notices[a.id]) && (
+                      {!isExpanded && errors[a.id] && (
                         <tr>
                           <td colSpan={9} className="px-4 pb-3 bg-slate-50/60">
-                            {errors[a.id] && <ErrorMessage>{errors[a.id]}</ErrorMessage>}
-                            {notices[a.id] && (
-                              <p className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-3 py-2 rounded-lg">
-                                {notices[a.id]}
-                              </p>
-                            )}
+                            <ErrorMessage>{errors[a.id]}</ErrorMessage>
                           </td>
                         </tr>
                       )}
@@ -941,11 +939,6 @@ export default function AmbassadeursTable({
                               )}
 
                               {errors[a.id] && <ErrorMessage>{errors[a.id]}</ErrorMessage>}
-                              {notices[a.id] && (
-                                <p className="text-sm text-slate-700 bg-slate-100 border border-slate-200 px-3 py-2 rounded-lg">
-                                  {notices[a.id]}
-                                </p>
-                              )}
                             </div>
                           </td>
                         </tr>

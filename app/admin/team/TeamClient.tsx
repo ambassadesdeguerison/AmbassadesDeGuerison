@@ -9,6 +9,7 @@ import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import AdminNotice from '@/components/admin/AdminNotice';
 import ErrorMessage from '@/components/admin/ErrorMessage';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/admin/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 
 interface Member {
   user_id: string;
@@ -44,15 +45,12 @@ const ROLE_HELP: Record<string, string> = {
 
 export default function TeamClient({ members: initial, currentRole, currentUserId }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const [members, setMembers] = useState(initial);
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'super_admin'>('admin');
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
-  const [success, setSuccess] = useState('');
-  // Distingue « accès accordé + e-mail parti » de « accès accordé, e-mail en
-  // échec » — deux issues valides qui n'appellent pas la même action de l'admin.
-  const [emailFailed, setEmailFailed] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
   const [busy, setBusy] = useState(false);
   const [removeError, setRemoveError] = useState('');
@@ -67,7 +65,6 @@ export default function TeamClient({ members: initial, currentRole, currentUserI
     e.preventDefault();
     setAdding(true);
     setAddError('');
-    setSuccess('');
 
     const res = await apiCall<{ invited: boolean; emailSent: boolean; email: string }>('/api/admin/team', {
       body: { email: newEmail, role: newRole },
@@ -76,16 +73,18 @@ export default function TeamClient({ members: initial, currentRole, currentUserI
     if (res.ok) {
       setNewEmail('');
       const { invited, emailSent, email } = res.data;
-      setEmailFailed(!emailSent);
-      // L'accès est accordé en base même si l'e-mail n'est pas parti — le dire
+      // Deux issues valides qui n'appellent pas la même action de l'admin :
+      // l'accès est accordé en base même si l'e-mail n'est pas parti — le dire
       // franchement plutôt que d'annoncer un envoi qui n'a pas eu lieu.
-      setSuccess(
-        emailSent
-          ? invited
-            ? `Compte créé pour ${email}. Un lien de connexion vient de lui être envoyé.`
-            : `${email} a reçu l'accès. Un lien de connexion vient de lui être envoyé.`
-          : `${email} a bien reçu l'accès, mais l'e-mail n'a pas pu être envoyé. Prévenez la personne : elle peut se connecter depuis /auth avec cette adresse.`
-      );
+      if (emailSent) {
+        toast.success(invited ? `Compte créé pour ${email}` : `Accès donné à ${email}`, {
+          description: 'Un lien de connexion vient de lui être envoyé par e-mail.',
+        });
+      } else {
+        toast.warning(`Accès donné à ${email}, mais l'e-mail n'est pas parti`, {
+          description: "Prévenez la personne : elle peut se connecter depuis /auth avec cette adresse.",
+        });
+      }
       router.refresh();
     } else {
       setAddError(res.error);
@@ -104,8 +103,12 @@ export default function TeamClient({ members: initial, currentRole, currentUserI
         const res = await apiCall('/api/admin/team', { method: 'DELETE', body: { user_id: m.user_id } });
         setBusy(false);
         setConfirm(null);
-        if (res.ok) setMembers((list) => list.filter((x) => x.user_id !== m.user_id));
-        else setRemoveError(res.error);
+        if (res.ok) {
+          setMembers((list) => list.filter((x) => x.user_id !== m.user_id));
+          toast.success('Accès retiré', { description: `${m.email} n'a plus accès à l'espace d'administration.` });
+        } else {
+          setRemoveError(res.error);
+        }
       },
     });
   }
@@ -211,17 +214,6 @@ export default function TeamClient({ members: initial, currentRole, currentUserI
             </div>
 
             {addError && <ErrorMessage>{addError}</ErrorMessage>}
-            {success && (
-              <p
-                className={`text-sm leading-relaxed border px-3 py-2 rounded-lg ${
-                  emailFailed
-                    ? 'text-amber-900 bg-amber-50 border-amber-100'
-                    : 'text-emerald-800 bg-emerald-50 border-emerald-100'
-                }`}
-              >
-                {success}
-              </p>
-            )}
 
             <button
               type="submit"

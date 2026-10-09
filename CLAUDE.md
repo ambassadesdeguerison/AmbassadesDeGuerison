@@ -172,6 +172,17 @@ Page `/confidentialite` + légendes inline, ajoutées le 2026-08-07 (TODO-23). D
 
 Les durées de conservation annoncées sur la page **ne sont appliquées par aucune purge automatique** — écart à combler avant un lancement public.
 
+## Notifications (toasts) — `components/ui/Toast.tsx` (2026-10-09)
+
+`ToastProvider` est monté dans `app/layout.tsx` : la file survit à `router.refresh()` et aux navigations. Dans un Client Component : `const toast = useToast()` puis `toast.success | error | warning | info(titre, { description })` (l'objet est stable, utilisable dans les dépendances d'un `useEffect`). `useToast` hors fournisseur lève une erreur explicite. Logique pure (file, doublons, plafond de 4, durée) dans `lib/toast/state.ts`. Points non-évidents :
+
+- **Ne jamais écrire « e-mail envoyé » sans confirmation du serveur.** Une route qui envoie un e-mail doit l'**attendre** (`await Promise.allSettled`, pas de feu-et-oublie) et remonter l'issue : `candidateEmail: 'sent' | 'failed' | 'none'` pour `POST /api/admin/ambassadeurs/[id]/status`, `emailSent: boolean | null` pour `/api/visit-requests/[token]/accept|decline` et `/api/live-signals/[id]` (`null` = e-mails désactivés). L'action elle-même réussit même si l'e-mail échoue : l'écran affiche alors un **avertissement** (« …, mais l'e-mail n'est pas parti ») qui dit quoi faire, jamais un succès ni une erreur.
+- Le texte dépendant de plusieurs paramètres vit dans une fonction pure testée : `lib/admin/ambassador-action-feedback.ts` (admin) et `lib/dashboard/request-action-feedback.ts` (ambassadeur). Prénoms toujours via `de()` (`lib/elision.ts`).
+- **Quand notifier** : un résultat invisible à l'écran (e-mail parti, ligne qui quitte le filtre actif après `router.refresh()`, effet sur la carte publique). Pas pour un résultat déjà visible (une ligne qui change de couleur) ni pour les sauvegardes qui affichent déjà « Enregistré ! » à côté du bouton. Une **erreur** reste aussi affichée près du bouton (`ErrorMessage`) : la notification disparaît, l'erreur contextuelle non.
+- Durée proportionnelle au texte (min. 6 s succès/info, 10 s avertissement/erreur), suspendue au survol, au focus et quand l'onglet est masqué. Erreurs en `role="alert"`, le reste dans une région `aria-live="polite"` toujours présente. Pas d'animation d'entrée (DESIGN.md).
+- Le message collé à une ligne (`notices` dans `AmbassadeursTable`) a été supprimé : après validation, la ligne quittait le filtre « À valider » et son message disparaissait avec elle.
+- Dashboard ambassadeur : `handleContactAction`, `toggleActivation` et `sendLiveSignal` ignoraient une réponse en erreur (signal « envoyé » alors que l'API avait refusé, bascule d'activation non enregistrée). Ils vérifient désormais `res.ok`.
+
 ## Règles importantes
 
 - `lib/supabase/server.ts` (service_role) : JAMAIS importé depuis un Client Component

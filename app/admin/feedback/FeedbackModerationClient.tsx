@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/browser';
-import { AlertTriangle, CheckCircle2, Clock, X, Star, ThumbsUp, ThumbsDown, Ban, Inbox } from 'lucide-react';
+import { CheckCircle2, Clock, X, Star, ThumbsUp, ThumbsDown, Ban, Inbox } from 'lucide-react';
 import { apiCall } from '@/lib/admin/api-call';
 import AdminPage from '@/components/admin/AdminPage';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
@@ -11,6 +11,7 @@ import AdminNotice from '@/components/admin/AdminNotice';
 import ErrorMessage from '@/components/admin/ErrorMessage';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/admin/ConfirmDialog';
 import { de } from '@/lib/elision';
+import { useToast } from '@/components/ui/Toast';
 
 type Feedback = {
   id: string;
@@ -73,7 +74,7 @@ export default function FeedbackModerationClient({ feedbacks: initial }: Props) 
   const [resolution, setResolution] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useToast();
   const [tab, setTab] = useState<'signalements' | 'notations'>('signalements');
   const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
@@ -95,12 +96,11 @@ export default function FeedbackModerationClient({ feedbacks: initial }: Props) 
         filter: 'reported=eq.true',
       }, (payload) => {
         setFeedbacks((prev) => [payload.new as Feedback, ...prev]);
-        setToast('Nouveau signalement reçu');
-        setTimeout(() => setToast(null), 4000);
+        toast.info('Nouveau signalement reçu', { description: 'Il apparaît en haut de la liste des signalements.' });
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [toast]);
 
   async function handleAction(id: string, action: 'reviewing' | 'resolved' | 'dismissed') {
     setSubmitting((s) => ({ ...s, [id]: true }));
@@ -141,11 +141,13 @@ export default function FeedbackModerationClient({ feedbacks: initial }: Props) 
         setConfirmBusy(false);
         setConfirm(null);
         if (res.ok) {
-          setToast('Visiteur bloqué');
-          setTimeout(() => setToast(null), 4000);
+          toast.success('Visiteur bloqué', {
+            description: `${fb.visitor_email} ne peut plus envoyer de demande de visite. Vous pouvez le débloquer depuis l'écran Blocages.`,
+          });
           router.refresh();
         } else {
           setErrors((e) => ({ ...e, [fb.id]: res.error }));
+          toast.error("Le blocage n'a pas abouti", { description: res.error });
         }
       },
     });
@@ -198,13 +200,6 @@ export default function FeedbackModerationClient({ feedbacks: initial }: Props) 
           Toutes les notations ({feedbacks.length})
         </button>
       </div>
-
-      {toast && (
-        <div className="fixed top-4 right-4 z-50 bg-indigo-600 text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" />
-          {toast}
-        </div>
-      )}
 
       {tab === 'signalements' && (
         <>

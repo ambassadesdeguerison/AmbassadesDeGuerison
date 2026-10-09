@@ -6,6 +6,7 @@ import { apiCall } from '@/lib/admin/api-call';
 import AdminNotice from '@/components/admin/AdminNotice';
 import ErrorMessage from '@/components/admin/ErrorMessage';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/admin/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 
 type Event = { id: string; title: string; event_date: string };
 type Campaign = {
@@ -64,6 +65,7 @@ const TYPE_HELP: Record<string, string> = {
 };
 
 export default function CalendrierCampaignSection({ futureEvents, allEvents, campaigns: initial, tzOffset }: Props) {
+  const toast = useToast();
   const [campaigns, setCampaigns] = useState(initial);
   const [form, setForm] = useState({
     event_id: futureEvents[0]?.id ?? '',
@@ -73,7 +75,6 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -81,7 +82,6 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
     e.preventDefault();
     setSaving(true);
     setError('');
-    setSuccess('');
 
     // Le champ `datetime-local` est interprété avec le même offset que la
     // création de live, pas celui du navigateur : un admin en métropole
@@ -97,11 +97,18 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
       // jamais affiché — l'admin ignorait à combien de personnes il venait de
       // programmer un envoi, et que la liste est figée à cet instant.
       const n = res.data.recipients;
-      setSuccess(
-        n === 0
-          ? 'Envoi planifié, mais aucun destinataire ne correspond pour le moment.'
-          : `Envoi planifié pour ${n} destinataire${n > 1 ? 's' : ''} — liste figée maintenant, les inscriptions ultérieures ne la rejoindront pas.`
-      );
+      // « Planifié » et non « envoyé » : rien ne part avant la date, et tant que
+      // les envois automatiques sont désactivés, rien ne part du tout (voir le
+      // bandeau en haut de la section).
+      if (n === 0) {
+        toast.warning('Envoi planifié, mais sans destinataire', {
+          description: 'Aucune personne ne correspond pour le moment. La liste est figée à cet instant.',
+        });
+      } else {
+        toast.success('Envoi planifié', {
+          description: `${n} destinataire${n > 1 ? 's' : ''}. La liste est figée maintenant : les inscriptions ultérieures ne la rejoindront pas.`,
+        });
+      }
       setCampaigns((c) => [
         ...c,
         { id: res.data.id, type: form.type, event_id: form.event_id, status: 'pending', scheduled_at: scheduledIso, sent_count: null, custom_message: form.custom_message || null },
@@ -125,8 +132,12 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
         const res = await apiCall('/api/admin/campaigns', { method: 'DELETE', body: { id: c.id } });
         setBusy(false);
         setConfirm(null);
-        if (res.ok) setCampaigns((list) => list.filter((x) => x.id !== c.id));
-        else setError(res.error);
+        if (res.ok) {
+          setCampaigns((list) => list.filter((x) => x.id !== c.id));
+          toast.success('Envoi annulé', { description: 'La liste de destinataires a été supprimée.' });
+        } else {
+          setError(res.error);
+        }
       },
     });
   }
@@ -251,7 +262,6 @@ export default function CalendrierCampaignSection({ futureEvents, allEvents, cam
           )}
 
           {error && <ErrorMessage>{error}</ErrorMessage>}
-          {success && <p className="text-emerald-800 text-sm bg-emerald-50 border border-emerald-100 px-3 py-2 rounded-lg">{success}</p>}
 
           <button
             type="submit"

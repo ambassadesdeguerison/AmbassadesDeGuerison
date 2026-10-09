@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Mic, Check, X } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
 
 interface Signal {
   id: string;
@@ -17,13 +18,11 @@ interface Signal {
   };
 }
 
-type EmailToast = { id: string; sent: boolean };
-
 export default function AdminFeed({ eventId }: { eventId: string | null }) {
+  const toast = useToast();
   const [signals, setSignals] = useState<Signal[]>([]);
   const [processing, setProcessing] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
-  const [emailToast, setEmailToast] = useState<EmailToast | null>(null);
   const prevCountRef = useRef<number | null>(null);
 
   function playBeep(frequency = 880) {
@@ -83,13 +82,34 @@ export default function AdminFeed({ eventId }: { eventId: string | null }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
       });
-      if (action === 'approve' && res.ok) {
-        const data = await res.json();
-        setEmailToast({ id, sent: data.emailSent ?? false });
-        setTimeout(() => setEmailToast(null), 4000);
+      if (!res.ok) {
+        // Le signal restait retiré du feed même si l'API avait refusé (autre
+        // admin passé avant, panne) : il réapparaissait au sondage suivant sans
+        // que personne ait compris ce qui s'était passé.
+        const data = await res.json().catch(() => ({}));
+        toast.error("Le témoignage n'a pas pu être traité", {
+          description: data.error ?? 'Réessayez dans un instant.',
+        });
+        return;
+      }
+      if (action === 'approve') {
+        const data = await res.json().catch(() => ({}));
+        if (data.emailSent) {
+          toast.success('Témoignage approuvé', {
+            description: "Le lien du live a été envoyé par e-mail à l'ambassadeur.",
+          });
+        } else {
+          toast.warning("Approuvé, mais l'e-mail n'est pas parti", {
+            description: "L'ambassadeur n'a pas reçu le lien du live. Envoyez-le-lui vous-même.",
+          });
+        }
+      } else {
+        toast.info('Témoignage refusé');
       }
       // Retire le signal du feed
       setSignals((prev) => prev.filter((s) => s.id !== id));
+    } catch {
+      toast.error('Connexion impossible', { description: 'Vérifiez votre accès à Internet, puis réessayez.' });
     } finally {
       setProcessing((prev) => {
         const next = new Set(prev);
@@ -112,20 +132,6 @@ export default function AdminFeed({ eventId }: { eventId: string | null }) {
           </svg>
         )}
       </div>
-
-      {emailToast && (
-        <div className={`mb-3 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-          emailToast.sent
-            ? 'bg-emerald-50 text-emerald-700'
-            : 'bg-red-50 text-red-700'
-        }`}>
-          {emailToast.sent ? (
-            <><Check className="w-4 h-4 flex-shrink-0" /> Lien YouTube envoyé par e-mail</>
-          ) : (
-            <><X className="w-4 h-4 flex-shrink-0" /> Approuvé, mais l&apos;e-mail n&apos;est pas parti</>
-          )}
-        </div>
-      )}
 
       {signals.length === 0 && (
         <div className="text-center py-16 text-slate-400">

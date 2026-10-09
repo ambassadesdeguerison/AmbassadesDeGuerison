@@ -547,6 +547,7 @@ en JS — le guard utilise `=== 'true'`).
 | `MapPublique` | Client Component (`dynamic`, `ssr:false`) | Leaflet + fetch `/api/host-activations` |
 | `EventBanner` | Client Component | Countdown en temps réel (`setInterval`) |
 | `DevOverlay` | Client Component | État local + mutations via `fetch` |
+| `ToastProvider` / `useToast` | Client Component | Notifications de confirmation, montées dans `app/layout.tsx` (survivent à `router.refresh()`). Les routes qui envoient un e-mail l'attendent et remontent `candidateEmail` / `emailSent` — voir CLAUDE.md § Notifications |
 | `app/admin/*` | Server Components + Client Components mixtes | Données init en SSR, interactions en client |
 | `TemoignageCard` | Client Component | "Lire la suite" (expand/collapse état local) |
 | `MissionDuMoment` | Client Component | Carte contextuelle prioritaire — 5 états selon live/demandes/agenda ; `null` si calme |

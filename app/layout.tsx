@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Geist } from 'next/font/google';
 import './globals.css';
 import DevOverlay from '@/components/DevOverlay';
+import { ToastProvider } from '@/components/ui/Toast';
 import { isDevOverlayEnabled } from '@/lib/dev-overlay-auth';
 
 const geist = Geist({ variable: '--font-geist', subsets: ['latin'] });
@@ -27,8 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className={`${geist.variable} h-full antialiased`}>
       <body className={`${geist.className} min-h-full flex flex-col`}>
-        {children}
-        {isDevOverlayEnabled() && <DevOverlay />}
+        <ToastProvider>
+          {children}
+          {isDevOverlayEnabled() && <DevOverlay />}
+        </ToastProvider>
       </body>
     </html>
   );

@@ -6,6 +6,7 @@ import { PowerOff } from 'lucide-react';
 import { apiCall } from '@/lib/admin/api-call';
 import ErrorMessage from '@/components/admin/ErrorMessage';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/admin/ConfirmDialog';
+import { useToast } from '@/components/ui/Toast';
 
 interface Props {
   eventId: string;
@@ -13,6 +14,7 @@ interface Props {
 
 export default function LiveCloseButton({ eventId }: Props) {
   const router = useRouter();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
@@ -36,8 +38,12 @@ export default function LiveCloseButton({ eventId }: Props) {
         if (res.ok) {
           setDone(true);
           router.refresh();
+          toast.success('Live clôturé', {
+            description: 'Les ambassades ont été retirées de la carte publique.',
+          });
         } else {
           setError(res.error);
+          toast.error("Le live n'a pas été clôturé", { description: res.error });
         }
       },
     });

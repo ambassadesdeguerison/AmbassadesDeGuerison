@@ -16,6 +16,8 @@ import { participationLabels } from '@/lib/dashboard/participation-labels';
 import DashboardTabs, { type DashboardTab } from '@/components/dashboard/DashboardTabs';
 import MesInfosSection from '@/app/dashboard/MesInfosSection';
 import DeclineChoice from '@/components/DeclineChoice';
+import { useToast } from '@/components/ui/Toast';
+import { requestActionFeedback } from '@/lib/dashboard/request-action-feedback';
 import { useBrowserTimezone } from '@/lib/hooks/use-browser-timezone';
 
 const LIVE_WINDOW_HOURS = parseInt(process.env.NEXT_PUBLIC_LIVE_SIGNAL_WINDOW_HOURS ?? '4');
@@ -63,6 +65,7 @@ interface ContactRequest {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const toast = useToast();
   const tzLabel = useBrowserTimezone();
   const [profile, setProfile] = useState<HostProfile | null>(null);
   const [activations, setActivations] = useState<Activation[]>([]);
@@ -286,31 +289,64 @@ export default function DashboardPage() {
   }
 
   async function toggleActivation(id: string, currentValue: boolean) {
-    await fetch(`/api/host-activations/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ is_active: !currentValue }),
-    });
-    setActivations((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, is_active: !currentValue } : a))
-    );
+    const labels = participationLabels(profile?.host_type);
+    try {
+      const res = await fetch(`/api/host-activations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !currentValue }),
+      });
+      if (!res.ok) {
+        // L'état local basculait même si l'enregistrement avait échoué : la carte
+        // publique ne suivait pas, et rien ne le disait à l'ambassadeur.
+        toast.error("Votre choix n'a pas été enregistré", { description: 'Réessayez dans un instant.' });
+        return;
+      }
+      setActivations((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, is_active: !currentValue } : a))
+      );
+      if (currentValue) {
+        toast.success("C'est noté", {
+          description: "Vous n'accueillez pas pour ce live. Vous n'apparaissez plus sur la carte.",
+        });
+      } else {
+        toast.success(labels.joined, { description: 'Vous apparaissez maintenant sur la carte pour ce live.' });
+      }
+    } catch {
+      toast.error('Connexion impossible', { description: 'Vérifiez votre connexion Internet, puis réessayez.' });
+    }
   }
 
   async function sendLiveSignal() {
     if (!signalDescription.trim() || !profile || !currentEvent) return;
     setSignalLoading(true);
-    await fetch('/api/live-signals', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        host_profile_id: profile.id,
-        event_id: currentEvent.id,
-        description: signalDescription.trim(),
-      }),
-    });
-    setSignalSent(true);
-    setSignalDescription('');
-    setSignalLoading(false);
+    try {
+      const res = await fetch('/api/live-signals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host_profile_id: profile.id,
+          event_id: currentEvent.id,
+          description: signalDescription.trim(),
+        }),
+      });
+      if (!res.ok) {
+        // Le signal était affiché « envoyé » même quand l'API l'avait refusé :
+        // l'ambassadeur attendait une réponse de David qui ne viendrait jamais.
+        const data = await res.json().catch(() => ({}));
+        toast.error("Votre témoignage n'a pas été envoyé", {
+          description: data.error ?? 'Votre texte est conservé. Réessayez dans un instant.',
+        });
+        return;
+      }
+      setSignalSent(true);
+      setSignalDescription('');
+      toast.success('Témoignage envoyé', { description: 'David le reçoit tout de suite et vous répond bientôt.' });
+    } catch {
+      toast.error('Connexion impossible', { description: 'Votre texte est conservé. Réessayez dans un instant.' });
+    } finally {
+      setSignalLoading(false);
+    }
   }
 
   async function copyAmbassadeLink() {
@@ -401,17 +437,51 @@ export default function DashboardPage() {
 
   async function handleContactAction(token: string, action: 'accept' | 'decline', permanent = false) {
     setRequestActionLoading({ token, action, permanent });
-    const res = await fetch(`/api/visit-requests/${token}/${action}`, {
-      method: 'POST',
-      ...(action === 'decline' && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ permanent }) }),
-    });
-    if (res.ok) {
+    const request = contactRequests.find((r) => r.action_token === token);
+    try {
+      const res = await fetch(`/api/visit-requests/${token}/${action}`, {
+        method: 'POST',
+        ...(action === 'decline' && { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ permanent }) }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        // Avant, l'échec ne laissait aucune trace : le bouton se rouvrait et
+        // l'ambassadeur ne savait pas si sa réponse avait été prise en compte.
+        toast.error("Votre réponse n'a pas été enregistrée", {
+          description: data.error ?? 'Réessayez dans un instant.',
+        });
+        return;
+      }
+
+      // L'API répond 200 « déjà traitée » (autre appareil, lien de l'e-mail) :
+      // afficher le vrai statut plutôt que celui du bouton cliqué.
+      if (data.message) {
+        setContactRequests((prev) =>
+          prev.map((r) => (r.action_token === token ? { ...r, status: data.status ?? r.status } : r))
+        );
+        toast.info('Cette demande avait déjà reçu une réponse', {
+          description: "Rien n'a été modifié.",
+        });
+        return;
+      }
+
       const newStatus = action === 'accept' ? 'accepted' : 'declined';
       setContactRequests((prev) =>
         prev.map((r) => (r.action_token === token ? { ...r, status: newStatus } : r))
       );
+      const { tone, title, description } = requestActionFeedback({
+        action,
+        permanent,
+        emailSent: data.emailSent,
+        visitorFirstName: request?.visitor_first_name ?? '',
+      });
+      toast[tone](title, { description });
+    } catch {
+      toast.error('Connexion impossible', { description: 'Vérifiez votre connexion Internet, puis réessayez.' });
+    } finally {
+      setRequestActionLoading(null);
     }
-    setRequestActionLoading(null);
   }
 
   async function handleSignOut() {

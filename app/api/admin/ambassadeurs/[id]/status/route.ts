@@ -10,6 +10,7 @@ interface Props {
 
 const VALID_ACTIONS = ['validated', 'validated_bypass', 'rejected', 'suspended', 'reactiver'] as const;
 type Action = typeof VALID_ACTIONS[number];
+type CandidateEmail = 'sent' | 'failed' | 'none';
 
 const ACTION_STATUS: Record<Exclude<Action, 'reactiver'>, string> = {
   validated: 'validated',
@@ -77,22 +78,45 @@ export async function POST(req: NextRequest, { params }: Props) {
       : (notes?.trim() || null),
   });
 
-  if (FEATURES.EMAIL_NOTIFICATIONS && profile.user_id) {
-    const { data: authUser } = await supabase.auth.admin.getUserById(profile.user_id);
-    const email = authUser?.user?.email;
-    if (email && (action === 'validated' || action === 'validated_bypass' || (action === 'reactiver' && newStatus === 'validated'))) {
+  // Issue de l'e-mail au candidat, remontée à l'écran admin pour qu'il confirme
+  // (ou non) l'envoi :
+  //  - 'sent'   : l'e-mail est parti ;
+  //  - 'failed' : il devait partir et n'est pas parti (échec d'envoi, ou aucune
+  //               adresse trouvée) — l'action, elle, a bien eu lieu ;
+  //  - 'none'   : cette action n'envoie rien au candidat (suspension, réintégration
+  //               d'un dossier incomplet), ou les e-mails sont désactivés.
+  let candidateEmail: CandidateEmail = 'none';
+
+  const emailsCandidate =
+    action === 'validated' || action === 'validated_bypass' || action === 'rejected' ||
+    (action === 'reactiver' && newStatus === 'validated');
+
+  if (FEATURES.EMAIL_NOTIFICATIONS && emailsCandidate) {
+    const email = profile.user_id
+      ? (await supabase.auth.admin.getUserById(profile.user_id)).data?.user?.email
+      : undefined;
+
+    if (!email) {
+      console.error('[admin/status] e-mail candidat non envoyé : aucune adresse', { profileId: id, action });
+      candidateEmail = 'failed';
+    } else if (action === 'rejected') {
+      const [refus] = await Promise.allSettled([
+        sendRefusCandidature(email, profile.first_name, notes?.trim() || undefined),
+      ]);
+      candidateEmail = refus.status === 'fulfilled' ? 'sent' : 'failed';
+    } else {
       // sendNouvelleActivationAdmin était défini dans templates.ts mais
       // jamais appelé (trouvé par /qa, 2026-07-29) — documenté comme envoyé
       // ici dans CLAUDE.md et la checklist QA manuelle, mais code mort.
-      Promise.allSettled([
+      // Son échec ne change rien pour l'admin qui valide : seul l'e-mail au
+      // candidat est rapporté.
+      const [bienvenue] = await Promise.allSettled([
         sendValidationFinale(email, profile.first_name),
         sendNouvelleActivationAdmin(profile.first_name, profile.city, profile.country),
       ]);
-    }
-    if (email && action === 'rejected') {
-      Promise.allSettled([sendRefusCandidature(email, profile.first_name, notes?.trim() || undefined)]);
+      candidateEmail = bienvenue.status === 'fulfilled' ? 'sent' : 'failed';
     }
   }
 
-  return NextResponse.json({ success: true, status: newStatus });
+  return NextResponse.json({ success: true, status: newStatus, candidateEmail });
 }
