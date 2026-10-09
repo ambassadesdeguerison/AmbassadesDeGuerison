@@ -5,13 +5,16 @@ import AppHeader from '@/components/AppHeader';
 import { CheckCircle2, Clock, MapPin, AlertCircle } from 'lucide-react';
 import { formatEventDateDual } from '@/lib/format-event-date';
 import { de } from '@/lib/elision';
+import BackToRequests, { cameFromMonEspace } from '@/components/visitor/BackToRequests';
 
 interface Props {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ from?: string | string[] }>;
 }
 
-export default async function VisitorConfirmationPage({ params }: Props) {
+export default async function VisitorConfirmationPage({ params, searchParams }: Props) {
   const { token } = await params;
+  const { from } = await searchParams;
   const supabase = createServiceClient();
 
   const { data: contact } = await supabase
@@ -64,7 +67,7 @@ export default async function VisitorConfirmationPage({ params }: Props) {
       done: status === 'accepted',
       current: status === 'accepted',
       detail: status === 'accepted'
-        ? `Vous recevrez les coordonnées de ${host?.first_name ?? "l'ambassadeur"} par e-mail.`
+        ? `Vous recevrez les coordonnées ${host?.first_name ? de(host.first_name) : "de l'ambassadeur"} par e-mail.`
         : 'Transmise par e-mail à la confirmation.',
     },
   ];
@@ -76,6 +79,8 @@ export default async function VisitorConfirmationPage({ params }: Props) {
       <AppHeader />
       <main className="bg-slate-50 px-4 py-5 flex-1">
         <div className="max-w-lg mx-auto space-y-4">
+          {cameFromMonEspace(from) && <BackToRequests />}
+
           {/* Event info */}
           {event && (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2, Clock, XCircle } from 'lucide-react';
 import { de } from '@/lib/elision';
+import { FROM_MON_ESPACE } from '@/components/visitor/BackToRequests';
 import {
   displayStatus,
   requestAction,
@@ -63,11 +64,11 @@ interface Props {
 function hrefFor(action: Exclude<RequestAction, null>, token: string): string {
   switch (action) {
     case 'feedback':
-      return `/feedback/${token}`;
+      return `/feedback/${token}?from=${FROM_MON_ESPACE}`;
     case 'find_other':
       return '/';
     default:
-      return `/visitor/${token}`;
+      return `/visitor/${token}?from=${FROM_MON_ESPACE}`;
   }
 }
 
@@ -104,7 +105,7 @@ export default function RequestCard({ request: r, now, tzLabel, variant }: Props
       {action && (
         <Link
           href={hrefFor(action, r.visitor_token)}
-          className={`mt-3 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl text-sm font-medium transition-colors ${
+          className={`mt-3 flex w-fit items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl text-sm font-medium transition-colors ${
             primary
               ? 'bg-indigo-600 text-white hover:bg-indigo-700'
               : 'border border-slate-200 text-slate-700 hover:bg-slate-50'

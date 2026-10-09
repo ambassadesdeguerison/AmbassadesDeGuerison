@@ -56,8 +56,8 @@ describe('MesDemandes', () => {
     );
     expect(screen.getByText('1 en attente')).toBeTruthy();
     expect(screen.getByText('1 acceptée')).toBeTruthy();
-    expect(screen.getByRole('link', { name: /suivre ma demande/i }).getAttribute('href')).toBe('/visitor/tok-p');
-    expect(screen.getByRole('link', { name: /voir les détails/i }).getAttribute('href')).toBe('/visitor/tok-a');
+    expect(screen.getByRole('link', { name: /suivre ma demande/i }).getAttribute('href')).toBe('/visitor/tok-p?from=mon-espace');
+    expect(screen.getByRole('link', { name: /voir les détails/i }).getAttribute('href')).toBe('/visitor/tok-a?from=mon-espace');
     // l'acceptée (live le plus proche) passe en premier
     const items = screen.getAllByRole('listitem');
     expect(items[0].textContent).toContain('Anne');
@@ -103,7 +103,7 @@ describe('MesDemandes', () => {
       />,
     );
     fireEvent.click(screen.getByRole('button', { name: /historique/i }));
-    expect(screen.getByRole('link', { name: /donner mon avis/i }).getAttribute('href')).toBe('/feedback/tok-f');
+    expect(screen.getByRole('link', { name: /donner mon avis/i }).getAttribute('href')).toBe('/feedback/tok-f?from=mon-espace');
   });
 
   it('refusée pour un live à venir : propose une autre ambassade', () => {
