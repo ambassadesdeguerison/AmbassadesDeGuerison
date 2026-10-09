@@ -10,6 +10,23 @@ function extractQuartier(addr: Record<string, string | undefined>): string | und
   return addr.city_district ?? addr.suburb ?? addr.neighbourhood ?? addr.quarter;
 }
 
+// Adresse lisible : « 19, Boulevard Mendès France, 44700 Orvault, France ».
+// `display_name` de Nominatim est la hiérarchie OSM complète (lieux-dits,
+// département, région, « France métropolitaine »…), trop longue pour un
+// humain. On reconstruit depuis les champs structurés, avec repli sur un
+// lieu-dit quand il n'y a pas de rue, puis sur `display_name` en dernier recours.
+function formatAddress(addr: Record<string, string | undefined>, displayName: string): string {
+  const city = addr.city ?? addr.town ?? addr.village ?? addr.municipality;
+  const street = addr.road ?? addr.pedestrian ?? addr.footway ?? addr.path;
+  const locality = street ? undefined : (addr.hamlet ?? addr.isolated_dwelling ?? addr.neighbourhood ?? addr.suburb);
+  const line1 = [addr.house_number, street ?? locality].filter(Boolean).join(', ');
+  const line2 = [addr.postcode, city].filter(Boolean).join(' ');
+  const parts = [line1, line2, addr.country].filter(Boolean);
+  // Sans rue ni lieu-dit ni ville, on n'a rien d'exploitable : garder l'original.
+  if (!street && !locality && !city) return displayName;
+  return parts.join(', ');
+}
+
 // Champs de la réponse Nominatim (format=json&addressdetails=1) que cette route lit.
 interface NominatimResult {
   lat?: string;
@@ -55,16 +72,19 @@ export async function GET(req: NextRequest) {
         const addr = r.address ?? {};
         const city = addr.city ?? addr.town ?? addr.village ?? addr.municipality ?? '';
         const country = addr.country ?? '';
+        const address = formatAddress(addr, r.display_name);
         return {
-          label: r.display_name as string,
-          address: r.display_name as string,
+          label: address,
+          address,
           city,
           country,
           quartier: extractQuartier(addr) ?? null,
           lat_precise: parseFloat(r.lat!),
           lng_precise: parseFloat(r.lon!),
         };
-      });
+      })
+      // Des résultats distincts peuvent donner la même adresse courte.
+      .filter((r, i, all) => all.findIndex((o) => o.label === r.label) === i);
     return NextResponse.json(results);
   }
 
