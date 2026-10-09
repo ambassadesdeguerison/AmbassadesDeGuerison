@@ -53,6 +53,8 @@ export default async function VisitorConfirmationPage({ params }: Props) {
         ? 'Demande acceptée !'
         : status === 'declined'
         ? 'Demande non retenue cette fois.'
+        : status === 'cancelled_no_response'
+        ? "Pas de réponse à temps."
         : 'Dès que possible.',
     },
     {
@@ -126,11 +128,11 @@ export default async function VisitorConfirmationPage({ params }: Props) {
             </nav>
           </div>
 
-          {/* Statut declined */}
-          {status === 'declined' && (
+          {/* Statuts sans suite : refus, ou ambassadeur sans réponse (même issue pour le visiteur) */}
+          {(status === 'declined' || status === 'cancelled_no_response') && (
             <div className="bg-amber-50 rounded-xl border border-amber-100 p-4 text-center">
               <p className="text-amber-800 text-sm font-medium mb-2">
-                Pas de place cette fois
+                {status === 'declined' ? 'Pas de place cette fois' : "L'ambassadeur n'a pas pu répondre à temps"}
               </p>
               <p className="text-amber-700 text-xs mb-4">
                 D&apos;autres ambassades sont peut-être disponibles près de chez vous.

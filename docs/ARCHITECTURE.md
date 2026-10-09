@@ -298,10 +298,22 @@ message, consentement notifications) → POST /api/visit-requests
   │  sans réponse libère sa place. Réglable dans /admin/settings/timing
   │  (event_timing_config, lib/visitor/request-limit.ts)
   ▼
-/mon-espace — espace minimal (email, téléphone éditable, photo de profil éditable, déconnexion)
-  │  + « Mes demandes » (`components/MesDemandes.tsx`, `GET /api/visitor/requests`) : liste en lecture
-  │  seule des demandes avec leur statut. N'expose jamais `action_token` (c'est aussi le jeton
-  │  d'acceptation côté hôte) ; `declined_permanently` apparaît comme un refus ordinaire.
+/mon-espace — 3 onglets (`TabNav`, onglet actif dans l'URL : `?onglet=demandes|profil|guide`, « Demandes » par défaut)
+  │  • Demandes (`components/MesDemandes.tsx`, `GET /api/visitor/requests`) : « En cours » (live à venir,
+  │    en attente ou acceptée, le live le plus proche d'abord) puis « Historique (N) » replié, « Voir plus »
+  │    par 5. Tri dans `lib/visitor/group-requests.ts` (live terminé = `closed_at` OU fenêtre
+  │    `NEXT_PUBLIC_LIVE_SIGNAL_WINDOW_HOURS` écoulée). Action par carte : « Suivre ma demande » /
+  │    « Voir les détails » → `/visitor/[token]`, « Donner mon avis » → `/feedback/[token]` (acceptée, live
+  │    passé), « Chercher une autre ambassade » → `/`. Une demande restée « en attente » après son live
+  │    s'affiche « Sans réponse ». Badge de l'onglet = demandes en attente d'un live à venir.
+  │    La réponse renvoie `visitor_token` (jeton du visiteur, aucun pouvoir d'acceptation) mais jamais
+  │    `action_token` (jeton de l'hôte) ; `declined_permanently` apparaît comme un refus ordinaire.
+  │    Dates affichées dans le fuseau du navigateur (`formatLiveDate` + `useBrowserTimezone`).
+  │  • Profil (`components/visitor/ProfilTab.tsx`) : e-mail, téléphone éditable, photo, déconnexion.
+  │  • Guide (`components/decouvrir/DecouvrirContent.tsx`, partagé avec la page publique `/decouvrir`) :
+  │    comment se passe une visite, FAQ, témoignage vedette. `app/mon-espace/page.tsx` est un Server
+  │    Component (revalidate 60) qui charge le témoignage et le passe à `MonEspaceClient`.
+  │  Les trois panneaux restent montés (`hidden`) : saisie du téléphone, FAQ et historique ne se perdent pas.
   │  PAS un dashboard complet — juste assez pour ne pas retaper ses infos et suivre ses demandes
 ```
 
@@ -552,10 +564,12 @@ en JS — le guard utilise `=== 'true'`).
 | `TemoignageCard` | Client Component | "Lire la suite" (expand/collapse état local) |
 | `MissionDuMoment` | Client Component | Carte contextuelle prioritaire — 5 états selon live/demandes/agenda ; `null` si calme |
 | `StatusTimeline` | Client Component | Stepper 4-étapes — **uniquement pour non-validés** (`pending_review`, `pre_approved`, `enrichment_pending`). Revérifie `profilePhotoUrl`/`roomPhotoUrls` avant d'afficher l'étape "Profil enrichi" comme atteinte — un `status='enrichment_pending'` sans dossier complet (possible seulement via donnée créée hors du flux API, ex. script/test) retombe visuellement sur l'étape précédente plutôt que d'afficher un faux "en cours d'examen" (trouvé 2026-08-07, cf `app/dashboard/page.tsx` où l'encart "Ton dossier est en cours d'examen" applique la même garde). |
-| `DashboardTabs` | Client Component | Navigation `/dashboard` par onglets (Accueil/Demandes/Profil/Formation) — **uniquement pour validés**, bottom tabs mobile + tabs sticky desktop. Badge compteur sur "Demandes". Onboarding reste linéaire (pas d'onglets). |
+| `TabNav` | Client Component | Barre d'onglets générique (`components/ui/TabNav.tsx`) : bottom tabs mobile + tabs sticky desktop, `role="tablist"`/`tab`, flèches/Début/Fin au clavier, badge compteur ambre. Utilisée par `DashboardTabs` et `/mon-espace`. Les panneaux portent `role="tabpanel"` avec `tabPanelId`/`tabButtonId`. |
+| `DashboardTabs` | Client Component | Enveloppe de `TabNav` pour `/dashboard` (Accueil/Demandes/Profil/Formation) — **uniquement pour validés**. Badge compteur sur "Demandes". Onboarding reste linéaire (pas d'onglets). L'onglet actif reste un état local (pas dans l'URL, contrairement à `/mon-espace`). |
+| `DecouvrirContent` | Server-compatible | Contenu de « Votre première visite » (réassurance, étapes, FAQ, témoignage, CTA), partagé par `/decouvrir` et l'onglet « Guide » de `/mon-espace`. Le témoignage vient de `lib/decouvrir/featured-testimonial.ts`. |
 | `MesInfosSection` | Client Component | Formulaire édition profil (ville + adresse précise + consignes + tel) |
 | `AddressInput` | Client Component | Autocomplétion Nominatim `mode=address` — calqué sur `CityInput` |
-| `FaqAccordion` | Client Component | Accordéon accessible (`<button aria-expanded>`), état local d'ouverture |
+| `FaqAccordion` | Client Component | Accordéon accessible (`<button aria-expanded>`), état local d'ouverture, ids via `useId()` (présent sur `/decouvrir` et dans `/mon-espace`) |
 
 **Polling** : `MapPublique` et `AdminFeed` refetchent toutes les 5 secondes.
 Pas de WebSocket — Supabase Realtime ajouterait de la complexité pour un usage
@@ -736,7 +750,7 @@ Mis à jour manuellement à chaque PR significative.
 |---------|--------|-------------------|------------|
 | Carte publique (pins) | ✅ | `GET /api/host-activations` | Cluster auto par proximité en pixels à l'écran (`leaflet.markercluster`, recalculé à chaque zoom — remplace juillet 2026 l'ancien groupement par coordonnées exactes qui masquait silencieusement les pins proches mais non identiques). Champ `quartier` + message de présentation (`presentation_message`, 240 car. max) + photo de profil (avatar 28px, signed URL 24h) affichés dans les popups (cluster + pin individuel) si renseignés. Bouton "Trier par distance" dans les clusters (géolocalisation éphémère, voir section dédiée). **Jitter décoratif** (`lib/geo/jitter.ts`, 2026-09-27) appliqué à chaque pin avant renvoi — sépare visuellement les ambassadeurs d'une même ville géocodés au même point exact ; ne dérive jamais de `lat_precise`/`lng_precise`, voir § Jitter décoratif carte publique. |
 | Politique de confidentialité (`/confidentialite`) | ⚠️ | `app/confidentialite/page.tsx` | Page statique 8 sections (responsable, données collectées, ce qu'on ne fait pas, bases légales, durées, droits, sous-traitants, mineurs). **3 placeholders `[À COMPLÉTER]` bloquent la publication publique** : entité juridique, adresse du siège, e-mail de contact RGPD — mentions obligatoires (art. 13 RGPD), volontairement laissées visibles plutôt que remplies d'une valeur plausible qui passerait la relecture. Voir § Transparence des données. |
-| Page de préparation visiteur (`/decouvrir`) | ✅ | `app/decouvrir/page.tsx` | Réassurance + 3 étapes + FAQ accessible (`FaqAccordion`) + témoignage vedette (fallback global si aucun pour le prochain live) + CTA retour carte. CTA discret "C'est votre première fois ?" sur `MapPublique` (coin bas-droit, masquable, mémorisé `localStorage`). |
+| Page de préparation visiteur (`/decouvrir`) | ✅ | `app/decouvrir/page.tsx` | Contenu dans `DecouvrirContent`, repris par l'onglet « Guide » de `/mon-espace`. Réassurance + 3 étapes + FAQ accessible (`FaqAccordion`) + témoignage vedette (fallback global si aucun pour le prochain live) + CTA retour carte. CTA discret "C'est votre première fois ?" sur `MapPublique` (coin bas-droit, masquable, mémorisé `localStorage`). |
 | Géolocalisation auto au premier chargement | ✅ | `MapPublique` → `map.locate()` | Zoom métropole si permission acceptée, vue monde sinon (silencieux). Sautée si une position de carte est déjà mémorisée (`localStorage['map-view-state']`) — voir ligne dédiée ci-dessous. |
 | Mémorisation de la position carte (centre + zoom) | ✅ | `components/MapPublique.tsx` → `readSavedMapView()`/`saveMapView()` | `localStorage['map-view-state']` (`{lat, lng, zoom}`), mis à jour sur `moveend`/`zoomend`. Au montage suivant, la carte s'initialise directement sur cette position — pas de `setView([20,10],3)` ni de géolocalisation auto/`flyTo` — pour éviter de réanimer un zoom à chaque refresh alors que le visiteur avait déjà positionné la carte. Le bouton "Me localiser" (manuel) garde son `flyTo` animé. |
 | EventBanner (5 états) | ✅ | `lib/homepage-data.ts` → `app/page.tsx` | |

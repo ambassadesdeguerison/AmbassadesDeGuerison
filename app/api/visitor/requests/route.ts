@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { createServiceClient } from '@/lib/supabase/server';
+import type { RequestStatus } from '@/lib/visitor/group-requests';
 
 function getAnonClient(req: NextRequest) {
   return createServerClient(
@@ -19,6 +20,8 @@ function first<T>(v: Related<T>): T | null {
 // Ne renvoie jamais `action_token` : c'est aussi le jeton d'acceptation côté hôte
 // (/accueillir/[token]), et `declined_permanently` est ramené à « declined » —
 // le visiteur n'a pas à savoir qu'un refus est définitif (message neutre, cf CLAUDE.md).
+// Renvoie en revanche `visitor_token` : c'est le jeton du visiteur (suivi, avis), qui ne donne
+// aucun pouvoir d'acceptation — il permet de lier chaque carte vers /visitor/[token].
 export async function GET(req: NextRequest) {
   const { data: { user } } = await getAnonClient(req).auth.getUser();
   if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
@@ -34,9 +37,9 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('contact_requests')
     .select(`
-      id, status, nb_personnes, created_at,
+      id, status, nb_personnes, created_at, visitor_token,
       host_activations!inner(
-        events!inner(title, event_date),
+        events!inner(id, title, event_date, closed_at),
         host_profiles!inner(first_name, city, country)
       )
     `)
@@ -55,11 +58,14 @@ export async function GET(req: NextRequest) {
     const host = first(ha?.host_profiles ?? null);
     return {
       id: r.id,
-      status: r.status as 'pending' | 'accepted' | 'declined' | 'cancelled_no_response',
+      status: r.status as RequestStatus,
       nb_personnes: r.nb_personnes,
       created_at: r.created_at,
+      visitor_token: r.visitor_token,
+      event_id: event?.id ?? null,
       event_title: event?.title ?? null,
       event_date: event?.event_date ?? null,
+      event_closed_at: event?.closed_at ?? null,
       host_first_name: host?.first_name ?? null,
       host_city: host?.city ?? null,
       host_country: host?.country ?? null,

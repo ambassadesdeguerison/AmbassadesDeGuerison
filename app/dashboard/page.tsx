@@ -13,7 +13,8 @@ import Avatar from '@/components/ui/Avatar';
 import StatusTimeline from '@/components/dashboard/StatusTimeline';
 import MissionDuMoment from '@/components/dashboard/MissionDuMoment';
 import { participationLabels } from '@/lib/dashboard/participation-labels';
-import DashboardTabs, { type DashboardTab } from '@/components/dashboard/DashboardTabs';
+import DashboardTabs, { DASHBOARD_TABS_ID, type DashboardTab } from '@/components/dashboard/DashboardTabs';
+import { tabButtonId, tabPanelId } from '@/components/ui/TabNav';
 import MesInfosSection from '@/app/dashboard/MesInfosSection';
 import DeclineChoice from '@/components/DeclineChoice';
 import { useToast } from '@/components/ui/Toast';
@@ -769,7 +770,7 @@ export default function DashboardPage() {
           <>
             {/* ── Onglet Accueil ── */}
             {activeTab === 'accueil' && (
-              <>
+              <div role="tabpanel" id={tabPanelId(DASHBOARD_TABS_ID, 'accueil')} aria-labelledby={tabButtonId(DASHBOARD_TABS_ID, 'accueil')} className="space-y-6">
                 {/* Mission du moment — carte contextuelle (priorité décroissante) */}
                 <MissionDuMoment
                   hostType={profile.host_type}
@@ -898,11 +899,12 @@ export default function DashboardPage() {
                     </div>
                   </section>
                 )}
-              </>
+              </div>
             )}
 
             {/* ── Onglet Demandes ── */}
             {activeTab === 'demandes' && (
+              <div role="tabpanel" id={tabPanelId(DASHBOARD_TABS_ID, 'demandes')} aria-labelledby={tabButtonId(DASHBOARD_TABS_ID, 'demandes')}>
               <section>
                 <h2 className="font-semibold text-slate-800 mb-3 text-sm uppercase tracking-wide">Mes demandes</h2>
                 {pendingCount > 0 && (
@@ -1007,11 +1009,12 @@ export default function DashboardPage() {
                   </div>
                 )}
               </section>
+              </div>
             )}
 
             {/* ── Onglet Profil ── */}
             {activeTab === 'profil' && (
-              <>
+              <div role="tabpanel" id={tabPanelId(DASHBOARD_TABS_ID, 'profil')} aria-labelledby={tabButtonId(DASHBOARD_TABS_ID, 'profil')} className="space-y-6">
                 {/* Mon ambassade — partage */}
                 <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm space-y-4">
                   <div className="flex items-center gap-2">
@@ -1130,12 +1133,12 @@ export default function DashboardPage() {
 
                 {/* Mes informations */}
                 <MesInfosSection profile={profile} />
-              </>
+              </div>
             )}
 
             {/* ── Onglet Formation ── */}
             {activeTab === 'formation' && (
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div role="tabpanel" id={tabPanelId(DASHBOARD_TABS_ID, 'formation')} aria-labelledby={tabButtonId(DASHBOARD_TABS_ID, 'formation')} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="flex items-center gap-2 px-5 pt-5 pb-3">
                   <Play className="w-4 h-4 text-indigo-500" />
                   <h2 className="font-semibold text-slate-800 text-sm">Formation ambassadeur</h2>
