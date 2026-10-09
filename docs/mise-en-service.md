@@ -106,6 +106,7 @@ Copier le résultat (sans guillemets). Recommencer pour le second secret. Les no
 | `LIVE_WINDOW_PAST_HOURS` | `6` | Fenêtre du suivi admin après le début du live |
 | `LIVE_WINDOW_FUTURE_HOURS` | `4` | Fenêtre du suivi admin avant le live |
 | `NEXT_PUBLIC_ADMIN_TZ_OFFSET` | `+04:00` | Fuseau du planning admin (La Réunion) |
+| `MAP_CACHE_SECONDS` | `30` | **Cache de la carte publique** : réduit fortement les lectures de la base et le trafic Supabase en affluence. Absente ou `0` = aucun cache. Pas de redéploiement de code, mais redéployer pour que Vercel relise la variable. |
 
 #### Facultatives
 

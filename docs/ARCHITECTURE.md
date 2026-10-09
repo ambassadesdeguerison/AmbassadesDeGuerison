@@ -723,6 +723,7 @@ Utilisé dans :
 | `NEXT_PUBLIC_LIVE_SIGNAL_WINDOW_HOURS` | Client + Server | Fenêtre "live en cours" (défaut : 4h) |
 | `NEXT_PUBLIC_ADMIN_TZ_OFFSET` | Client | Offset UTC pour l'admin planning (La Réunion = +4) |
 | `CRON_SECRET` | Server uniquement | Authentification des jobs Vercel Cron |
+| `MAP_CACHE_SECONDS` | Server uniquement | Cache CDN (`s-maxage`) de `GET /api/host-activations`, 0 par défaut ; 30 au lancement (`lib/map/cache-headers.ts`) |
 | `RESEND_REPLY_TO` | Server uniquement | Adresse des réponses aux e-mails (en-tête Reply-To posé dans `lib/email/send.ts`) ; facultative |
 | `RESEND_ADMIN_EMAIL` | Server uniquement | Destinataire des alertes admin (candidature, questionnaire, 0 hôte actif) |
 | `EMAIL_PROOF_SECRET` | Server uniquement | Signature de la preuve d'e-mail (inscription) et des billets d'envoi vidéo ; repli sur `SUPABASE_SERVICE_ROLE_KEY` |
