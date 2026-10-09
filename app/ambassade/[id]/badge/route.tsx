@@ -36,7 +36,7 @@ export async function GET(
   if (supabaseUrl && serviceKey) {
     const res = await fetch(
       `${supabaseUrl}/rest/v1/host_profiles?id=eq.${id}&status=eq.validated&select=first_name,city,country,quartier,host_type,is_women_only`,
-      { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }, cache: 'no-store' }
+      { headers: { apikey: serviceKey, ...(serviceKey.startsWith('sb_') ? {} : { Authorization: `Bearer ${serviceKey}` }) }, cache: 'no-store' }
     );
     if (res.ok) {
       const rows = await res.json();

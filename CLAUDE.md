@@ -38,6 +38,8 @@ Tests DB (triggers, RLS) : nécessite `supabase start` (Docker).
 
 ## Déploiement Vercel
 
+> **Passage aux comptes de David (octobre 2026)** : Resend, Supabase et Vercel migrent vers des comptes neufs au nom de David. Procédure, variables et contrôles : `docs/mise-en-service.md`. Les identifiants ci-dessous sont ceux de l'ancien compte, à remplacer une fois le nouveau projet créé.
+
 Projet : **`ambassades-guerison`** — compte `yoan-theophiles-projects` (renommé depuis `davidthery-app` le 2026-05-05)
 - **Production** : https://ambassades-guerison.vercel.app
 - **Dashboard** : https://vercel.com/yoan-theophiles-projects/ambassades-guerison
@@ -70,6 +72,8 @@ Ajouter/modifier les variables : `vercel env add NAME production` ou via l'API R
 - Templates supprimés (orphelins, ne pas recréer sans vérifier un caller réel) : `magic-link-bienvenue`, `contact-accepted`, `contact-reserved`, `pre-validation-accordee`, `bienvenue-ambassadeur`. Ce dernier annonçait à tort "vous apparaissez sur la carte" dès validation admin (l'ambassadeur doit encore s'auto-activer par live) — trouvé par `/qa` le 2026-07-28.
 
 ### Reset base de données
+
+`scripts/reset-db.sql` porte l'**état final de toutes les migrations** et se suffit sur une base neuve (ne pas rejouer les `migration-*.sql` derrière) ; il se termine par les `GRANT` exigés par les projets Supabase récents (les nouvelles tables ne sont plus exposées à l'API par défaut — une table ajoutée plus tard doit recevoir les siens). **Il efface tout : jamais sur une base contenant de vrais profils.** Compte admin d'une base sans donnée de démo : coller `scripts/create-admin.sql` dans le SQL Editor de Supabase après avoir créé l'utilisateur dans Authentication > Users (pas `seed.js`) — pas de CLI nécessaire, voir `docs/mise-en-service.md`. Contrôle d'accès : `node scripts/probe-access.js`. Clés Supabase récentes (`sb_secret_…`) : en-tête `apikey` seul, jamais `Authorization: Bearer` (déjà géré par le code et les scripts).
 
 ```bash
 supabase db query --linked --file scripts/reset-db.sql   # recrée le schéma

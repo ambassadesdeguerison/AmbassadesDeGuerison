@@ -35,8 +35,8 @@ const check = (name, ok, detail) => {
 };
 
 (async () => {
-  const anonHeaders = { apikey: ANON, Authorization: `Bearer ${ANON}` };
-  const svcHeaders = { apikey: SERVICE, Authorization: `Bearer ${SERVICE}` };
+  const anonHeaders = { apikey: ANON, ...(ANON.startsWith('sb_') ? {} : { Authorization: `Bearer ${ANON}` }) };
+  const svcHeaders = { apikey: SERVICE, ...(SERVICE.startsWith('sb_') ? {} : { Authorization: `Bearer ${SERVICE}` }) };
 
   // 1. lecture anonyme de la table
   const sensitive = 'phone,email,address_private,lat_precise,lng_precise,admin_notes,denomination,leadership_role,intro_video_path';

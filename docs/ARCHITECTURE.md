@@ -723,6 +723,14 @@ Utilisé dans :
 | `NEXT_PUBLIC_LIVE_SIGNAL_WINDOW_HOURS` | Client + Server | Fenêtre "live en cours" (défaut : 4h) |
 | `NEXT_PUBLIC_ADMIN_TZ_OFFSET` | Client | Offset UTC pour l'admin planning (La Réunion = +4) |
 | `CRON_SECRET` | Server uniquement | Authentification des jobs Vercel Cron |
+| `RESEND_REPLY_TO` | Server uniquement | Adresse des réponses aux e-mails (en-tête Reply-To posé dans `lib/email/send.ts`) ; facultative |
+| `RESEND_ADMIN_EMAIL` | Server uniquement | Destinataire des alertes admin (candidature, questionnaire, 0 hôte actif) |
+| `EMAIL_PROOF_SECRET` | Server uniquement | Signature de la preuve d'e-mail (inscription) et des billets d'envoi vidéo ; repli sur `SUPABASE_SERVICE_ROLE_KEY` |
+| `NEXT_PUBLIC_YOUTUBE_CHANNEL_URL` | Client | Lien du bandeau « live en cours » (facultatif) |
+| `LIVE_WINDOW_PAST_HOURS` / `LIVE_WINDOW_FUTURE_HOURS` | Server uniquement | Fenêtre du feed admin (voir plus bas) |
+| `DEV_OVERLAY_SECRET` | Server uniquement | Secret exigé par `/api/dev/*` quand le DevOverlay est actif en production |
+
+Liste complète, valeurs et ordre de mise en place : [`mise-en-service.md`](./mise-en-service.md).
 | `EMAIL_PREVIEW` | Server uniquement | Active `/dev/emails` (doit valoir exactement `"true"`) |
 | `USE_MAILHOG` | Server uniquement | `"true"` route tous les envois (`lib/email/send.ts`) vers Mailhog (SMTP local) au lieu de Resend — test des vrais flux applicatifs sans dépendre d'adresses e-mail réelles |
 | `MAILHOG_SMTP_HOST` / `MAILHOG_SMTP_PORT` | Server uniquement | Hôte/port du conteneur Mailhog (défaut : `localhost:1025`) |

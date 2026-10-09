@@ -311,16 +311,9 @@ Chercher dans les logs serveur (terminal `npm run dev`, ou Vercel Logs) la ligne
 
 ## GitHub Actions (automatisations)
 
-### supabase-keepalive.yml
+### ~~supabase-keepalive.yml~~ — Supprimé
 
-Supabase met en pause les projets gratuits après 7 jours d'inactivité.
-Ce workflow ping la base de données toutes les 5 jours pour éviter la pause.
-
-```
-.github/workflows/supabase-keepalive.yml
-→ Cron : toutes les 5 jours
-→ Action : SELECT 1 sur la base de données
-```
+Le projet Supabase est en plan **Pro** (compte de David) : il n'est jamais mis en pause pour inactivité, le ping n'a plus d'objet. Workflow retiré en octobre 2026 (voir l'historique git).
 
 ### host-activations-check.yml
 
@@ -523,17 +516,16 @@ AND hp.id NOT IN (
 
 ---
 
-## Coûts et limites (Supabase gratuit)
+## Coûts et limites (Supabase Pro, compte de David)
 
-| Ressource | Limite gratuite | Usage attendu |
-|-----------|----------------|---------------|
-| Base de données | 500 MB | Très largement suffisant |
-| Connexions DB | 60 simultanées | Port 6543 (pooler) obligatoire |
-| Auth | 50 000 MAU | Suffisant pour v1 |
-| Storage | 1 GB | Non utilisé en v1 (FEATURES.PHOTOS=false) |
-| Pause inactivité | 7 jours | Géré par le keepalive GitHub Actions |
+Vercel et Supabase sont en plan **Pro**, sur les comptes de David. Détail des coûts et des seuils : [`estimation-couts.md`](./estimation-couts.md).
 
-Quand l'application dépasse 100 hôtes actifs réguliers → envisager Supabase Pro (€25/mois).
+| Ressource | À retenir |
+|-----------|-----------|
+| Connexions DB | Port 6543 (pooler) obligatoire côté serveur |
+| Sauvegardes | Quotidiennes, 7 jours (Pro seulement) |
+| Pause d'inactivité | N'existe pas en Pro |
+| Plafond de dépenses | À régler chez Vercel et chez Supabase (voir `estimation-couts.md`) |
 
 ---
 

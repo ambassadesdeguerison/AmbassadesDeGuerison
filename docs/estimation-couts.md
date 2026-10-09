@@ -67,7 +67,7 @@ Types relevés dans le code et volumes (scénario Croissance, par mois) : confir
 ## 6. Recommandations
 
 **Niveau de service, par étape** (payer le jour où des vraies données ou de vrais utilisateurs arrivent) :
-1. **Maintenant (conception)** : tout en gratuit. Supabase gratuit se met en pause après 1 semaine ; le workflow keepalive couvre cela.
+1. **Maintenant (conception)** : tout en gratuit. Supabase gratuit se met en pause après 1 semaine. *(Historique : le workflow keepalive qui couvrait cela a été supprimé en octobre 2026, Vercel et Supabase étant passés en Pro.)*
 2. **Avant que Camille valide de vrais profils** : Supabase Pro (25 $). Seul le Pro fait des sauvegardes (7 jours) ; le gratuit n'en fait aucune, limite les fichiers à 50 Mo et le trafic à 5 Go.
 3. **Avant l'annonce publique** : Resend Pro (20 $), Vercel Pro (20 $), cache de la carte, domaine d'envoi vérifié.
 4. **Dès le passage en payant** : régler un plafond de dépenses chez Vercel (suspend la production, avec quelques minutes de retard) et chez Supabase (couvre trafic et fichiers, **pas** le serveur).

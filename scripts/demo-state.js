@@ -34,7 +34,7 @@ if (!BASE_URL || !SERVICE_KEY) {
 
 const headers = {
   apikey: SERVICE_KEY,
-  Authorization: `Bearer ${SERVICE_KEY}`,
+  ...(SERVICE_KEY.startsWith('sb_') ? {} : { Authorization: `Bearer ${SERVICE_KEY}` }),
   'Content-Type': 'application/json',
   Prefer: 'return=representation',
 };

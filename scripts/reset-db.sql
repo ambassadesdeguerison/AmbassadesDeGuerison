@@ -1,7 +1,12 @@
 -- ============================================================
 -- RESET COMPLET — DavidTheryApp (pivot live-driven v2)
 -- Usage : supabase db query --linked --file scripts/reset-db.sql
+--         (ou coller le fichier dans Supabase > SQL Editor)
 -- ⚠️  Supprime TOUTES les données et recrée le schéma proprement
+--
+-- Ce fichier porte l'ÉTAT FINAL de tous les scripts/migration-*.sql : sur une base neuve ou remise à
+-- zéro, il suffit seul — ne PAS rejouer les migrations après lui. Les migrations ne servent qu'à mettre
+-- à jour une base qui contient déjà de vraies données (et alors, ne JAMAIS lancer ce fichier).
 -- ============================================================
 
 -- ============================================================
@@ -750,3 +755,22 @@ USING (
   AND auth.role() = 'authenticated'
   AND (storage.foldername(name))[1] = auth.uid()::text
 );
+
+
+-- ============================================================
+-- 11. DROITS D'ACCÈS À L'API DATA (GRANT)
+-- ============================================================
+-- Depuis mai 2026, un projet Supabase neuf n'ouvre plus automatiquement les nouvelles tables de `public`
+-- à l'API (case « Automatically expose new tables » décochée à la création). Sans ce bloc, sur un projet
+-- neuf, TOUTES les requêtes échouent en « permission denied » — alors que sur l'ancien projet, créé avant
+-- le changement, les droits étaient accordés d'office.
+--
+-- Ces droits reproduisent l'ancien comportement. Ils n'ouvrent rien à eux seuls : la sécurité reste portée
+-- par la RLS (activée sur les 15 tables, section 6) et par `node scripts/probe-access.js`.
+-- Idempotent. Toute NOUVELLE table ajoutée plus tard doit recevoir ses propres GRANT (et sa RLS).
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+
+GRANT ALL ON ALL TABLES    IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
